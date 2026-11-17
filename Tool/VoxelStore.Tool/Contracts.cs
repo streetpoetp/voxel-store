@@ -36,6 +36,18 @@ public sealed class CoverageRequirement
     public bool Required { get; set; } = true;
 }
 
+public sealed class RetiredAssetPolicy
+{
+    public int Version { get; set; }
+    public List<RetiredAssetIdentity> Assets { get; set; } = new();
+}
+
+public sealed class RetiredAssetIdentity
+{
+    public string Id { get; set; } = string.Empty;
+    public string UnitRef { get; set; } = string.Empty;
+}
+
 public sealed class CompatibilityProfile
 {
     public int Version { get; set; }

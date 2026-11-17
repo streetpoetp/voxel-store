@@ -147,9 +147,7 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
             - reference-02.png
             - reference-03.png
           equipment:
-            - equipment-reference-01.png
-            - equipment-reference-02.png
-            - equipment-reference-03.png
+            - equipment-bow-source.png
         traits:
           - chunky low-resolution voxel forms
           - chibi proportion language
@@ -157,9 +155,7 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
     WritePngHeader(Path.Combine(styleRoot, "reference-01.png"), 1200, 900);
     WritePngHeader(Path.Combine(styleRoot, "reference-02.png"), 1200, 900);
     WritePngHeader(Path.Combine(styleRoot, "reference-03.png"), 1200, 900);
-    WritePngHeader(Path.Combine(styleRoot, "equipment-reference-01.png"), 1200, 900);
-    WritePngHeader(Path.Combine(styleRoot, "equipment-reference-02.png"), 1200, 900);
-    WritePngHeader(Path.Combine(styleRoot, "equipment-reference-03.png"), 1200, 900);
+    WritePngHeader(Path.Combine(styleRoot, "equipment-bow-source.png"), 1200, 900);
 
     string assetRoot = Path.Combine(
         root, "Art", "CombatFoundation", "Units", "Avatars", "FixtureAvatar");
@@ -211,9 +207,9 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
         ReferenceStyleAuthority equipmentStyle =
             new StoreEngine(styleRoot).ResolveReferenceStyle("equipment");
         Require(
-            equipmentStyle.KindReferencePaths.Count == 3 &&
-            equipmentStyle.KindReferencePaths.All(x => Path.GetFileName(x).StartsWith("equipment-", StringComparison.Ordinal)),
-            "equipment must resolve only equipment-scoped references");
+            equipmentStyle.KindReferencePaths.Count == 1 &&
+            Path.GetFileName(equipmentStyle.KindReferencePaths[0]) == "equipment-bow-source.png",
+            "equipment must resolve only the independent bow source reference");
         ExpectFailure(
             () => new StoreEngine(styleRoot).ResolveReferenceStyle("unknown"),
             "does not support asset kind");
@@ -519,7 +515,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
             "Art",
             "Style",
             "low-resolution-voxel.v1",
-            "equipment-reference-01.png");
+            "equipment-bow-source.png");
         byte[] originalEquipmentStyle = File.ReadAllBytes(equipmentStylePng);
         try
         {
@@ -639,11 +635,86 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
     }
 }
 
+static void RunRetirementContractTests()
+{
+    string root = TempRoot();
+    try
+    {
+        Directory.CreateDirectory(Path.Combine(root, "policy"));
+        File.WriteAllText(
+            Path.Combine(root, "policy", "retired-assets.yaml"),
+            """
+            version: 1
+            assets:
+              - id: retired.asset
+                unitRef: retired/unit
+            """);
+
+        string assetRoot = Path.Combine(root, "Art", "Fixture");
+        Directory.CreateDirectory(assetRoot);
+        string manifestPath = Path.Combine(assetRoot, "asset.yaml");
+        void WriteManifest(string id, string unitRef) =>
+            File.WriteAllText(
+                manifestPath,
+                $"""
+                version: 1
+                id: {id}
+                kind: equipment
+                unitRef: {unitRef}
+                mount:
+                  profile: humanoid.medium.v1
+                  socket: Hand.L
+                source:
+                  base: ./Source/Fixture
+                  palette: ./Source/Palette.yaml
+                style:
+                  family: combat-foundation.v1
+                """);
+
+        WriteManifest("retired.asset", "fresh/unit");
+        ExpectFailure(
+            () => new StoreEngine(root).DiscoverAssets(),
+            "reuses a retired published identity");
+
+        WriteManifest("fresh.asset", "retired/unit");
+        ExpectFailure(
+            () => new StoreEngine(root).DiscoverAssets(),
+            "reuses a retired published identity");
+
+        WriteManifest("fresh.asset", "fresh/unit");
+        Require(
+            new StoreEngine(root).DiscoverAssets().Count == 1,
+            "fresh replacement identity must remain valid");
+
+        RunGit(root, "init");
+        RunGit(root, "config", "user.email", "voxel-store-tests@example.invalid");
+        RunGit(root, "config", "user.name", "Voxel Store Tests");
+        RunGit(root, "add", ".");
+        RunGit(root, "commit", "-m", "fixture");
+
+        WriteManifest("changed.asset", "fresh/unit");
+        ExpectFailure(
+            () => new StoreEngine(root).DiscoverAssets(),
+            "Published semantic identity changed in-place");
+
+        RunGit(root, "checkout", "--", "Art/Fixture/asset.yaml");
+        File.Delete(manifestPath);
+        Require(
+            new StoreEngine(root).DiscoverAssets().Count == 0,
+            "intentional deletion of a retired/removed manifest must not be treated as in-place mutation");
+    }
+    finally
+    {
+        DeleteTree(root);
+    }
+}
+
 string repositoryRoot = StoreEngine.FindRoot(AppContext.BaseDirectory);
 if (args.Contains("--reference-authority-only", StringComparer.Ordinal))
 {
     RunReferenceAuthorityContractTests(repositoryRoot);
-    Console.WriteLine("PASS: reference-style and ReferenceContract v2 authority tests");
+    RunRetirementContractTests();
+    Console.WriteLine("PASS: reference-style, retirement, and ReferenceContract v2 authority tests");
     return;
 }
 
@@ -999,8 +1070,8 @@ finally
 
 IReadOnlyList<AssetRecord> assets = engine.DiscoverAssets();
 Require(
-    assets.Count == 4,
-    "CombatFoundation.v1 must contain exactly four V1 assets");
+    assets.Count == 2,
+    "CombatFoundation.v1 must contain exactly two active assets");
 Require(
     assets.Select(x => x.Manifest.Id)
         .Distinct(StringComparer.Ordinal).Count() == assets.Count,
@@ -1039,14 +1110,14 @@ Require(
     first.Assets.Count == second.Assets.Count,
     "scan must be deterministic");
 Require(
-    first.Compatibility.Count == 6 &&
+    first.Compatibility.Count == 2 &&
     first.Compatibility.All(x => x.Passed),
-    "three equipment pairs across two required pose samples must pass");
+    "one bow pair across two required pose samples must pass");
 
 string compatibilityEvidence = Path.Combine(
     assets.Single(x => x.Manifest.Kind == "avatar").ProofDirectory,
     "Compatibility",
-    "foundation.equipment.blade.right-01.json");
+    "foundation.equipment.bow.left-01.json");
 using (JsonDocument evidence =
        JsonDocument.Parse(File.ReadAllText(compatibilityEvidence)))
 {
@@ -1081,16 +1152,16 @@ Require(
     "health regeneration must be byte deterministic");
 
 // A stale generated sibling is diagnosed before expansion work.
-AssetRecord blade = assets.Single(
-    x => x.Manifest.Id == "foundation.equipment.blade.right-01");
-string bladeGenerated = blade.SourceBase + ".generated.vox";
-byte[] originalGenerated = File.ReadAllBytes(bladeGenerated);
+AssetRecord bow = assets.Single(
+    x => x.Manifest.Id == "foundation.equipment.bow.left-01");
+string bowGenerated = bow.SourceBase + ".generated.vox";
+byte[] originalGenerated = File.ReadAllBytes(bowGenerated);
 string coveragePath = Path.Combine(repositoryRoot, "policy", "coverage.yaml");
 string originalCoverage = File.ReadAllText(coveragePath);
 try
 {
     File.WriteAllBytes(
-        bladeGenerated,
+        bowGenerated,
         originalGenerated.Concat(new byte[] { 0x7f }).ToArray());
     File.WriteAllText(
         coveragePath,
@@ -1104,14 +1175,14 @@ try
         """);
     StoreSnapshot stale =
         engine.Scan(writeDerived: false, writeCompatibility: false);
-    AssetHealth staleBlade =
-        stale.Assets.Single(x => x.Id == blade.Manifest.Id);
+    AssetHealth staleBow =
+        stale.Assets.Single(x => x.Id == bow.Manifest.Id);
     Require(
-        staleBlade.FailedGate == "generation",
+        staleBow.FailedGate == "generation",
         "stale generated VOX must fail generation gate");
     Require(
         stale.NextJob?.Priority == "stale-reproducible" &&
-        stale.NextJob.Target == blade.Manifest.Id,
+        stale.NextJob.Target == bow.Manifest.Id,
         "stale generated VOX must be the failure-first maintenance job");
     Require(
         stale.CoverageGaps.Any(x => x.Id == "simultaneous.coverage-gap"),
@@ -1119,7 +1190,7 @@ try
 }
 finally
 {
-    File.WriteAllBytes(bladeGenerated, originalGenerated);
+    File.WriteAllBytes(bowGenerated, originalGenerated);
     File.WriteAllText(coveragePath, originalCoverage);
 }
 
@@ -1200,7 +1271,7 @@ finally
     File.WriteAllBytes(heroProof, originalHeroProof);
 }
 
-// Initial bootstrap with only the canonical avatar exposes exactly three equipment gaps.
+// Initial bootstrap with only the canonical avatar exposes exactly one bow gap.
 string bootstrapRoot = TempRoot();
 try
 {
@@ -1250,9 +1321,9 @@ try
         bootstrap.Assets.Count == 1 && bootstrap.Assets[0].Published,
         "bootstrap avatar must publish");
     Require(
-        bootstrap.CoverageGaps.Count == 3 &&
+        bootstrap.CoverageGaps.Count == 1 &&
         bootstrap.CoverageGaps.All(x => x.Kind == "equipment"),
-        "avatar-only bootstrap must expose exactly three equipment mount gaps");
+        "avatar-only bootstrap must expose exactly one bow equipment gap");
     Require(
         bootstrap.NextJob?.Priority == "required-coverage",
         "bootstrap must select required coverage after healthy avatar");

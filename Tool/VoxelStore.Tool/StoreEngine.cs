@@ -117,9 +117,41 @@ public sealed class StoreEngine
 
         EnsureUnique(assets, x => x.Manifest.Id, "asset id");
         EnsureUnique(assets, x => x.Manifest.UnitRef, "UnitRef");
+        IReadOnlyList<RetiredAssetIdentity> retired = LoadRetiredIdentities();
+        foreach (AssetRecord asset in assets)
+        {
+            if (retired.Any(x => string.Equals(x.Id, asset.Manifest.Id, StringComparison.Ordinal)))
+                throw new InvalidDataException(
+                    $"Active asset id '{asset.Manifest.Id}' reuses a retired published identity.");
+            if (retired.Any(x => string.Equals(x.UnitRef, asset.Manifest.UnitRef, StringComparison.Ordinal)))
+                throw new InvalidDataException(
+                    $"Active UnitRef '{asset.Manifest.UnitRef}' reuses a retired published identity.");
+        }
         foreach (AssetRecord asset in assets)
             ValidateHistoricalIdentity(asset);
         return assets;
+    }
+
+    private IReadOnlyList<RetiredAssetIdentity> LoadRetiredIdentities()
+    {
+        string path = Path.Combine(_root, "policy", "retired-assets.yaml");
+        if (!File.Exists(path))
+            return Array.Empty<RetiredAssetIdentity>();
+
+        RetiredAssetPolicy policy = ContractYaml.Load<RetiredAssetPolicy>(path);
+        if (policy.Version != 1)
+            throw new InvalidDataException("Unsupported retired-assets policy version.");
+        if (policy.Assets.Any(x =>
+                string.IsNullOrWhiteSpace(x.Id) ||
+                string.IsNullOrWhiteSpace(x.UnitRef)))
+            throw new InvalidDataException("Retired asset id and UnitRef are required.");
+        if (policy.Assets.Select(x => x.Id)
+                .Distinct(StringComparer.Ordinal).Count() != policy.Assets.Count)
+            throw new InvalidDataException("Retired asset ids must be unique.");
+        if (policy.Assets.Select(x => x.UnitRef)
+                .Distinct(StringComparer.Ordinal).Count() != policy.Assets.Count)
+            throw new InvalidDataException("Retired UnitRefs must be unique.");
+        return policy.Assets;
     }
 
     public StoreSnapshot Scan(bool writeDerived, bool writeCompatibility)
