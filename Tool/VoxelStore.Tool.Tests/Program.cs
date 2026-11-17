@@ -139,12 +139,17 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
     File.WriteAllText(
         Path.Combine(styleRoot, "style.yaml"),
         """
-        version: 1
+        version: 2
         id: low-resolution-voxel.v1
         references:
-          - reference-01.png
-          - reference-02.png
-          - reference-03.png
+          avatar:
+            - reference-01.png
+            - reference-02.png
+            - reference-03.png
+          equipment:
+            - equipment-reference-01.png
+            - equipment-reference-02.png
+            - equipment-reference-03.png
         traits:
           - chunky low-resolution voxel forms
           - chibi proportion language
@@ -152,6 +157,9 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
     WritePngHeader(Path.Combine(styleRoot, "reference-01.png"), 1200, 900);
     WritePngHeader(Path.Combine(styleRoot, "reference-02.png"), 1200, 900);
     WritePngHeader(Path.Combine(styleRoot, "reference-03.png"), 1200, 900);
+    WritePngHeader(Path.Combine(styleRoot, "equipment-reference-01.png"), 1200, 900);
+    WritePngHeader(Path.Combine(styleRoot, "equipment-reference-02.png"), 1200, 900);
+    WritePngHeader(Path.Combine(styleRoot, "equipment-reference-03.png"), 1200, 900);
 
     string assetRoot = Path.Combine(
         root, "Art", "CombatFoundation", "Units", "Avatars", "FixtureAvatar");
@@ -194,21 +202,55 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
     try
     {
         string styleDir = Path.Combine(styleRoot, "Art", "Style", "low-resolution-voxel.v1");
-        ReferenceStyleAuthority style = new StoreEngine(styleRoot).ResolveReferenceStyle();
+        ReferenceStyleAuthority style =
+            new StoreEngine(styleRoot).ResolveReferenceStyle("avatar");
         Require(style.Id == "low-resolution-voxel.v1", "style id must resolve");
-        Require(style.ReferencePaths.Count == 3, "style must resolve exactly three PNG references");
+        Require(style.Kind == "avatar", "style kind must resolve");
+        Require(style.CommonReferencePaths.Count == 0, "fixture has no common style images");
+        Require(style.KindReferencePaths.Count == 3, "avatar must resolve exactly three PNG references");
+        ReferenceStyleAuthority equipmentStyle =
+            new StoreEngine(styleRoot).ResolveReferenceStyle("equipment");
+        Require(
+            equipmentStyle.KindReferencePaths.Count == 3 &&
+            equipmentStyle.KindReferencePaths.All(x => Path.GetFileName(x).StartsWith("equipment-", StringComparison.Ordinal)),
+            "equipment must resolve only equipment-scoped references");
+        ExpectFailure(
+            () => new StoreEngine(styleRoot).ResolveReferenceStyle("unknown"),
+            "does not support asset kind");
 
         string styleManifest = Path.Combine(styleDir, "style.yaml");
         string originalStyle = File.ReadAllText(styleManifest);
         File.WriteAllText(
             styleManifest,
             originalStyle.Replace(
-                "  - reference-03.png",
-                "  - reference-02.png",
+                "  avatar:",
+                "  avatar_missing:",
                 StringComparison.Ordinal));
         ExpectFailure(
-            () => new StoreEngine(styleRoot).ResolveReferenceStyle(),
-            "non-empty and unique");
+            () => new StoreEngine(styleRoot).ResolveReferenceStyle("avatar"),
+            "scope 'avatar' must be non-empty");
+        File.WriteAllText(styleManifest, originalStyle);
+
+        File.WriteAllText(
+            styleManifest,
+            originalStyle.Replace(
+                "  avatar:",
+                "  common:\n    - reference-01.png\n  avatar:",
+                StringComparison.Ordinal));
+        ExpectFailure(
+            () => new StoreEngine(styleRoot).ResolveReferenceStyle("avatar"),
+            "unique across scopes");
+        File.WriteAllText(styleManifest, originalStyle);
+
+        File.WriteAllText(
+            styleManifest,
+            originalStyle.Replace(
+                "    - reference-03.png",
+                "    - reference-02.png",
+                StringComparison.Ordinal));
+        ExpectFailure(
+            () => new StoreEngine(styleRoot).ResolveReferenceStyle("avatar"),
+            "image paths must be unique");
         File.WriteAllText(styleManifest, originalStyle);
 
         File.WriteAllText(
@@ -218,13 +260,13 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
                 "reference-03.svg",
                 StringComparison.Ordinal));
         ExpectFailure(
-            () => new StoreEngine(styleRoot).ResolveReferenceStyle(),
+            () => new StoreEngine(styleRoot).ResolveReferenceStyle("avatar"),
             "must be PNG");
         File.WriteAllText(styleManifest, originalStyle);
 
         File.Delete(Path.Combine(styleDir, "reference-03.png"));
         ExpectFailure(
-            () => new StoreEngine(styleRoot).ResolveReferenceStyle(),
+            () => new StoreEngine(styleRoot).ResolveReferenceStyle("avatar"),
             "Required PNG is missing");
         WritePngHeader(Path.Combine(styleDir, "reference-03.png"), 1200, 900);
 
@@ -237,7 +279,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
                 "referenceStyle:",
                 StringComparison.Ordinal));
         ExpectFailure(
-            () => new StoreEngine(styleRoot).ResolveReferenceStyle(),
+            () => new StoreEngine(styleRoot).ResolveReferenceStyle("avatar"),
             "policy is incomplete");
         File.WriteAllText(policyPath, originalPolicy);
     }
@@ -458,8 +500,40 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
             "low-resolution-voxel.v1",
             "reference audit must record style authority");
         Require(
-            audit.RootElement.GetProperty("StyleSha256").EnumerateObject().Count() == 4,
-            "reference audit must hash style manifest plus three style PNGs");
+            audit.RootElement.GetProperty("StyleKind").GetString() == "avatar",
+            "reference audit must record the applicable style kind");
+        Require(
+            audit.RootElement.GetProperty("StyleAuthoritySha256").GetString()?.Length == 64,
+            "reference audit must record a semantic applicable-style digest");
+        Require(
+            audit.RootElement.GetProperty("StyleSha256").EnumerateObject().Count() == 3,
+            "avatar reference audit must hash only three avatar-scoped style PNGs");
+        Require(
+            audit.RootElement.GetProperty("StyleSha256").EnumerateObject()
+                .All(x => x.Name.Contains("reference-0", StringComparison.Ordinal) &&
+                          !x.Name.Contains("equipment-", StringComparison.Ordinal)),
+            "avatar reference audit must not include equipment-scoped style PNGs");
+
+        string equipmentStylePng = Path.Combine(
+            validRoot,
+            "Art",
+            "Style",
+            "low-resolution-voxel.v1",
+            "equipment-reference-01.png");
+        byte[] originalEquipmentStyle = File.ReadAllBytes(equipmentStylePng);
+        try
+        {
+            byte[] changed = originalEquipmentStyle.ToArray();
+            changed[23] ^= 1;
+            File.WriteAllBytes(equipmentStylePng, changed);
+            Require(
+                ReferenceGate(fixtureEngine.Scan(false, false)).Passed,
+                "equipment-only style image mutation must not stale avatar reference evidence");
+        }
+        finally
+        {
+            File.WriteAllBytes(equipmentStylePng, originalEquipmentStyle);
+        }
 
         string stylePng = Path.Combine(
             validRoot,
@@ -477,7 +551,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
             Require(
                 !ReferenceGate(stale).Passed &&
                 ReferenceGate(stale).Message.Contains(
-                    "style evidence is stale",
+                    "style authority digest is stale",
                     StringComparison.OrdinalIgnoreCase),
                 "style image mutation must stale accepted reference evidence");
         }
@@ -512,7 +586,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
             Require(
                 !ReferenceGate(stale).Passed &&
                 ReferenceGate(stale).Message.Contains(
-                    "style evidence is stale",
+                    "style authority digest is stale",
                     StringComparison.OrdinalIgnoreCase),
                 "style manifest mutation must stale accepted reference evidence");
         }

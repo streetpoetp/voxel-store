@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Hero.Voxel.Tool;
@@ -34,8 +35,10 @@ public sealed record SocketWorldFrame(Vector3 Origin, Vector3 WorldX, Vector3 Wo
 public sealed record PngInfo(int Width, int Height);
 public sealed record ReferenceStyleAuthority(
     string Id,
+    string Kind,
     string ManifestPath,
-    IReadOnlyList<string> ReferencePaths,
+    IReadOnlyList<string> CommonReferencePaths,
+    IReadOnlyList<string> KindReferencePaths,
     IReadOnlyList<string> Traits);
 
 public sealed class AssetHealth
@@ -179,11 +182,11 @@ public sealed class StoreEngine
 
     public HeroVoxelProvider.Resolution ResolveProvider() => _provider.Resolve();
 
-    public ReferenceStyleAuthority ResolveReferenceStyle()
+    public ReferenceStyleAuthority ResolveReferenceStyle(string assetKind)
     {
         StorePolicy policy = ContractYaml.Load<StorePolicy>(Path.Combine(_root, "policy", "store.yaml"));
         ValidatePolicy(policy);
-        return ResolveReferenceStyle(policy.ReferenceStyle);
+        return ResolveReferenceStyle(policy.ReferenceStyle, assetKind);
     }
 
     private AssetHealth EvaluateBaseHealth(
@@ -308,7 +311,9 @@ public sealed class StoreEngine
         foreach (string part in contract.RequiredParts)
             ReadPngInfo(ResolveContained(asset.ReferenceDirectory, contract.PartSheets[part], $"Part Sheet '{part}'"));
 
-        ReferenceStyleAuthority style = ResolveReferenceStyle(policy.ReferenceStyle);
+        ReferenceStyleAuthority style = ResolveReferenceStyle(
+            policy.ReferenceStyle,
+            asset.Manifest.Kind);
         VerifyAudit(
             asset.ReferenceDirectory,
             auditPath,
@@ -663,13 +668,17 @@ public sealed class StoreEngine
         foreach (string part in contract.RequiredParts)
             ReadPngInfo(ResolveContained(asset.ReferenceDirectory, contract.PartSheets[part], $"Part Sheet '{part}'"));
 
-        ReferenceStyleAuthority style = ResolveReferenceStyle(policy.ReferenceStyle);
+        ReferenceStyleAuthority style = ResolveReferenceStyle(
+            policy.ReferenceStyle,
+            asset.Manifest.Kind);
         HeroVoxelLock lockFile = ContractYaml.Load<HeroVoxelLock>(
             Path.Combine(_root, "toolchain", "hero-voxel.lock.yaml"));
         var audit = new AuditEvidence
         {
             Kind = "reference",
             ReferenceStyle = style.Id,
+            StyleKind = style.Kind,
+            StyleAuthoritySha256 = BuildStyleAuthoritySha256(style),
             HeroVoxelWorkflowSha256 = lockFile.WorkflowSha256,
             StyleSha256 = new Dictionary<string, string>(StringComparer.Ordinal)
         };
@@ -680,9 +689,7 @@ public sealed class StoreEngine
             audit.Sha256[Path.GetRelativePath(asset.ReferenceDirectory, file).Replace('\\', '/')] =
                 HeroVoxelProvider.HashFile(file);
         }
-        audit.StyleSha256![Path.GetRelativePath(_root, style.ManifestPath).Replace('\\', '/')] =
-            HeroVoxelProvider.HashFile(style.ManifestPath);
-        foreach (string file in style.ReferencePaths)
+        foreach (string file in EnumerateApplicableStyleReferences(style))
             audit.StyleSha256![Path.GetRelativePath(_root, file).Replace('\\', '/')] =
                 HeroVoxelProvider.HashFile(file);
         Directory.CreateDirectory(asset.ReferenceDirectory);
@@ -770,6 +777,14 @@ public sealed class StoreEngine
             ?? throw new InvalidDataException("Reference audit evidence is invalid.");
         if (!string.Equals(audit.ReferenceStyle, style.Id, StringComparison.Ordinal))
             throw new InvalidDataException("Reference audit style authority is stale.");
+        if (!string.Equals(audit.StyleKind, style.Kind, StringComparison.Ordinal))
+            throw new InvalidDataException("Reference audit style kind is stale.");
+        string expectedAuthority = BuildStyleAuthoritySha256(style);
+        if (!string.Equals(
+                audit.StyleAuthoritySha256,
+                expectedAuthority,
+                StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Reference audit style authority digest is stale.");
 
         HeroVoxelLock lockFile = ContractYaml.Load<HeroVoxelLock>(
             Path.Combine(_root, "toolchain", "hero-voxel.lock.yaml"));
@@ -791,18 +806,54 @@ public sealed class StoreEngine
     private Dictionary<string, string> BuildStyleHashes(ReferenceStyleAuthority style)
     {
         var hashes = new Dictionary<string, string>(StringComparer.Ordinal);
-        hashes[Path.GetRelativePath(_root, style.ManifestPath).Replace('\\', '/')] =
-            HeroVoxelProvider.HashFile(style.ManifestPath);
-        foreach (string file in style.ReferencePaths)
+        foreach (string file in EnumerateApplicableStyleReferences(style))
             hashes[Path.GetRelativePath(_root, file).Replace('\\', '/')] =
                 HeroVoxelProvider.HashFile(file);
         return hashes;
     }
 
-    private ReferenceStyleAuthority ResolveReferenceStyle(string styleId)
+    private string BuildStyleAuthoritySha256(ReferenceStyleAuthority style)
+    {
+        string manifestDirectory = Path.GetDirectoryName(style.ManifestPath)!;
+        var builder = new StringBuilder();
+        builder.Append("style=").Append(style.Id).Append('\n');
+        builder.Append("kind=").Append(style.Kind).Append('\n');
+        foreach (string trait in style.Traits)
+            builder.Append("trait=").Append(trait).Append('\n');
+        foreach (string file in style.CommonReferencePaths)
+        {
+            string relative = Path.GetRelativePath(manifestDirectory, file).Replace('\\', '/');
+            builder.Append("common=").Append(relative).Append('|')
+                .Append(HeroVoxelProvider.HashFile(file)).Append('\n');
+        }
+        foreach (string file in style.KindReferencePaths)
+        {
+            string relative = Path.GetRelativePath(manifestDirectory, file).Replace('\\', '/');
+            builder.Append("kindref=").Append(relative).Append('|')
+                .Append(HeroVoxelProvider.HashFile(file)).Append('\n');
+        }
+        byte[] bytes = Encoding.UTF8.GetBytes(builder.ToString());
+        return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+    }
+
+    private static IEnumerable<string> EnumerateApplicableStyleReferences(
+        ReferenceStyleAuthority style)
+    {
+        foreach (string file in style.CommonReferencePaths)
+            yield return file;
+        foreach (string file in style.KindReferencePaths)
+            yield return file;
+    }
+
+    private ReferenceStyleAuthority ResolveReferenceStyle(
+        string styleId,
+        string assetKind)
     {
         if (string.IsNullOrWhiteSpace(styleId))
             throw new InvalidDataException("Store referenceStyle is required.");
+        if (assetKind is not ("avatar" or "equipment"))
+            throw new InvalidDataException(
+                $"Reference style does not support asset kind '{assetKind}'.");
 
         string styleBase = Path.Combine(_root, "Art", "Style");
         string manifestPath = ResolveContained(
@@ -813,30 +864,60 @@ public sealed class StoreEngine
             throw new InvalidDataException($"Reference style manifest is missing for '{styleId}'.");
 
         ReferenceStyleManifest manifest = ContractYaml.Load<ReferenceStyleManifest>(manifestPath);
-        if (manifest.Version != 1 || !string.Equals(manifest.Id, styleId, StringComparison.Ordinal))
+        if (manifest.Version != 2 || !string.Equals(manifest.Id, styleId, StringComparison.Ordinal))
             throw new InvalidDataException($"Reference style manifest '{styleId}' has invalid identity/version.");
-        if (manifest.References.Count == 0 ||
-            manifest.References.Distinct(StringComparer.OrdinalIgnoreCase).Count() != manifest.References.Count)
-            throw new InvalidDataException("Reference style images must be non-empty and unique.");
         if (manifest.Traits.Count == 0 || manifest.Traits.Any(string.IsNullOrWhiteSpace))
             throw new InvalidDataException("Reference style traits must be non-empty.");
+        if (!manifest.References.TryGetValue(assetKind, out List<string>? kindReferences) ||
+            kindReferences.Count == 0)
+            throw new InvalidDataException(
+                $"Reference style scope '{assetKind}' must be non-empty.");
+        manifest.References.TryGetValue("common", out List<string>? commonReferences);
+        commonReferences ??= new List<string>();
 
         string manifestDirectory = Path.GetDirectoryName(manifestPath)!;
-        var references = new List<string>(manifest.References.Count);
-        foreach (string relative in manifest.References)
-        {
-            if (!string.Equals(Path.GetExtension(relative), ".png", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("Reference style images must be PNG files.");
-            string path = ResolveContained(manifestDirectory, relative, "Reference style image");
-            ReadPngInfo(path);
-            references.Add(path);
-        }
+        List<string> common = ResolveStyleScope(
+            manifestDirectory,
+            "common",
+            commonReferences);
+        List<string> kind = ResolveStyleScope(
+            manifestDirectory,
+            assetKind,
+            kindReferences);
+        if (common.Concat(kind).Distinct(StringComparer.OrdinalIgnoreCase).Count() !=
+            common.Count + kind.Count)
+            throw new InvalidDataException(
+                "Applicable reference style image paths must be unique across scopes.");
 
         return new ReferenceStyleAuthority(
             manifest.Id,
+            assetKind,
             manifestPath,
-            references,
+            common,
+            kind,
             manifest.Traits);
+    }
+
+    private static List<string> ResolveStyleScope(
+        string manifestDirectory,
+        string scope,
+        IEnumerable<string> references)
+    {
+        var resolved = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string relative in references)
+        {
+            if (!string.Equals(Path.GetExtension(relative), ".png", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException(
+                    $"Reference style scope '{scope}' images must be PNG files.");
+            string path = ResolveContained(manifestDirectory, relative, "Reference style image");
+            if (!seen.Add(path))
+                throw new InvalidDataException(
+                    $"Reference style scope '{scope}' image paths must be unique.");
+            ReadPngInfo(path);
+            resolved.Add(path);
+        }
+        return resolved;
     }
 
     private static void ValidateReferenceMapping(AssetRecord asset, ReferenceContract contract)

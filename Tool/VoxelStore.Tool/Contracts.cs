@@ -102,7 +102,8 @@ public sealed class ReferenceStyleManifest
 {
     public int Version { get; set; }
     public string Id { get; set; } = string.Empty;
-    public List<string> References { get; set; } = new();
+    public Dictionary<string, List<string>> References { get; set; } =
+        new(StringComparer.Ordinal);
     public List<string> Traits { get; set; } = new();
 }
 
@@ -121,6 +122,10 @@ public sealed class AuditEvidence
     public Dictionary<string, string> Sha256 { get; set; } = new(StringComparer.Ordinal);
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ReferenceStyle { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StyleKind { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StyleAuthoritySha256 { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? HeroVoxelWorkflowSha256 { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
