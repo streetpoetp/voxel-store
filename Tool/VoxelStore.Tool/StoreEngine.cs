@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
@@ -30,6 +31,12 @@ public sealed record CompatibilityResult(
 
 public sealed record PartWorldFrame(Vector3 Origin, Vector3 WorldX, Vector3 WorldY, Vector3 WorldZ);
 public sealed record SocketWorldFrame(Vector3 Origin, Vector3 WorldX, Vector3 WorldY, Vector3 WorldZ);
+public sealed record PngInfo(int Width, int Height);
+public sealed record ReferenceStyleAuthority(
+    string Id,
+    string ManifestPath,
+    IReadOnlyList<string> ReferencePaths,
+    IReadOnlyList<string> Traits);
 
 public sealed class AssetHealth
 {
@@ -164,11 +171,20 @@ public sealed class StoreEngine
     public void Seal(string assetId)
     {
         AssetRecord asset = RequireAsset(assetId);
-        WriteReferenceAudit(asset);
+        StorePolicy policy = ContractYaml.Load<StorePolicy>(Path.Combine(_root, "policy", "store.yaml"));
+        ValidatePolicy(policy);
+        WriteReferenceAudit(asset, policy);
         WriteProofAudit(asset);
     }
 
     public HeroVoxelProvider.Resolution ResolveProvider() => _provider.Resolve();
+
+    public ReferenceStyleAuthority ResolveReferenceStyle()
+    {
+        StorePolicy policy = ContractYaml.Load<StorePolicy>(Path.Combine(_root, "policy", "store.yaml"));
+        ValidatePolicy(policy);
+        return ResolveReferenceStyle(policy.ReferenceStyle);
+    }
 
     private AssetHealth EvaluateBaseHealth(
         AssetRecord asset,
@@ -182,7 +198,7 @@ public sealed class StoreEngine
             UnitRef = asset.Manifest.UnitRef
         };
         AddGate(health, "manifest", () => ValidateManifest(asset, policy, profiles));
-        AddGate(health, "reference", () => ValidateReference(asset));
+        AddGate(health, "reference", () => ValidateReference(asset, policy));
         AddGate(health, "source", () => ValidateSource(asset));
         HeroVoxelProvider.CompiledAsset? compiled = null;
         AddGate(health, "generation", () =>
@@ -272,30 +288,33 @@ public sealed class StoreEngine
         return asset.ManifestPath;
     }
 
-    private static string ValidateReference(AssetRecord asset)
+    private string ValidateReference(AssetRecord asset, StorePolicy policy)
     {
         string contractPath = Path.Combine(asset.ReferenceDirectory, "reference.yaml");
         string auditPath = Path.Combine(asset.ReferenceDirectory, "audit.generated.json");
         if (!File.Exists(contractPath) || !File.Exists(auditPath))
             throw new InvalidDataException("Reference contract/audit evidence is missing.");
         ReferenceContract contract = ContractYaml.Load<ReferenceContract>(contractPath);
+        if (contract.Version != 2)
+            throw new InvalidDataException("Reference contract must use version 2 explicit PNG authority.");
         if (contract.RequiredParts.Count == 0 ||
             contract.RequiredParts.Distinct(StringComparer.Ordinal).Count() != contract.RequiredParts.Count)
             throw new InvalidDataException("RequiredParts must be non-empty and unique.");
-        string composition = Path.Combine(asset.ReferenceDirectory, contract.Composition);
-        if (!File.Exists(composition))
-            throw new InvalidDataException("Composition Sheet is missing.");
+        ValidateReferenceMapping(asset, contract);
+        string composition = ResolveContained(asset.ReferenceDirectory, contract.Composition, "Composition Sheet");
+        PngInfo compositionInfo = ReadPngInfo(composition);
+        if ((long)compositionInfo.Width * 2 != (long)compositionInfo.Height * 3)
+            throw new InvalidDataException("Composition Sheet PNG must use exact 3:2 aspect ratio.");
         foreach (string part in contract.RequiredParts)
-        {
-            string sheet = Path.Combine(asset.ReferenceDirectory, "Parts", Sanitize(part) + ".svg");
-            if (!File.Exists(sheet))
-                throw new InvalidDataException($"Part Sheet missing for '{part}'.");
-        }
+            ReadPngInfo(ResolveContained(asset.ReferenceDirectory, contract.PartSheets[part], $"Part Sheet '{part}'"));
+
+        ReferenceStyleAuthority style = ResolveReferenceStyle(policy.ReferenceStyle);
         VerifyAudit(
             asset.ReferenceDirectory,
             auditPath,
             "reference",
             EnumerateReferenceFiles(asset));
+        VerifyReferenceProvenance(auditPath, style);
         return auditPath;
     }
 
@@ -625,14 +644,35 @@ public sealed class StoreEngine
         string contractPath = Path.Combine(asset.ReferenceDirectory, "reference.yaml");
         ReferenceContract contract = ContractYaml.Load<ReferenceContract>(contractPath);
         yield return contractPath;
-        yield return Path.Combine(asset.ReferenceDirectory, contract.Composition);
+        yield return ResolveContained(asset.ReferenceDirectory, contract.Composition, "Composition Sheet");
         foreach (string part in contract.RequiredParts)
-            yield return Path.Combine(asset.ReferenceDirectory, "Parts", Sanitize(part) + ".svg");
+            yield return ResolveContained(asset.ReferenceDirectory, contract.PartSheets[part], $"Part Sheet '{part}'");
     }
 
-    private void WriteReferenceAudit(AssetRecord asset)
+    private void WriteReferenceAudit(AssetRecord asset, StorePolicy policy)
     {
-        var audit = new AuditEvidence { Kind = "reference" };
+        ReferenceContract contract = ContractYaml.Load<ReferenceContract>(
+            Path.Combine(asset.ReferenceDirectory, "reference.yaml"));
+        if (contract.Version != 2)
+            throw new InvalidDataException("Cannot seal obsolete reference contract; version 2 PNG authority is required.");
+        ValidateReferenceMapping(asset, contract);
+        string composition = ResolveContained(asset.ReferenceDirectory, contract.Composition, "Composition Sheet");
+        PngInfo compositionInfo = ReadPngInfo(composition);
+        if ((long)compositionInfo.Width * 2 != (long)compositionInfo.Height * 3)
+            throw new InvalidDataException("Cannot seal Composition Sheet PNG that is not exact 3:2.");
+        foreach (string part in contract.RequiredParts)
+            ReadPngInfo(ResolveContained(asset.ReferenceDirectory, contract.PartSheets[part], $"Part Sheet '{part}'"));
+
+        ReferenceStyleAuthority style = ResolveReferenceStyle(policy.ReferenceStyle);
+        HeroVoxelLock lockFile = ContractYaml.Load<HeroVoxelLock>(
+            Path.Combine(_root, "toolchain", "hero-voxel.lock.yaml"));
+        var audit = new AuditEvidence
+        {
+            Kind = "reference",
+            ReferenceStyle = style.Id,
+            HeroVoxelWorkflowSha256 = lockFile.WorkflowSha256,
+            StyleSha256 = new Dictionary<string, string>(StringComparer.Ordinal)
+        };
         foreach (string file in EnumerateReferenceFiles(asset))
         {
             if (!File.Exists(file))
@@ -640,6 +680,11 @@ public sealed class StoreEngine
             audit.Sha256[Path.GetRelativePath(asset.ReferenceDirectory, file).Replace('\\', '/')] =
                 HeroVoxelProvider.HashFile(file);
         }
+        audit.StyleSha256![Path.GetRelativePath(_root, style.ManifestPath).Replace('\\', '/')] =
+            HeroVoxelProvider.HashFile(style.ManifestPath);
+        foreach (string file in style.ReferencePaths)
+            audit.StyleSha256![Path.GetRelativePath(_root, file).Replace('\\', '/')] =
+                HeroVoxelProvider.HashFile(file);
         Directory.CreateDirectory(asset.ReferenceDirectory);
         File.WriteAllText(
             Path.Combine(asset.ReferenceDirectory, "audit.generated.json"),
@@ -716,6 +761,153 @@ public sealed class StoreEngine
         }
     }
 
+    private void VerifyReferenceProvenance(
+        string auditPath,
+        ReferenceStyleAuthority style)
+    {
+        AuditEvidence audit =
+            JsonSerializer.Deserialize<AuditEvidence>(File.ReadAllText(auditPath), JsonOptions)
+            ?? throw new InvalidDataException("Reference audit evidence is invalid.");
+        if (!string.Equals(audit.ReferenceStyle, style.Id, StringComparison.Ordinal))
+            throw new InvalidDataException("Reference audit style authority is stale.");
+
+        HeroVoxelLock lockFile = ContractYaml.Load<HeroVoxelLock>(
+            Path.Combine(_root, "toolchain", "hero-voxel.lock.yaml"));
+        if (!string.Equals(
+                audit.HeroVoxelWorkflowSha256,
+                lockFile.WorkflowSha256,
+                StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Reference audit Hero.Voxel workflow authority is stale.");
+
+        Dictionary<string, string> expected = BuildStyleHashes(style);
+        if (audit.StyleSha256 == null ||
+            audit.StyleSha256.Count != expected.Count ||
+            expected.Any(pair =>
+                !audit.StyleSha256.TryGetValue(pair.Key, out string? actual) ||
+                !string.Equals(actual, pair.Value, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("Reference audit style evidence is stale.");
+    }
+
+    private Dictionary<string, string> BuildStyleHashes(ReferenceStyleAuthority style)
+    {
+        var hashes = new Dictionary<string, string>(StringComparer.Ordinal);
+        hashes[Path.GetRelativePath(_root, style.ManifestPath).Replace('\\', '/')] =
+            HeroVoxelProvider.HashFile(style.ManifestPath);
+        foreach (string file in style.ReferencePaths)
+            hashes[Path.GetRelativePath(_root, file).Replace('\\', '/')] =
+                HeroVoxelProvider.HashFile(file);
+        return hashes;
+    }
+
+    private ReferenceStyleAuthority ResolveReferenceStyle(string styleId)
+    {
+        if (string.IsNullOrWhiteSpace(styleId))
+            throw new InvalidDataException("Store referenceStyle is required.");
+
+        string styleBase = Path.Combine(_root, "Art", "Style");
+        string manifestPath = ResolveContained(
+            styleBase,
+            styleId.Replace('\\', '/') + "/style.yaml",
+            "Reference style manifest");
+        if (!File.Exists(manifestPath))
+            throw new InvalidDataException($"Reference style manifest is missing for '{styleId}'.");
+
+        ReferenceStyleManifest manifest = ContractYaml.Load<ReferenceStyleManifest>(manifestPath);
+        if (manifest.Version != 1 || !string.Equals(manifest.Id, styleId, StringComparison.Ordinal))
+            throw new InvalidDataException($"Reference style manifest '{styleId}' has invalid identity/version.");
+        if (manifest.References.Count == 0 ||
+            manifest.References.Distinct(StringComparer.OrdinalIgnoreCase).Count() != manifest.References.Count)
+            throw new InvalidDataException("Reference style images must be non-empty and unique.");
+        if (manifest.Traits.Count == 0 || manifest.Traits.Any(string.IsNullOrWhiteSpace))
+            throw new InvalidDataException("Reference style traits must be non-empty.");
+
+        string manifestDirectory = Path.GetDirectoryName(manifestPath)!;
+        var references = new List<string>(manifest.References.Count);
+        foreach (string relative in manifest.References)
+        {
+            if (!string.Equals(Path.GetExtension(relative), ".png", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Reference style images must be PNG files.");
+            string path = ResolveContained(manifestDirectory, relative, "Reference style image");
+            ReadPngInfo(path);
+            references.Add(path);
+        }
+
+        return new ReferenceStyleAuthority(
+            manifest.Id,
+            manifestPath,
+            references,
+            manifest.Traits);
+    }
+
+    private static void ValidateReferenceMapping(AssetRecord asset, ReferenceContract contract)
+    {
+        if (string.IsNullOrWhiteSpace(contract.Composition))
+            throw new InvalidDataException("Composition Sheet mapping is required.");
+        string[] expectedParts =
+            contract.RequiredParts.OrderBy(x => x, StringComparer.Ordinal).ToArray();
+        string[] actualParts =
+            contract.PartSheets.Keys.OrderBy(x => x, StringComparer.Ordinal).ToArray();
+        if (!expectedParts.SequenceEqual(actualParts, StringComparer.Ordinal))
+            throw new InvalidDataException("Part Sheet mapping must match RequiredParts exactly.");
+
+        string composition =
+            ResolveContained(asset.ReferenceDirectory, contract.Composition, "Composition Sheet");
+        if (!string.Equals(Path.GetExtension(composition), ".png", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Composition Sheet must be a PNG file.");
+
+        var uniquePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            composition
+        };
+        foreach (string part in contract.RequiredParts)
+        {
+            string relative = contract.PartSheets[part];
+            if (string.IsNullOrWhiteSpace(relative))
+                throw new InvalidDataException($"Part Sheet mapping is empty for '{part}'.");
+            string sheet =
+                ResolveContained(asset.ReferenceDirectory, relative, $"Part Sheet '{part}'");
+            if (!string.Equals(Path.GetExtension(sheet), ".png", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"Part Sheet '{part}' must be a PNG file.");
+            if (!uniquePaths.Add(sheet))
+                throw new InvalidDataException(
+                    "Composition and Part Sheet mappings must resolve to unique files.");
+        }
+    }
+
+    private static PngInfo ReadPngInfo(string path)
+    {
+        if (!File.Exists(path))
+            throw new InvalidDataException($"Required PNG is missing: {path}");
+        byte[] header = new byte[24];
+        using FileStream stream = File.OpenRead(path);
+        if (stream.Read(header, 0, header.Length) != header.Length)
+            throw new InvalidDataException($"PNG is truncated: {path}");
+        ReadOnlySpan<byte> signature = new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 };
+        if (!header.AsSpan(0, 8).SequenceEqual(signature) ||
+            BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(8, 4)) != 13 ||
+            !header.AsSpan(12, 4).SequenceEqual("IHDR"u8))
+            throw new InvalidDataException($"Invalid PNG signature/IHDR: {path}");
+        uint width = BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(16, 4));
+        uint height = BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(20, 4));
+        if (width == 0 || height == 0 || width > int.MaxValue || height > int.MaxValue)
+            throw new InvalidDataException($"PNG dimensions are invalid: {path}");
+        return new PngInfo((int)width, (int)height);
+    }
+
+    private static string ResolveContained(string root, string relative, string label)
+    {
+        if (string.IsNullOrWhiteSpace(relative) || Path.IsPathRooted(relative))
+            throw new InvalidDataException($"{label} path must be a non-empty relative path.");
+        string fullRoot =
+            Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+            Path.DirectorySeparatorChar;
+        string full = Path.GetFullPath(
+            Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)));
+        if (!full.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException($"{label} path escapes its authority root: {relative}");
+        return full;
+    }
+
     private AssetRecord RequireAsset(string assetId) =>
         DiscoverAssets().SingleOrDefault(x => x.Manifest.Id == assetId)
         ?? throw new InvalidOperationException($"Unknown asset id '{assetId}'.");
@@ -736,7 +928,10 @@ public sealed class StoreEngine
 
     private static void ValidatePolicy(StorePolicy policy)
     {
-        if (policy.Version != 1 || string.IsNullOrWhiteSpace(policy.Name) || string.IsNullOrWhiteSpace(policy.StyleFamily))
+        if (policy.Version != 1 ||
+            string.IsNullOrWhiteSpace(policy.Name) ||
+            string.IsNullOrWhiteSpace(policy.StyleFamily) ||
+            string.IsNullOrWhiteSpace(policy.ReferenceStyle))
             throw new InvalidDataException("Store policy is incomplete.");
         if (policy.Budget.MaxVoxelsPerAsset <= 0 || policy.Budget.MaxPartsPerAsset <= 0)
             throw new InvalidDataException("Store budgets must be positive.");

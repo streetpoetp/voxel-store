@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Buffers.Binary;
 using System.Text.Json;
 using VoxelStore.Tool;
 
@@ -87,7 +88,491 @@ static void RunGit(string root, params string[] args)
             $"git {string.Join(' ', args)} failed: {stdout}{stderr}");
 }
 
+static void WritePngHeader(string path, int width, int height, bool validSignature = true)
+{
+    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    byte[] bytes = new byte[24];
+    byte[] signature = { 137, 80, 78, 71, 13, 10, 26, 10 };
+    if (validSignature)
+        signature.CopyTo(bytes, 0);
+    BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(8, 4), 13);
+    "IHDR"u8.CopyTo(bytes.AsSpan(12, 4));
+    BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(16, 4), (uint)width);
+    BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(20, 4), (uint)height);
+    File.WriteAllBytes(path, bytes);
+}
+
+static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
+{
+    string root = TempRoot();
+    Directory.CreateDirectory(Path.Combine(root, "policy", "families"));
+    File.WriteAllText(
+        Path.Combine(root, "policy", "store.yaml"),
+        """
+        version: 1
+        name: ReferenceFixture
+        styleFamily: combat-foundation.v1
+        referenceStyle: low-resolution-voxel.v1
+        allowOptionalExpansion: false
+        budget:
+          maxVoxelsPerAsset: 4096
+          maxPartsPerAsset: 16
+        """);
+    File.WriteAllText(
+        Path.Combine(root, "policy", "coverage.yaml"),
+        """
+        version: 1
+        foundation: ReferenceFixture
+        requirements: []
+        """);
+    CopyFile(
+        sourceRoot,
+        root,
+        "policy/families/humanoid.medium.v1.yaml");
+    CopyFile(
+        sourceRoot,
+        root,
+        "toolchain/hero-voxel.lock.yaml");
+
+    string styleRoot = Path.Combine(root, "Art", "Style", "low-resolution-voxel.v1");
+    Directory.CreateDirectory(styleRoot);
+    File.WriteAllText(
+        Path.Combine(styleRoot, "style.yaml"),
+        """
+        version: 1
+        id: low-resolution-voxel.v1
+        references:
+          - reference-01.png
+          - reference-02.png
+          - reference-03.png
+        traits:
+          - chunky low-resolution voxel forms
+          - chibi proportion language
+        """);
+    WritePngHeader(Path.Combine(styleRoot, "reference-01.png"), 1200, 900);
+    WritePngHeader(Path.Combine(styleRoot, "reference-02.png"), 1200, 900);
+    WritePngHeader(Path.Combine(styleRoot, "reference-03.png"), 1200, 900);
+
+    string assetRoot = Path.Combine(
+        root, "Art", "CombatFoundation", "Units", "Avatars", "FixtureAvatar");
+    Directory.CreateDirectory(assetRoot);
+    File.WriteAllText(
+        Path.Combine(assetRoot, "asset.yaml"),
+        """
+        version: 1
+        id: fixture.avatar
+        kind: avatar
+        unitRef: fixture/avatar
+        family: humanoid.medium.v1
+        source:
+          base: ./Source/FixtureAvatar
+          palette: ../../../Palette.yaml
+        style:
+          family: combat-foundation.v1
+        """);
+    string referenceRoot = Path.Combine(assetRoot, "Reference");
+    Directory.CreateDirectory(referenceRoot);
+    File.WriteAllText(Path.Combine(referenceRoot, "reference.yaml"), referenceYaml);
+    return root;
+}
+
+static GateResult ReferenceGate(StoreSnapshot snapshot) =>
+    snapshot.Assets.Single().Gates.Single(x => x.Id == "reference");
+
+static void RunReferenceAuthorityContractTests(string sourceRoot)
+{
+    string styleRoot = PrepareReferenceFixture(
+        sourceRoot,
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        """);
+    try
+    {
+        string styleDir = Path.Combine(styleRoot, "Art", "Style", "low-resolution-voxel.v1");
+        ReferenceStyleAuthority style = new StoreEngine(styleRoot).ResolveReferenceStyle();
+        Require(style.Id == "low-resolution-voxel.v1", "style id must resolve");
+        Require(style.ReferencePaths.Count == 3, "style must resolve exactly three PNG references");
+
+        string styleManifest = Path.Combine(styleDir, "style.yaml");
+        string originalStyle = File.ReadAllText(styleManifest);
+        File.WriteAllText(
+            styleManifest,
+            originalStyle.Replace(
+                "  - reference-03.png",
+                "  - reference-02.png",
+                StringComparison.Ordinal));
+        ExpectFailure(
+            () => new StoreEngine(styleRoot).ResolveReferenceStyle(),
+            "non-empty and unique");
+        File.WriteAllText(styleManifest, originalStyle);
+
+        File.WriteAllText(
+            styleManifest,
+            originalStyle.Replace(
+                "reference-03.png",
+                "reference-03.svg",
+                StringComparison.Ordinal));
+        ExpectFailure(
+            () => new StoreEngine(styleRoot).ResolveReferenceStyle(),
+            "must be PNG");
+        File.WriteAllText(styleManifest, originalStyle);
+
+        File.Delete(Path.Combine(styleDir, "reference-03.png"));
+        ExpectFailure(
+            () => new StoreEngine(styleRoot).ResolveReferenceStyle(),
+            "Required PNG is missing");
+        WritePngHeader(Path.Combine(styleDir, "reference-03.png"), 1200, 900);
+
+        string policyPath = Path.Combine(styleRoot, "policy", "store.yaml");
+        string originalPolicy = File.ReadAllText(policyPath);
+        File.WriteAllText(
+            policyPath,
+            originalPolicy.Replace(
+                "referenceStyle: low-resolution-voxel.v1",
+                "referenceStyle:",
+                StringComparison.Ordinal));
+        ExpectFailure(
+            () => new StoreEngine(styleRoot).ResolveReferenceStyle(),
+            "policy is incomplete");
+        File.WriteAllText(policyPath, originalPolicy);
+    }
+    finally
+    {
+        DeleteTree(styleRoot);
+    }
+
+    void ExpectReferenceFailure(string yaml, string expected, Action<string>? arrange = null)
+    {
+        string root = PrepareReferenceFixture(sourceRoot, yaml);
+        try
+        {
+            string referenceRoot = Path.Combine(
+                root,
+                "Art",
+                "CombatFoundation",
+                "Units",
+                "Avatars",
+                "FixtureAvatar",
+                "Reference");
+            Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
+            WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
+            WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
+            WritePngHeader(Path.Combine(referenceRoot, "Parts", "Head.png"), 800, 800);
+            File.WriteAllText(
+                Path.Combine(referenceRoot, "audit.generated.json"),
+                """{"version":1,"kind":"reference","sha256":{}}""");
+            arrange?.Invoke(referenceRoot);
+            StoreSnapshot snapshot = new StoreEngine(root).Scan(false, false);
+            GateResult gate = ReferenceGate(snapshot);
+            Require(!gate.Passed, "fixture reference gate must fail");
+            Require(
+                gate.Message.Contains(expected, StringComparison.OrdinalIgnoreCase),
+                $"reference failure must contain '{expected}', got '{gate.Message}'");
+        }
+        finally
+        {
+            DeleteTree(root);
+        }
+    }
+
+    ExpectReferenceFailure(
+        """
+        version: 1
+        composition: composition.svg
+        requiredParts:
+          - Body
+        """,
+        "version 2");
+
+    ExpectReferenceFailure(
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+          - Head
+        partSheets:
+          Body: Parts/Body.png
+        """,
+        "match RequiredParts exactly");
+
+    ExpectReferenceFailure(
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+          Head: Parts/Head.png
+        """,
+        "match RequiredParts exactly");
+
+    ExpectReferenceFailure(
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+          - Head
+        partSheets:
+          Body: Parts/Body.png
+          Head: Parts/Body.png
+        """,
+        "unique files");
+
+    ExpectReferenceFailure(
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: composition.png
+        """,
+        "unique files");
+
+    ExpectReferenceFailure(
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: ../escape.png
+        """,
+        "escapes its authority root");
+
+    ExpectReferenceFailure(
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.svg
+        """,
+        "must be a PNG");
+
+    ExpectReferenceFailure(
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        """,
+        "Invalid PNG signature",
+        referenceRoot =>
+            WritePngHeader(
+                Path.Combine(referenceRoot, "Parts", "Body.png"),
+                800,
+                800,
+                validSignature: false));
+
+    ExpectReferenceFailure(
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        """,
+        "dimensions are invalid",
+        referenceRoot =>
+            WritePngHeader(
+                Path.Combine(referenceRoot, "composition.png"),
+                0,
+                800));
+
+    ExpectReferenceFailure(
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        """,
+        "exact 3:2",
+        referenceRoot =>
+            WritePngHeader(
+                Path.Combine(referenceRoot, "composition.png"),
+                1000,
+                800));
+
+    string validRoot = PrepareReferenceFixture(
+        sourceRoot,
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        """);
+    try
+    {
+        string referenceRoot = Path.Combine(
+            validRoot,
+            "Art",
+            "CombatFoundation",
+            "Units",
+            "Avatars",
+            "FixtureAvatar",
+            "Reference");
+        Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
+        WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
+        WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 700, 900);
+        WritePngHeader(Path.Combine(referenceRoot, "Parts", "Unused.png"), 300, 300);
+
+        StoreEngine fixtureEngine = new(validRoot);
+        StoreSnapshot unsealed = fixtureEngine.Scan(false, false);
+        Require(
+            !ReferenceGate(unsealed).Passed &&
+            ReferenceGate(unsealed).Message.Contains(
+                "contract/audit evidence is missing",
+                StringComparison.OrdinalIgnoreCase),
+            "PNG files without explicit visual seal must not satisfy reference acceptance");
+
+        ExpectFailure(
+            () => fixtureEngine.Seal("fixture.avatar"),
+            "Cannot seal missing proof input");
+        StoreSnapshot sealedSnapshot = fixtureEngine.Scan(false, false);
+        Require(ReferenceGate(sealedSnapshot).Passed, "sealed valid v2 reference must pass reference gate");
+        string auditPath = Path.Combine(referenceRoot, "audit.generated.json");
+        using JsonDocument audit = JsonDocument.Parse(File.ReadAllText(auditPath));
+        JsonElement hashes = audit.RootElement.GetProperty("Sha256");
+        Require(
+            !hashes.TryGetProperty("Parts/Unused.png", out _),
+            "unreferenced PNG must not become reference authority");
+        Require(
+            audit.RootElement.GetProperty("ReferenceStyle").GetString() ==
+            "low-resolution-voxel.v1",
+            "reference audit must record style authority");
+        Require(
+            audit.RootElement.GetProperty("StyleSha256").EnumerateObject().Count() == 4,
+            "reference audit must hash style manifest plus three style PNGs");
+
+        string stylePng = Path.Combine(
+            validRoot,
+            "Art",
+            "Style",
+            "low-resolution-voxel.v1",
+            "reference-01.png");
+        byte[] original = File.ReadAllBytes(stylePng);
+        try
+        {
+            byte[] changed = original.ToArray();
+            changed[23] ^= 1;
+            File.WriteAllBytes(stylePng, changed);
+            StoreSnapshot stale = fixtureEngine.Scan(false, false);
+            Require(
+                !ReferenceGate(stale).Passed &&
+                ReferenceGate(stale).Message.Contains(
+                    "style evidence is stale",
+                    StringComparison.OrdinalIgnoreCase),
+                "style image mutation must stale accepted reference evidence");
+        }
+        finally
+        {
+            File.WriteAllBytes(stylePng, original);
+        }
+
+        ExpectFailure(
+            () => fixtureEngine.Seal("fixture.avatar"),
+            "Cannot seal missing proof input");
+        Require(
+            ReferenceGate(fixtureEngine.Scan(false, false)).Passed,
+            "resealing restored style evidence must recover reference gate");
+
+        string styleManifest = Path.Combine(
+            validRoot,
+            "Art",
+            "Style",
+            "low-resolution-voxel.v1",
+            "style.yaml");
+        string originalStyleManifest = File.ReadAllText(styleManifest);
+        try
+        {
+            File.WriteAllText(
+                styleManifest,
+                originalStyleManifest.Replace(
+                    "chibi proportion language",
+                    "chibi proportion language adjusted",
+                    StringComparison.Ordinal));
+            StoreSnapshot stale = fixtureEngine.Scan(false, false);
+            Require(
+                !ReferenceGate(stale).Passed &&
+                ReferenceGate(stale).Message.Contains(
+                    "style evidence is stale",
+                    StringComparison.OrdinalIgnoreCase),
+                "style manifest mutation must stale accepted reference evidence");
+        }
+        finally
+        {
+            File.WriteAllText(styleManifest, originalStyleManifest);
+        }
+
+        ExpectFailure(
+            () => fixtureEngine.Seal("fixture.avatar"),
+            "Cannot seal missing proof input");
+        Require(
+            ReferenceGate(fixtureEngine.Scan(false, false)).Passed,
+            "resealing restored style manifest evidence must recover reference gate");
+
+        string lockPath = Path.Combine(validRoot, "toolchain", "hero-voxel.lock.yaml");
+        string originalLock = File.ReadAllText(lockPath);
+        HeroVoxelLock parsedLock = ContractYaml.Load<HeroVoxelLock>(lockPath);
+        try
+        {
+            File.WriteAllText(
+                lockPath,
+                originalLock.Replace(
+                    parsedLock.WorkflowSha256,
+                    new string('0', 64),
+                    StringComparison.Ordinal));
+            StoreSnapshot stale = fixtureEngine.Scan(false, false);
+            Require(
+                !ReferenceGate(stale).Passed &&
+                ReferenceGate(stale).Message.Contains(
+                    "workflow authority is stale",
+                    StringComparison.OrdinalIgnoreCase),
+                "Hero.Voxel workflow fingerprint mutation must stale reference evidence");
+        }
+        finally
+        {
+            File.WriteAllText(lockPath, originalLock);
+        }
+
+        ExpectFailure(
+            () => fixtureEngine.Seal("fixture.avatar"),
+            "Cannot seal missing proof input");
+        Require(
+            ReferenceGate(fixtureEngine.Scan(false, false)).Passed,
+            "resealing restored workflow evidence must recover reference gate");
+    }
+    finally
+    {
+        DeleteTree(validRoot);
+    }
+}
+
 string repositoryRoot = StoreEngine.FindRoot(AppContext.BaseDirectory);
+if (args.Contains("--reference-authority-only", StringComparer.Ordinal))
+{
+    RunReferenceAuthorityContractTests(repositoryRoot);
+    Console.WriteLine("PASS: reference-style and ReferenceContract v2 authority tests");
+    return;
+}
+
 var engine = new StoreEngine(repositoryRoot);
 
 // Provider resolution and public Hero.Voxel integration.
@@ -568,13 +1053,13 @@ finally
 AssetRecord avatar =
     assets.Single(x => x.Manifest.Kind == "avatar");
 string compositionPath =
-    Path.Combine(avatar.ReferenceDirectory, "composition.svg");
-string originalComposition = File.ReadAllText(compositionPath);
+    Path.Combine(avatar.ReferenceDirectory, "composition.png");
+byte[] originalComposition = File.ReadAllBytes(compositionPath);
 try
 {
-    File.WriteAllText(
+    File.WriteAllBytes(
         compositionPath,
-        originalComposition + Environment.NewLine + "<!-- stale-test -->");
+        originalComposition.Concat(new byte[] { 0x7f }).ToArray());
     StoreSnapshot staleReference =
         engine.Scan(writeDerived: false, writeCompatibility: false);
     AssetHealth avatarHealth =
@@ -588,7 +1073,7 @@ try
 }
 finally
 {
-    File.WriteAllText(compositionPath, originalComposition);
+    File.WriteAllBytes(compositionPath, originalComposition);
 }
 
 void AssertProofAuditInvalidatesOnTextChange(string path, string label)
@@ -656,6 +1141,18 @@ try
     {
         CopyFile(repositoryRoot, bootstrapRoot, relative);
     }
+
+    CopyDirectory(
+        Path.Combine(
+            repositoryRoot,
+            "Art",
+            "Style",
+            "low-resolution-voxel.v1"),
+        Path.Combine(
+            bootstrapRoot,
+            "Art",
+            "Style",
+            "low-resolution-voxel.v1"));
 
     CopyDirectory(
         Path.Combine(

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -8,6 +9,7 @@ public sealed class StorePolicy
     public int Version { get; set; }
     public string Name { get; set; } = string.Empty;
     public string StyleFamily { get; set; } = string.Empty;
+    public string ReferenceStyle { get; set; } = string.Empty;
     public bool AllowOptionalExpansion { get; set; }
     public StoreBudget Budget { get; set; } = new();
 }
@@ -96,10 +98,20 @@ public sealed class HeroVoxelLock
     public string Workflow { get; set; } = string.Empty;
 }
 
+public sealed class ReferenceStyleManifest
+{
+    public int Version { get; set; }
+    public string Id { get; set; } = string.Empty;
+    public List<string> References { get; set; } = new();
+    public List<string> Traits { get; set; } = new();
+}
+
 public sealed class ReferenceContract
 {
+    public int Version { get; set; }
     public string Composition { get; set; } = string.Empty;
     public List<string> RequiredParts { get; set; } = new();
+    public Dictionary<string, string> PartSheets { get; set; } = new(StringComparer.Ordinal);
 }
 
 public sealed class AuditEvidence
@@ -107,6 +119,12 @@ public sealed class AuditEvidence
     public int Version { get; set; } = 1;
     public string Kind { get; set; } = string.Empty;
     public Dictionary<string, string> Sha256 { get; set; } = new(StringComparer.Ordinal);
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ReferenceStyle { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? HeroVoxelWorkflowSha256 { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, string>? StyleSha256 { get; set; }
 }
 
 public static class ContractYaml
