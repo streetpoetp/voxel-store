@@ -311,7 +311,7 @@ static void RunReferenceDensitySelectorTests()
 }
 
 
-static void RunReferenceDensityEvidenceTests(string repositoryRoot)
+static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string repositoryRoot)
 {
     string root = TempRoot();
     try
@@ -321,33 +321,87 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
         CopyDirectory(
             Path.Combine(repositoryRoot, "Art", "Style", "low-resolution-voxel.v1"),
             Path.Combine(root, "Art", "Style", "low-resolution-voxel.v1"));
-        CopyDirectory(
-            Path.Combine(
-                repositoryRoot,
-                "Art",
-                "CombatFoundation",
-                "Units",
-                "Equipment",
-                "Staff01"),
-            Path.Combine(
-                root,
-                "Art",
-                "CombatFoundation",
-                "Units",
-                "Equipment",
-                "Staff01"));
 
         string assetRoot = Path.Combine(
-            root, "Art", "CombatFoundation", "Units", "Equipment", "Staff01");
+            root, "Art", "CombatFoundation", "Units", "Equipment", "FixtureStaff");
+        Directory.CreateDirectory(Path.Combine(assetRoot, "Reference", "Parts"));
+        Directory.CreateDirectory(Path.Combine(assetRoot, "Source"));
+
+        File.WriteAllText(
+            Path.Combine(assetRoot, "asset.yaml"),
+            """
+            version: 2
+            id: fixture.equipment.staff
+            kind: equipment
+            unitRef: fixture/equipment/staff
+            form: staff
+            mount:
+              profile: humanoid.medium.v2
+              capability: Hand
+            source:
+              base: ./Source/FixtureStaff
+              palette: ./Source/FixtureStaff.palette.yaml
+            style:
+              family: combat-foundation.v1
+            """);
+        File.WriteAllText(
+            Path.Combine(assetRoot, "Reference", "reference.yaml"),
+            """
+            version: 2
+            composition: composition.png
+            requiredParts:
+              - Staff
+            partSheets:
+              Staff: Parts/Staff.png
+            """);
+        WritePngHeader(Path.Combine(assetRoot, "Reference", "composition.png"), 1200, 800);
+        WritePngHeader(Path.Combine(assetRoot, "Reference", "Parts", "Staff.png"), 800, 800);
+        File.WriteAllText(
+            Path.Combine(assetRoot, "Source", "FixtureStaff.palette.yaml"),
+            """
+            version: 1
+            colors:
+              staff: "#75462BFF"
+            """);
+        File.WriteAllText(
+            Path.Combine(assetRoot, "Source", "FixtureStaff.voxel.yaml"),
+            """
+            name: FixtureStaff
+            voxelsPerUnit: 64
+            assemblyOrigin:
+              part: Staff
+            parts:
+              - part: Staff
+                pivot: [2, 2, 48]
+                voxels:
+                  - box: { min: [0, 0, 0], size: [4, 4, 96], color: staff }
+            """);
+
+        var engine = new StoreEngine(root);
+        engine.Generate("fixture.equipment.staff");
+        engine.Seal("fixture.equipment.staff");
+        return (root, assetRoot);
+    }
+    catch
+    {
+        DeleteTree(root);
+        throw;
+    }
+}
+
+
+static void RunReferenceDensityEvidenceTests(string repositoryRoot)
+{
+    const string densityFixtureId = "fixture.equipment.staff";
+    (string root, string assetRoot) = PrepareDensityEquipmentFixture(repositoryRoot);
+    try
+    {
         string densityRoot = Path.Combine(assetRoot, "Density");
         DeleteTree(densityRoot);
         string manifestPath = Path.Combine(assetRoot, "asset.yaml");
-        string legacyManifest = File.ReadAllText(manifestPath)
-            .Replace("density: reference-driven\r\n", "", StringComparison.Ordinal)
-            .Replace("density: reference-driven\n", "", StringComparison.Ordinal);
-        File.WriteAllText(manifestPath, legacyManifest);
+        string legacyManifest = File.ReadAllText(manifestPath);
         var legacyEngine = new StoreEngine(root);
-        legacyEngine.Seal("foundation.equipment.staff.01");
+        legacyEngine.Seal(densityFixtureId);
         var legacySnapshot = legacyEngine.Scan(false, false);
         Require(
             legacySnapshot.Assets.Single().Published &&
@@ -358,8 +412,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
             legacyManifest.Replace(
                 "form: staff",
                 "form: staff\ndensity: reference-driven",
-                StringComparison.Ordinal));
-        Directory.CreateDirectory(densityRoot);
+                StringComparison.Ordinal));        Directory.CreateDirectory(densityRoot);
         string inputPath = Path.Combine(densityRoot, "input.yaml");
         string originalInput =
             """
@@ -428,16 +481,16 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
         Require(
             !missingDensityStaff.Published &&
             missingDensityStaff.FailedGate == "density" &&
-            missingDensity.NextJob?.Target == "foundation.equipment.staff.01" &&
+            missingDensity.NextJob?.Target == densityFixtureId &&
             missingDensity.NextJob.Reason.Contains("density", StringComparison.Ordinal),
             "opted-in equipment missing density evidence must block at density on the same maintenance asset");
 
         var engine = new StoreEngine(root);
         ReferenceDensityEvidence first = engine.SelectDensity(
-            "foundation.equipment.staff.01",
+            densityFixtureId,
             write: false);
         ReferenceDensityEvidence second = engine.SelectDensity(
-            "foundation.equipment.staff.01",
+            densityFixtureId,
             write: false);
         string firstJson = JsonSerializer.Serialize(first);
         string secondJson = JsonSerializer.Serialize(second);
@@ -445,7 +498,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
             first.SelectedVpu == 112 && firstJson == secondJson,
             "density engine operation must be deterministic and select the lowest passing candidate");
 
-        engine.SelectDensity("foundation.equipment.staff.01", write: true);
+        engine.SelectDensity(densityFixtureId, write: true);
         AssetRecord staff = engine.DiscoverAssets().Single();
         StoreSnapshot sourceMismatch = new StoreEngine(root).Scan(false, false);
         Require(
@@ -455,7 +508,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
                 StringComparison.Ordinal),
             "current density evidence with mismatched canonical VPU must fail at source");
 
-        string canonicalSpec = Path.Combine(assetRoot, "Source", "Staff01.voxel.yaml");
+        string canonicalSpec = Path.Combine(assetRoot, "Source", "FixtureStaff.voxel.yaml");
         string originalCanonicalSpec = File.ReadAllText(canonicalSpec);
         File.WriteAllText(
             canonicalSpec,
@@ -484,7 +537,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
             };
             start.ArgumentList.Add(typeof(StoreEngine).Assembly.Location);
             start.ArgumentList.Add("density");
-            start.ArgumentList.Add("foundation.equipment.staff.01");
+            start.ArgumentList.Add(densityFixtureId);
             start.ArgumentList.Add("--root");
             start.ArgumentList.Add(root);
             if (write)
@@ -516,7 +569,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
             staleDensity.Assets.Single().FailedGate == "density",
             "changed target extent must stale density at the density gate");
         File.WriteAllText(inputPath, originalInput);
-        engine.SelectDensity("foundation.equipment.staff.01", write: true);
+        engine.SelectDensity(densityFixtureId, write: true);
         File.WriteAllText(
             inputPath,
             originalInput.Replace("pixelSpan: 10", "pixelSpan: 11", StringComparison.Ordinal));
@@ -524,7 +577,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
             () => engine.ValidateDensityEvidence(staff, storePolicy),
             "stale");
         File.WriteAllText(inputPath, originalInput);
-        engine.SelectDensity("foundation.equipment.staff.01", write: true);
+        engine.SelectDensity(densityFixtureId, write: true);
 
         string partSheet = Path.Combine(assetRoot, "Reference", "Parts", "Staff.png");
         byte[] partSheetBytes = File.ReadAllBytes(partSheet);
@@ -533,7 +586,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
             () => engine.ValidateDensityEvidence(staff, storePolicy),
             "stale");
         File.WriteAllBytes(partSheet, partSheetBytes);
-        engine.SelectDensity("foundation.equipment.staff.01", write: true);
+        engine.SelectDensity(densityFixtureId, write: true);
 
         string candidatePreview = Path.Combine(
             densityRoot, "Candidates", "vpu-112", "Proof", "hero.png");
@@ -1340,10 +1393,10 @@ static void RunReferenceSealVersionTests(string sourceRoot)
         WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
         WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
         StoreEngine engine = new(v2Root);
-        ExpectFailure(() => engine.Seal("fixture.avatar"), "Cannot seal missing proof input");
+        engine.SealReference("fixture.avatar");
         string auditPath = Path.Combine(referenceRoot, "audit.generated.json");
         byte[] first = File.ReadAllBytes(auditPath);
-        ExpectFailure(() => engine.Seal("fixture.avatar"), "Cannot seal missing proof input");
+        engine.SealReference("fixture.avatar");
         byte[] second = File.ReadAllBytes(auditPath);
         Require(
             first.SequenceEqual(second),
@@ -1439,7 +1492,7 @@ static void RunReferenceSealVersionTests(string sourceRoot)
                 new JsonSerializerOptions { WriteIndented = true }));
 
         StoreEngine engine = new(v3Root);
-        ExpectFailure(() => engine.Seal("fixture.avatar"), "Cannot seal missing proof input");
+        engine.SealReference("fixture.avatar");
         string auditPath = Path.Combine(referenceRoot, "audit.generated.json");
         byte[] first = File.ReadAllBytes(auditPath);
         using (JsonDocument audit = JsonDocument.Parse(first))
@@ -1467,7 +1520,7 @@ static void RunReferenceSealVersionTests(string sourceRoot)
                 "import source provenance must not become construction reference audit authority");
         }
 
-        ExpectFailure(() => engine.Seal("fixture.avatar"), "Cannot seal missing proof input");
+        engine.SealReference("fixture.avatar");
         byte[] second = File.ReadAllBytes(auditPath);
         Require(
             first.SequenceEqual(second),
@@ -1569,7 +1622,7 @@ static void RunReferenceV3PublicationTests(string sourceRoot)
         string referenceRoot = ReferenceRoot(v3Root);
         WriteV3Package(referenceRoot);
         StoreEngine engine = new(v3Root);
-        ExpectFailure(() => engine.Seal("fixture.avatar"), "Cannot seal missing proof input");
+        engine.SealReference("fixture.avatar");
         Require(
             ReferenceGate(engine.Scan(false, false)).Passed,
             "current v3 Product Target/provenance/fidelity package must pass reference gate");
@@ -1655,7 +1708,7 @@ static void RunReferenceV3PublicationTests(string sourceRoot)
         WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
         WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
         StoreEngine engine = new(v2Root);
-        ExpectFailure(() => engine.Seal("fixture.avatar"), "Cannot seal missing proof input");
+        engine.SealReference("fixture.avatar");
         Require(
             ReferenceGate(engine.Scan(false, false)).Passed,
             "unchanged v2 asset must continue to pass reference without target migration");
@@ -1669,30 +1722,71 @@ static void RunReferenceV3PublicationTests(string sourceRoot)
 
 static void RunV3DensityBoundaryTests(string sourceRoot)
 {
-    string root = TempRoot();
+    const string densityFixtureId = "fixture.equipment.staff";
+    (string root, string assetRoot) = PrepareDensityEquipmentFixture(sourceRoot);
     try
     {
-        CopyDirectory(Path.Combine(sourceRoot, "policy"), Path.Combine(root, "policy"));
-        CopyDirectory(
-            Path.Combine(sourceRoot, "Art", "Style"),
-            Path.Combine(root, "Art", "Style"));
-        CopyFile(sourceRoot, root, "toolchain/hero-voxel.lock.yaml");
+        string manifestPath = Path.Combine(assetRoot, "asset.yaml");
+        File.WriteAllText(
+            manifestPath,
+            File.ReadAllText(manifestPath).Replace(
+                "form: staff",
+                "form: staff\ndensity: reference-driven",
+                StringComparison.Ordinal));
 
-        string sourceAsset = Path.Combine(
-            sourceRoot,
-            "Art",
-            "CombatFoundation",
-            "Units",
-            "Equipment",
-            "Staff01");
-        string assetRoot = Path.Combine(
-            root,
-            "Art",
-            "CombatFoundation",
-            "Units",
-            "Equipment",
-            "Staff01");
-        CopyDirectory(sourceAsset, assetRoot);
+        string densityRoot = Path.Combine(assetRoot, "Density");
+        Directory.CreateDirectory(densityRoot);
+        File.WriteAllText(
+            Path.Combine(densityRoot, "input.yaml"),
+            """
+            version: 1
+            targetWorldLongAxis: 1.5
+            parts:
+              Staff:
+                partSheet: Parts/Staff.png
+                objectLongAxisPixels: 600
+                features:
+                  - id: staff-band
+                    pixelSpan: 15
+                    importance: secondary
+                    requiredVoxelSpan: 3
+            """);
+
+        void WriteCandidate(int vpu, bool featurePass)
+        {
+            string candidateRoot = Path.Combine(
+                densityRoot, "Candidates", $"vpu-{vpu:D3}");
+            string sourcePath = Path.Combine(candidateRoot, "Source", "candidate.voxel.yaml");
+            string previewPath = Path.Combine(candidateRoot, "Proof", "hero.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(sourcePath)!);
+            File.WriteAllText(sourcePath, $"name: candidate-{vpu}\nvoxelsPerUnit: {vpu}\n");
+            WritePngHeader(previewPath, 512, 512);
+
+            var audit = new ReferenceDensityCandidateAudit
+            {
+                Version = 1,
+                Vpu = vpu,
+                Features = new Dictionary<string, bool>(StringComparer.Ordinal)
+                {
+                    ["staff-band"] = featurePass
+                },
+                NormalizedWorldSize = new[] { 0.25, 0.25, 1.5 },
+                IntegerBounds = new[] { 16, 16, (int)Math.Round(1.5 * vpu) },
+                OccupiedVoxels = 4000 + vpu,
+                AxisCompliant = true,
+                GreedyMergedQuads = 400 + vpu,
+                Vertices = (400 + vpu) * 4,
+                Triangles = (400 + vpu) * 2,
+                SourceSha256 = HeroVoxelProvider.HashFile(sourcePath),
+                PreviewSha256 = HeroVoxelProvider.HashFile(previewPath)
+            };
+            File.WriteAllText(
+                Path.Combine(candidateRoot, "audit.json"),
+                JsonSerializer.Serialize(audit, new JsonSerializerOptions { WriteIndented = true }));
+        }
+
+        WriteCandidate(64, false);
+        WriteCandidate(80, true);
 
         string referenceRoot = Path.Combine(assetRoot, "Reference");
         string targetPath = Path.Combine(referenceRoot, "target.png");
@@ -1715,9 +1809,7 @@ static void RunV3DensityBoundaryTests(string sourceRoot)
         };
         File.WriteAllText(
             Path.Combine(referenceRoot, "target.provenance.json"),
-            JsonSerializer.Serialize(
-                provenance,
-                new JsonSerializerOptions { WriteIndented = true }));
+            JsonSerializer.Serialize(provenance, new JsonSerializerOptions { WriteIndented = true }));
 
         static Dictionary<string, string> PassingCriteria() => new(StringComparer.Ordinal)
         {
@@ -1756,9 +1848,7 @@ static void RunV3DensityBoundaryTests(string sourceRoot)
         };
         File.WriteAllText(
             Path.Combine(referenceRoot, "fidelity.audit.json"),
-            JsonSerializer.Serialize(
-                fidelity,
-                new JsonSerializerOptions { WriteIndented = true }));
+            JsonSerializer.Serialize(fidelity, new JsonSerializerOptions { WriteIndented = true }));
         File.WriteAllText(
             Path.Combine(referenceRoot, "reference.yaml"),
             """
@@ -1775,7 +1865,7 @@ static void RunV3DensityBoundaryTests(string sourceRoot)
             """);
 
         StoreEngine engine = new(root);
-        engine.Seal("foundation.equipment.staff.01");
+        engine.SealReference(densityFixtureId);
         AssetRecord staff = engine.DiscoverAssets().Single();
         Require(
             engine.ValidateReferenceContractStructure(staff).Version == 3,
@@ -1784,17 +1874,16 @@ static void RunV3DensityBoundaryTests(string sourceRoot)
         engine.ValidateFidelityAudit(staff);
 
         ReferenceDensityEvidence evidence =
-            engine.SelectDensity("foundation.equipment.staff.01", write: false);
+            engine.SelectDensity(densityFixtureId, write: false);
         Require(
             evidence.SelectedVpu == 80,
-            $"valid v3 reference must preserve existing Staff density selection; got {evidence.SelectedVpu}");
+            $"valid v3 reference must feed density selection through reference-only seal; got {evidence.SelectedVpu}");
     }
     finally
     {
         DeleteTree(root);
     }
 }
-
 
 static void RunTargetDrivenSampleTests(string sourceRoot)
 {
@@ -3049,10 +3138,20 @@ finally
 
 IReadOnlyList<AssetRecord> assets = engine.DiscoverAssets();
 Require(
-    assets.Count == 11 &&
+    assets.Count == 3 &&
     assets.Count(x => x.Manifest.Kind == "avatar") == 1 &&
-    assets.Count(x => x.Manifest.Kind == "equipment") == 10,
-    "CombatFoundation.v1 must contain one avatar plus ten active equipment assets");
+    assets.Count(x => x.Manifest.Kind == "equipment") == 2 &&
+    assets.Where(x => x.Manifest.Kind == "equipment")
+        .Select(x => x.Manifest.Id)
+        .OrderBy(x => x, StringComparer.Ordinal)
+        .SequenceEqual(
+            new[]
+            {
+                "foundation.equipment.dagger.02",
+                "foundation.equipment.sword.02"
+            },
+            StringComparer.Ordinal),
+    "checked-in cold-start proof baseline must contain one avatar plus exactly Sword02 and Dagger02");
 Require(
     assets.Select(x => x.Manifest.Id)
         .Distinct(StringComparer.Ordinal).Count() == assets.Count,
@@ -3080,23 +3179,29 @@ StoreSnapshot first =
     engine.Scan(writeDerived: true, writeCompatibility: true);
 StoreSnapshot second =
     engine.Scan(writeDerived: true, writeCompatibility: true);
-Require(first.Healthy && second.Healthy, "completed v2 store must be healthy");
 Require(
-    first.CoverageGaps.Count == 0,
-    "completed v2 store must have no required coverage gaps");
+    !first.Healthy && !second.Healthy,
+    "two-weapon cold-start proof baseline must remain intentionally incomplete");
 Require(
-    first.NextJob == null && second.NextJob == null,
-    "healthy store must plan no creative job");
+    first.CoverageGaps.Count == 8 &&
+    first.CoverageGaps.All(x => x.Required && x.Kind == "equipment"),
+    "two-weapon cold-start proof baseline must expose exactly eight required equipment gaps");
+Require(
+    first.NextJob?.Priority == "required-coverage" &&
+    first.NextJob.Target == "foundation.equipment.axe" &&
+    second.NextJob?.Priority == "required-coverage" &&
+    second.NextJob.Target == "foundation.equipment.axe",
+    "partial baseline must deterministically continue with Axe");
 Require(
     first.Assets.Count == second.Assets.Count,
     "scan must be deterministic");
 Require(
-    first.Compatibility.Count == 40 &&
+    first.Compatibility.Count == 8 &&
     first.Compatibility.All(x =>
         x.Passed &&
         x.Capability == "Hand" &&
         (x.Attachment == "Hand.0" || x.Attachment == "Hand.1")),
-    "ten hand-capability assets must each pass both neutral attachments across both required pose samples");
+    "Sword02 and Dagger02 must each pass both neutral attachments across both required pose samples");
 Require(
     first.Compatibility
         .Where(x => !string.IsNullOrWhiteSpace(x.Equipment))
@@ -3117,11 +3222,12 @@ try
             "    form: sword-missing",
             StringComparison.Ordinal));
     StoreSnapshot formGap = engine.Scan(writeDerived: false, writeCompatibility: false);
+    CoverageGap swordFormGap =
+        formGap.CoverageGaps.Single(x => x.Id == "foundation.equipment.sword");
     Require(
-        formGap.CoverageGaps.Count == 1 &&
-        formGap.CoverageGaps[0].Id == "foundation.equipment.sword" &&
-        formGap.CoverageGaps[0].Capability == "Hand" &&
-        formGap.CoverageGaps[0].Form == "sword-missing" &&
+        formGap.CoverageGaps.Count == 9 &&
+        swordFormGap.Capability == "Hand" &&
+        swordFormGap.Form == "sword-missing" &&
         formGap.NextJob?.Target == "foundation.equipment.sword",
         "coverage must match physical form exactly in addition to profile and Hand capability");
 }
@@ -3133,7 +3239,7 @@ finally
 string compatibilityEvidence = Path.Combine(
     assets.Single(x => x.Manifest.Kind == "avatar").ProofDirectory,
     "Compatibility",
-    "foundation.equipment.bow.01.json");
+    "foundation.equipment.sword.02.json");
 using (JsonDocument evidence =
        JsonDocument.Parse(File.ReadAllText(compatibilityEvidence)))
 {
@@ -3176,16 +3282,16 @@ Require(
     "health regeneration must be byte deterministic");
 
 // A stale generated sibling is diagnosed before expansion work.
-AssetRecord bow = assets.Single(
-    x => x.Manifest.Id == "foundation.equipment.bow.01");
-string bowGenerated = bow.SourceBase + ".generated.vox";
-byte[] originalGenerated = File.ReadAllBytes(bowGenerated);
+AssetRecord sword = assets.Single(
+    x => x.Manifest.Id == "foundation.equipment.sword.02");
+string swordGenerated = sword.SourceBase + ".generated.vox";
+byte[] originalGenerated = File.ReadAllBytes(swordGenerated);
 string coveragePath = Path.Combine(repositoryRoot, "policy", "coverage.yaml");
 string originalCoverage = File.ReadAllText(coveragePath);
 try
 {
     File.WriteAllBytes(
-        bowGenerated,
+        swordGenerated,
         originalGenerated.Concat(new byte[] { 0x7f }).ToArray());
     File.WriteAllText(
         coveragePath,
@@ -3199,14 +3305,14 @@ try
         """);
     StoreSnapshot stale =
         engine.Scan(writeDerived: false, writeCompatibility: false);
-    AssetHealth staleBow =
-        stale.Assets.Single(x => x.Id == bow.Manifest.Id);
+    AssetHealth staleSword =
+        stale.Assets.Single(x => x.Id == sword.Manifest.Id);
     Require(
-        staleBow.FailedGate == "generation",
+        staleSword.FailedGate == "generation",
         "stale generated VOX must fail generation gate");
     Require(
         stale.NextJob?.Priority == "stale-reproducible" &&
-        stale.NextJob.Target == bow.Manifest.Id,
+        stale.NextJob.Target == sword.Manifest.Id,
         "stale generated VOX must be the failure-first maintenance job");
     Require(
         stale.CoverageGaps.Any(x => x.Id == "simultaneous.coverage-gap"),
@@ -3214,7 +3320,7 @@ try
 }
 finally
 {
-    File.WriteAllBytes(bowGenerated, originalGenerated);
+    File.WriteAllBytes(swordGenerated, originalGenerated);
     File.WriteAllText(coveragePath, originalCoverage);
 }
 
@@ -3359,6 +3465,80 @@ try
 finally
 {
     DeleteTree(bootstrapRoot);
+}
+
+
+// Independent full-catalog convergence fixture: checked-in baseline stays partial,
+// while the unchanged ten-form contract must still converge when all forms publish.
+string fullCatalogRoot = TempRoot();
+try
+{
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "policy"),
+        Path.Combine(fullCatalogRoot, "policy"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "toolchain"),
+        Path.Combine(fullCatalogRoot, "toolchain"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Art", "Style", "low-resolution-voxel.v1"),
+        Path.Combine(fullCatalogRoot, "Art", "Style", "low-resolution-voxel.v1"));
+    CopyFile(repositoryRoot, fullCatalogRoot, "Art/CombatFoundation/Palette.yaml");
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Art", "CombatFoundation", "Units", "Avatars", "FoundationGuard01"),
+        Path.Combine(fullCatalogRoot, "Art", "CombatFoundation", "Units", "Avatars", "FoundationGuard01"));
+
+    string fixtureEquipmentRoot = Path.Combine(
+        fullCatalogRoot, "Art", "CombatFoundation", "Units", "Equipment");
+    Directory.CreateDirectory(fixtureEquipmentRoot);
+    string sourceSwordRoot = Path.Combine(
+        repositoryRoot, "Art", "CombatFoundation", "Units", "Equipment", "Sword02");
+    string sourceDaggerRoot = Path.Combine(
+        repositoryRoot, "Art", "CombatFoundation", "Units", "Equipment", "Dagger02");
+    CopyDirectory(sourceSwordRoot, Path.Combine(fixtureEquipmentRoot, "Sword02"));
+    CopyDirectory(sourceDaggerRoot, Path.Combine(fixtureEquipmentRoot, "Dagger02"));
+
+    string[] missingForms =
+    {
+        "axe", "hammer", "mace", "spear", "staff", "bow", "crossbow", "rifle"
+    };
+    var fullEngine = new StoreEngine(fullCatalogRoot);
+    foreach (string form in missingForms)
+    {
+        string fixtureName = "Fixture" + char.ToUpperInvariant(form[0]) + form[1..];
+        string fixtureRoot = Path.Combine(fixtureEquipmentRoot, fixtureName);
+        CopyDirectory(sourceSwordRoot, fixtureRoot);
+        string manifestPath = Path.Combine(fixtureRoot, "asset.yaml");
+        string manifest = File.ReadAllText(manifestPath)
+            .Replace(
+                "id: foundation.equipment.sword.02",
+                $"id: fixture.equipment.{form}.01",
+                StringComparison.Ordinal)
+            .Replace(
+                "unitRef: voxel-store/equipment/sword/02",
+                $"unitRef: fixture/equipment/{form}/01",
+                StringComparison.Ordinal)
+            .Replace(
+                "form: sword",
+                $"form: {form}",
+                StringComparison.Ordinal);
+        File.WriteAllText(manifestPath, manifest);
+        fullEngine.Seal($"fixture.equipment.{form}.01");
+    }
+
+    StoreSnapshot fullCatalog =
+        new StoreEngine(fullCatalogRoot).Scan(false, false);
+    Require(
+        fullCatalog.Healthy &&
+        fullCatalog.Assets.Count(x => x.Kind == "equipment") == 10 &&
+        fullCatalog.CoverageGaps.Count == 0 &&
+        fullCatalog.NextJob == null &&
+        fullCatalog.Compatibility.Count == 40 &&
+        fullCatalog.Compatibility.All(x => x.Passed),
+        "isolated ten-form catalog must converge to healthy/no-gap state with 40 passing compatibility rows");
+}
+finally
+{
+    DeleteTree(fullCatalogRoot);
 }
 
 string incompatibleRoot = TempRoot();

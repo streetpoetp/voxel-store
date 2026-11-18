@@ -41,6 +41,14 @@ try
                 Console.WriteLine($"generated {args[1]}");
                 return 0;
             }
+        case "seal-reference":
+            {
+                if (args.Length < 2)
+                    throw new ArgumentException("seal-reference requires <asset-id>.");
+                engine.SealReference(args[1]);
+                Console.WriteLine($"sealed reference {args[1]}");
+                return 0;
+            }
         case "seal":
             {
                 if (args.Length < 2)

@@ -16,6 +16,7 @@ From the repository root:
     dotnet run --project Tool/VoxelStore.Tool -- plan
     dotnet run --project Tool/VoxelStore.Tool -- density <asset-id> [--write]
     dotnet run --project Tool/VoxelStore.Tool -- generate <asset-id>
+    dotnet run --project Tool/VoxelStore.Tool -- seal-reference <asset-id>
     dotnet run --project Tool/VoxelStore.Tool -- seal <asset-id>
 
 Set `HERO_STUDIO_ROOT` to a compatible Hero Studio checkout before building/running because the Tool references Hero.Voxel's standalone .NET project, not copied source.

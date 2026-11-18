@@ -223,12 +223,18 @@ public sealed class StoreEngine
         _provider.GenerateProof(asset);
     }
 
-    public void Seal(string assetId)
+    public void SealReference(string assetId)
     {
         AssetRecord asset = RequireAsset(assetId);
         StorePolicy policy = ContractYaml.Load<StorePolicy>(Path.Combine(_root, "policy", "store.yaml"));
         ValidatePolicy(policy);
         WriteReferenceAudit(asset, policy);
+    }
+
+    public void Seal(string assetId)
+    {
+        SealReference(assetId);
+        AssetRecord asset = RequireAsset(assetId);
         WriteProofAudit(asset);
     }
 
