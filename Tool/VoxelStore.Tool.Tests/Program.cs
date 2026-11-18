@@ -102,6 +102,455 @@ static void WritePngHeader(string path, int width, int height, bool validSignatu
     File.WriteAllBytes(path, bytes);
 }
 
+
+static void RunReferenceDensitySelectorTests()
+{
+    var reference = new ReferenceContract
+    {
+        Version = 2,
+        Composition = "composition.png",
+        RequiredParts = new List<string> { "Staff" },
+        PartSheets = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Staff"] = "Parts/Staff.png"
+        }
+    };
+    var input = new ReferenceDensityInput
+    {
+        Version = 1,
+        TargetWorldLongAxis = 1.5,
+        Parts = new Dictionary<string, ReferenceDensityPartInput>(StringComparer.Ordinal)
+        {
+            ["Staff"] = new ReferenceDensityPartInput
+            {
+                PartSheet = "Parts/Staff.png",
+                ObjectLongAxisPixels = 520,
+                Features = new List<ReferenceDensityFeatureInput>
+                {
+                    new()
+                    {
+                        Id = "purple-cage-bar",
+                        PixelSpan = 10,
+                        Importance = "secondary",
+                        RequiredVoxelSpan = 3
+                    },
+                    new()
+                    {
+                        Id = "crystal-facet",
+                        PixelSpan = 8,
+                        Importance = "tertiary",
+                        RequiredVoxelSpan = 2
+                    }
+                }
+            }
+        }
+    };
+
+    ReferenceDensitySelector.ValidateInput(input, reference);
+
+    var wrongSheet = new ReferenceDensityInput
+    {
+        Version = 1,
+        TargetWorldLongAxis = 1.5,
+        Parts = new Dictionary<string, ReferenceDensityPartInput>(StringComparer.Ordinal)
+        {
+            ["Staff"] = new ReferenceDensityPartInput
+            {
+                PartSheet = "Parts/Stale.png",
+                ObjectLongAxisPixels = 520,
+                Features = input.Parts["Staff"].Features
+            }
+        }
+    };
+    ExpectFailure(
+        () => ReferenceDensitySelector.ValidateInput(wrongSheet, reference),
+        "must match accepted reference authority");
+
+    var invalidImportance = new ReferenceDensityInput
+    {
+        Version = 1,
+        TargetWorldLongAxis = 1.5,
+        Parts = new Dictionary<string, ReferenceDensityPartInput>(StringComparer.Ordinal)
+        {
+            ["Staff"] = new ReferenceDensityPartInput
+            {
+                PartSheet = "Parts/Staff.png",
+                ObjectLongAxisPixels = 520,
+                Features = new List<ReferenceDensityFeatureInput>
+                {
+                    new()
+                    {
+                        Id = "bad",
+                        PixelSpan = 10,
+                        Importance = "noise",
+                        RequiredVoxelSpan = 3
+                    }
+                }
+            }
+        }
+    };
+    ExpectFailure(
+        () => ReferenceDensitySelector.ValidateInput(invalidImportance, reference),
+        "unsupported importance");
+
+    var duplicateFeature = new ReferenceDensityInput
+    {
+        Version = 1,
+        TargetWorldLongAxis = 1.5,
+        Parts = new Dictionary<string, ReferenceDensityPartInput>(StringComparer.Ordinal)
+        {
+            ["Staff"] = new ReferenceDensityPartInput
+            {
+                PartSheet = "Parts/Staff.png",
+                ObjectLongAxisPixels = 520,
+                Features = new List<ReferenceDensityFeatureInput>
+                {
+                    new() { Id = "dup", PixelSpan = 10, Importance = "primary", RequiredVoxelSpan = 2 },
+                    new() { Id = "dup", PixelSpan = 12, Importance = "secondary", RequiredVoxelSpan = 2 }
+                }
+            }
+        }
+    };
+    ExpectFailure(
+        () => ReferenceDensitySelector.ValidateInput(duplicateFeature, reference),
+        "globally unique");
+
+    double estimate = ReferenceDensitySelector.EstimateVpu(input);
+    Require(
+        Math.Abs(estimate - 104.0) < 1e-9,
+        $"unexpected reference-density estimate: {estimate}");
+    int[] candidates = ReferenceDensitySelector.BuildCandidateSequence(input).ToArray();
+    int[] candidatesAgain = ReferenceDensitySelector.BuildCandidateSequence(input).ToArray();
+    Require(
+        candidates.SequenceEqual(candidatesAgain) &&
+        candidates.Length > 1 &&
+        candidates[0] == 96 &&
+        candidates[1] == 112 &&
+        candidates.SequenceEqual(candidates.OrderBy(x => x)),
+        "density candidate sequence must be deterministic, monotonic, and start one quantum below the rounded estimate");
+
+    var impossible = new ReferenceDensityInput
+    {
+        Version = 1,
+        TargetWorldLongAxis = 1.5,
+        Parts = new Dictionary<string, ReferenceDensityPartInput>(StringComparer.Ordinal)
+        {
+            ["Staff"] = new ReferenceDensityPartInput
+            {
+                PartSheet = "Parts/Staff.png",
+                ObjectLongAxisPixels = 520,
+                Features = new List<ReferenceDensityFeatureInput>
+                {
+                    new()
+                    {
+                        Id = "too-fine",
+                        PixelSpan = 4,
+                        Importance = "secondary",
+                        RequiredVoxelSpan = 3
+                    }
+                }
+            }
+        }
+    };
+    ExpectFailure(
+        () => ReferenceDensitySelector.BuildCandidateSequence(impossible),
+        "256-voxel");
+
+    var budget = new StoreBudget { MaxVoxelsPerAsset = 65536, MaxPartsPerAsset = 16 };
+    ReferenceDensityCandidateAudit Candidate(
+        int vpu,
+        bool cage,
+        bool facet,
+        int occupied = 8000) =>
+        new()
+        {
+            Version = 1,
+            Vpu = vpu,
+            Features = new Dictionary<string, bool>(StringComparer.Ordinal)
+            {
+                ["purple-cage-bar"] = cage,
+                ["crystal-facet"] = facet
+            },
+            NormalizedWorldSize = new[] { 0.4, 0.4, 1.5 },
+            IntegerBounds = new[] { 40, 40, Math.Min(256, (int)Math.Round(1.5 * vpu)) },
+            OccupiedVoxels = occupied,
+            AxisCompliant = true,
+            GreedyMergedQuads = 900,
+            Vertices = 3600,
+            Triangles = 1800,
+            SourceSha256 = new string('a', 64),
+            PreviewSha256 = new string('b', 64)
+        };
+
+    ReferenceDensityCandidateEvidence rejected =
+        ReferenceDensitySelector.ValidateCandidate(input, Candidate(96, true, false), budget, new string('c', 64));
+    ReferenceDensityCandidateEvidence pass112 =
+        ReferenceDensitySelector.ValidateCandidate(input, Candidate(112, true, true), budget, new string('d', 64));
+    ReferenceDensityCandidateEvidence pass128 =
+        ReferenceDensitySelector.ValidateCandidate(input, Candidate(128, true, true), budget, new string('e', 64));
+    Require(!rejected.Passed && rejected.LostFeatures.SequenceEqual(new[] { "crystal-facet" }),
+        "candidate losing a declared feature must be rejected");
+    Require(
+        ReferenceDensitySelector.SelectLowestSufficient(
+            new[] { 96, 112, 128 },
+            new[] { rejected, pass112, pass128 }) == 112,
+        "selector must choose the lowest sufficient evaluated VPU");
+
+    ReferenceDensityCandidateEvidence overBudget =
+        ReferenceDensitySelector.ValidateCandidate(
+            input,
+            Candidate(112, true, true, 65537),
+            budget,
+            new string('f', 64));
+    Require(!overBudget.Passed, "over-budget density candidate must be rejected");
+    Require(
+        ReferenceDensitySelector.SelectLowestSufficient(
+            new[] { 96, 112 },
+            new[] { rejected, overBudget }) == null,
+        "selector must return no selection when all candidates fail");
+}
+
+
+static void RunReferenceDensityEvidenceTests(string repositoryRoot)
+{
+    string root = TempRoot();
+    try
+    {
+        CopyDirectory(Path.Combine(repositoryRoot, "policy"), Path.Combine(root, "policy"));
+        CopyFile(repositoryRoot, root, "toolchain/hero-voxel.lock.yaml");
+        CopyDirectory(
+            Path.Combine(repositoryRoot, "Art", "Style", "low-resolution-voxel.v1"),
+            Path.Combine(root, "Art", "Style", "low-resolution-voxel.v1"));
+        CopyDirectory(
+            Path.Combine(
+                repositoryRoot,
+                "Art",
+                "CombatFoundation",
+                "Units",
+                "Equipment",
+                "Staff01"),
+            Path.Combine(
+                root,
+                "Art",
+                "CombatFoundation",
+                "Units",
+                "Equipment",
+                "Staff01"));
+
+        string assetRoot = Path.Combine(
+            root, "Art", "CombatFoundation", "Units", "Equipment", "Staff01");
+        string densityRoot = Path.Combine(assetRoot, "Density");
+        DeleteTree(densityRoot);
+        string manifestPath = Path.Combine(assetRoot, "asset.yaml");
+        string legacyManifest = File.ReadAllText(manifestPath)
+            .Replace("density: reference-driven\r\n", "", StringComparison.Ordinal)
+            .Replace("density: reference-driven\n", "", StringComparison.Ordinal);
+        File.WriteAllText(manifestPath, legacyManifest);
+        var legacyEngine = new StoreEngine(root);
+        legacyEngine.Seal("foundation.equipment.staff.01");
+        var legacySnapshot = legacyEngine.Scan(false, false);
+        Require(
+            legacySnapshot.Assets.Single().Published &&
+            legacySnapshot.Assets.Single().Gates.All(x => x.Id != "density"),
+            "legacy equipment must remain publishable without density evidence during migration");
+        File.WriteAllText(
+            manifestPath,
+            legacyManifest.Replace(
+                "form: staff",
+                "form: staff\ndensity: reference-driven",
+                StringComparison.Ordinal));
+        Directory.CreateDirectory(densityRoot);
+        string inputPath = Path.Combine(densityRoot, "input.yaml");
+        string originalInput =
+            """
+            version: 1
+            targetWorldLongAxis: 1.5
+            parts:
+              Staff:
+                partSheet: Parts/Staff.png
+                objectLongAxisPixels: 520
+                features:
+                  - id: purple-cage-bar
+                    pixelSpan: 10
+                    importance: secondary
+                    requiredVoxelSpan: 3
+                  - id: crystal-facet
+                    pixelSpan: 8
+                    importance: tertiary
+                    requiredVoxelSpan: 2
+            """;
+        File.WriteAllText(inputPath, originalInput);
+
+        void WriteCandidate(int vpu, bool cage, bool facet)
+        {
+            string candidateRoot = Path.Combine(
+                densityRoot, "Candidates", $"vpu-{vpu:D3}");
+            string sourcePath = Path.Combine(candidateRoot, "Source", "candidate.voxel.yaml");
+            string previewPath = Path.Combine(candidateRoot, "Proof", "hero.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(sourcePath)!);
+            File.WriteAllText(sourcePath, $"name: candidate-{vpu}\nvoxelsPerUnit: {vpu}\n");
+            WritePngHeader(previewPath, 512, 512);
+
+            var audit = new ReferenceDensityCandidateAudit
+            {
+                Version = 1,
+                Vpu = vpu,
+                Features = new Dictionary<string, bool>(StringComparer.Ordinal)
+                {
+                    ["purple-cage-bar"] = cage,
+                    ["crystal-facet"] = facet
+                },
+                NormalizedWorldSize = new[] { 0.4, 0.4, 1.5 },
+                IntegerBounds = new[]
+                {
+                    40,
+                    40,
+                    (int)Math.Round(1.5 * vpu)
+                },
+                OccupiedVoxels = 8000 + vpu,
+                AxisCompliant = true,
+                GreedyMergedQuads = 900 + vpu,
+                Vertices = (900 + vpu) * 4,
+                Triangles = (900 + vpu) * 2,
+                SourceSha256 = HeroVoxelProvider.HashFile(sourcePath),
+                PreviewSha256 = HeroVoxelProvider.HashFile(previewPath)
+            };
+            File.WriteAllText(
+                Path.Combine(candidateRoot, "audit.json"),
+                JsonSerializer.Serialize(audit, new JsonSerializerOptions { WriteIndented = true }));
+        }
+
+        WriteCandidate(96, true, false);
+        WriteCandidate(112, true, true);
+
+        StoreSnapshot missingDensity = new StoreEngine(root).Scan(false, false);
+        AssetHealth missingDensityStaff = missingDensity.Assets.Single();
+        Require(
+            !missingDensityStaff.Published &&
+            missingDensityStaff.FailedGate == "density" &&
+            missingDensity.NextJob?.Target == "foundation.equipment.staff.01" &&
+            missingDensity.NextJob.Reason.Contains("density", StringComparison.Ordinal),
+            "opted-in equipment missing density evidence must block at density on the same maintenance asset");
+
+        var engine = new StoreEngine(root);
+        ReferenceDensityEvidence first = engine.SelectDensity(
+            "foundation.equipment.staff.01",
+            write: false);
+        ReferenceDensityEvidence second = engine.SelectDensity(
+            "foundation.equipment.staff.01",
+            write: false);
+        string firstJson = JsonSerializer.Serialize(first);
+        string secondJson = JsonSerializer.Serialize(second);
+        Require(
+            first.SelectedVpu == 112 && firstJson == secondJson,
+            "density engine operation must be deterministic and select the lowest passing candidate");
+
+        engine.SelectDensity("foundation.equipment.staff.01", write: true);
+        AssetRecord staff = engine.DiscoverAssets().Single();
+        StoreSnapshot sourceMismatch = new StoreEngine(root).Scan(false, false);
+        Require(
+            sourceMismatch.Assets.Single().FailedGate == "source" &&
+            sourceMismatch.Assets.Single().Gates.Single(x => x.Id == "source").Message.Contains(
+                "does not match selected density VPU",
+                StringComparison.Ordinal),
+            "current density evidence with mismatched canonical VPU must fail at source");
+
+        string canonicalSpec = Path.Combine(assetRoot, "Source", "Staff01.voxel.yaml");
+        string originalCanonicalSpec = File.ReadAllText(canonicalSpec);
+        File.WriteAllText(
+            canonicalSpec,
+            System.Text.RegularExpressions.Regex.Replace(
+                originalCanonicalSpec,
+                @"(?m)^voxelsPerUnit:\s*\d+\s*$",
+                "voxelsPerUnit: 112"));        StoreSnapshot densityAndSourceCurrent = new StoreEngine(root).Scan(false, false);
+        Require(
+            densityAndSourceCurrent.Assets.Single().Gates.Single(x => x.Id == "density").Passed &&
+            densityAndSourceCurrent.Assets.Single().Gates.Single(x => x.Id == "source").Passed &&
+            densityAndSourceCurrent.Assets.Single().FailedGate == "generation",
+            "matching density/source VPU must advance beyond the source gate");
+        File.WriteAllText(canonicalSpec, originalCanonicalSpec);
+        StorePolicy storePolicy = ContractYaml.Load<StorePolicy>(
+            Path.Combine(root, "policy", "store.yaml"));
+        engine.ValidateDensityEvidence(staff, storePolicy);
+
+        (int ExitCode, string StdOut, string StdErr) RunDensityCli(bool write)
+        {
+            var start = new ProcessStartInfo("dotnet")
+            {
+                WorkingDirectory = root,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+            start.ArgumentList.Add(typeof(StoreEngine).Assembly.Location);
+            start.ArgumentList.Add("density");
+            start.ArgumentList.Add("foundation.equipment.staff.01");
+            start.ArgumentList.Add("--root");
+            start.ArgumentList.Add(root);
+            if (write)
+                start.ArgumentList.Add("--write");
+            using Process process =
+                Process.Start(start) ?? throw new InvalidOperationException("Failed to start density CLI.");
+            string stdout = process.StandardOutput.ReadToEnd();
+            string stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            return (process.ExitCode, stdout, stderr);
+        }
+
+        var cli1 = RunDensityCli(write: false);
+        var cli2 = RunDensityCli(write: false);
+        Require(
+            cli1.ExitCode == 0 &&
+            cli2.ExitCode == 0 &&
+            cli1.StdOut == cli2.StdOut,
+            $"density CLI must produce deterministic output: {cli1.StdErr}{cli2.StdErr}");
+
+        File.WriteAllText(
+            inputPath,
+            originalInput.Replace("targetWorldLongAxis: 1.5", "targetWorldLongAxis: 1.6", StringComparison.Ordinal));
+        ExpectFailure(
+            () => engine.ValidateDensityEvidence(staff, storePolicy),
+            "stale");
+        StoreSnapshot staleDensity = new StoreEngine(root).Scan(false, false);
+        Require(
+            staleDensity.Assets.Single().FailedGate == "density",
+            "changed target extent must stale density at the density gate");
+        File.WriteAllText(inputPath, originalInput);
+        engine.SelectDensity("foundation.equipment.staff.01", write: true);
+        File.WriteAllText(
+            inputPath,
+            originalInput.Replace("pixelSpan: 10", "pixelSpan: 11", StringComparison.Ordinal));
+        ExpectFailure(
+            () => engine.ValidateDensityEvidence(staff, storePolicy),
+            "stale");
+        File.WriteAllText(inputPath, originalInput);
+        engine.SelectDensity("foundation.equipment.staff.01", write: true);
+
+        string partSheet = Path.Combine(assetRoot, "Reference", "Parts", "Staff.png");
+        byte[] partSheetBytes = File.ReadAllBytes(partSheet);
+        WritePngHeader(partSheet, 999, 999);
+        ExpectFailure(
+            () => engine.ValidateDensityEvidence(staff, storePolicy),
+            "stale");
+        File.WriteAllBytes(partSheet, partSheetBytes);
+        engine.SelectDensity("foundation.equipment.staff.01", write: true);
+
+        string candidatePreview = Path.Combine(
+            densityRoot, "Candidates", "vpu-112", "Proof", "hero.png");
+        byte[] previewBytes = File.ReadAllBytes(candidatePreview);
+        WritePngHeader(candidatePreview, 513, 512);
+        ExpectFailure(
+            () => engine.ValidateDensityEvidence(staff, storePolicy),
+            "preview evidence is stale");
+        File.WriteAllBytes(candidatePreview, previewBytes);
+        engine.ValidateDensityEvidence(staff, storePolicy);
+    }
+    finally
+    {
+        DeleteTree(root);
+    }
+}
+
 static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
 {
     string root = TempRoot();
@@ -121,14 +570,14 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
     File.WriteAllText(
         Path.Combine(root, "policy", "coverage.yaml"),
         """
-        version: 1
+        version: 2
         foundation: ReferenceFixture
         requirements: []
         """);
     CopyFile(
         sourceRoot,
         root,
-        "policy/families/humanoid.medium.v1.yaml");
+        "policy/families/humanoid.medium.v2.yaml");
     CopyFile(
         sourceRoot,
         root,
@@ -151,6 +600,9 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
         traits:
           - chunky low-resolution voxel forms
           - chibi proportion language
+        traitsByKind:
+          equipment:
+            - purposeful secondary construction detail
         """);
     WritePngHeader(Path.Combine(styleRoot, "reference-01.png"), 1200, 900);
     WritePngHeader(Path.Combine(styleRoot, "reference-02.png"), 1200, 900);
@@ -163,11 +615,11 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
     File.WriteAllText(
         Path.Combine(assetRoot, "asset.yaml"),
         """
-        version: 1
+        version: 2
         id: fixture.avatar
         kind: avatar
         unitRef: fixture/avatar
-        family: humanoid.medium.v1
+        family: humanoid.medium.v2
         source:
           base: ./Source/FixtureAvatar
           palette: ../../../Palette.yaml
@@ -182,6 +634,1347 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
 
 static GateResult ReferenceGate(StoreSnapshot snapshot) =>
     snapshot.Assets.Single().Gates.Single(x => x.Id == "reference");
+
+
+static void RunTargetStyleAuthorityTests(string sourceRoot)
+{
+    string root = PrepareReferenceFixture(
+        sourceRoot,
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        """);
+    try
+    {
+        var engine = new StoreEngine(root);
+        ReferenceStyleAuthority legacyConstruction = engine.ResolveReferenceStyle("equipment");
+        string legacyConstructionHash = engine.ReferenceStyleAuthoritySha256(legacyConstruction);
+        Require(
+            legacyConstruction.CommonReferencePaths.Count == 0 &&
+            legacyConstruction.KindReferencePaths.Count == 1 &&
+            Path.GetFileName(legacyConstruction.KindReferencePaths[0]) == "equipment-bow-source.png",
+            "v2 construction style resolution must remain unchanged");
+        ExpectFailure(
+            () => engine.ResolveTargetReferenceStyle("equipment"),
+            "version 3");
+
+        string stylePath = Path.Combine(
+            root, "Art", "Style", "low-resolution-voxel.v1", "style.yaml");
+        string v2 = File.ReadAllText(stylePath);
+        string v3 = v2
+            .Replace("version: 2", "version: 3", StringComparison.Ordinal)
+            .Replace(
+                "traits:",
+                """
+                targetReferences:
+                  common:
+                    - reference-02.png
+                  equipment:
+                    - equipment-bow-source.png
+                  avatar:
+                    - reference-01.png
+                traits:
+                """,
+                StringComparison.Ordinal);
+        File.WriteAllText(stylePath, v3);
+
+        var v3Engine = new StoreEngine(root);
+        ReferenceStyleAuthority v3Construction = v3Engine.ResolveReferenceStyle("equipment");
+        string v3ConstructionHash = v3Engine.ReferenceStyleAuthoritySha256(v3Construction);
+        Require(
+            string.Equals(legacyConstructionHash, v3ConstructionHash, StringComparison.Ordinal),
+            "adding targetReferences must not change legacy construction-style authority hash");
+
+        ReferenceStyleAuthority target = v3Engine.ResolveTargetReferenceStyle("equipment");
+        Require(
+            target.CommonReferencePaths.Count == 1 &&
+            Path.GetFileName(target.CommonReferencePaths[0]) == "reference-02.png" &&
+            target.KindReferencePaths.Count == 1 &&
+            Path.GetFileName(target.KindReferencePaths[0]) == "equipment-bow-source.png",
+            "v3 target style must resolve target common plus matching-kind references");
+
+        File.WriteAllText(
+            stylePath,
+            v3.Replace(
+                "  equipment:\n    - equipment-bow-source.png\n  avatar:",
+                "  avatar:",
+                StringComparison.Ordinal));
+        ExpectFailure(
+            () => new StoreEngine(root).ResolveTargetReferenceStyle("equipment"),
+            "target scope 'equipment' must be non-empty");
+    }
+    finally
+    {
+        DeleteTree(root);
+    }
+    var activeEngine = new StoreEngine(sourceRoot);
+    ReferenceStyleAuthority activeTarget =
+        activeEngine.ResolveTargetReferenceStyle("equipment");
+    Require(
+        activeTarget.CommonReferencePaths.Count == 1 &&
+        Path.GetFileName(activeTarget.CommonReferencePaths[0]) == "reference-02.png" &&
+        activeTarget.KindReferencePaths.Select(Path.GetFileName).SequenceEqual(
+            new[] { "equipment-bow-source.png", "equipment-general-reference.png" },
+            StringComparer.Ordinal),
+        "active equipment target authority must include polished common plus existing equipment guidance");
+
+    foreach (AssetRecord asset in activeEngine.DiscoverAssets())
+    {
+        string auditPath = Path.Combine(asset.ReferenceDirectory, "audit.generated.json");
+        AuditEvidence audit =
+            JsonSerializer.Deserialize<AuditEvidence>(File.ReadAllText(auditPath))
+            ?? throw new InvalidDataException($"Invalid reference audit: {auditPath}");
+        ReferenceStyleAuthority construction =
+            activeEngine.ResolveReferenceStyle(asset.Manifest.Kind);
+        Require(
+            string.Equals(
+                audit.StyleAuthoritySha256,
+                activeEngine.ReferenceStyleAuthoritySha256(construction),
+                StringComparison.OrdinalIgnoreCase),
+            $"legacy construction-style authority must remain current for {asset.Manifest.Id}");
+    }
+}
+
+
+static void RunReferenceV3StructureTests(string sourceRoot)
+{
+    static string ReferenceRoot(string root) => Path.Combine(
+        root,
+        "Art",
+        "CombatFoundation",
+        "Units",
+        "Avatars",
+        "FixtureAvatar",
+        "Reference");
+
+    static void WriteBaseVisuals(string referenceRoot)
+    {
+        Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
+        WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
+        WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
+        WritePngHeader(Path.Combine(referenceRoot, "target.png"), 1200, 900);
+        File.WriteAllText(Path.Combine(referenceRoot, "target.provenance.json"), "{}");
+        File.WriteAllText(Path.Combine(referenceRoot, "fidelity.audit.json"), "{}");
+    }
+
+    string v2Root = PrepareReferenceFixture(
+        sourceRoot,
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        """);
+    try
+    {
+        string referenceRoot = ReferenceRoot(v2Root);
+        Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
+        WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
+        WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
+        StoreEngine engine = new(v2Root);
+        ReferenceContract contract =
+            engine.ValidateReferenceContractStructure(engine.DiscoverAssets().Single());
+        Require(contract.Version == 2, "valid legacy v2 reference contract must remain accepted");
+    }
+    finally
+    {
+        DeleteTree(v2Root);
+    }
+
+    const string validV3 =
+        """
+        version: 3
+        target:
+          image: target.png
+          provenance: target.provenance.json
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        fidelity: fidelity.audit.json
+        """;
+
+    string validRoot = PrepareReferenceFixture(sourceRoot, validV3);
+    try
+    {
+        string referenceRoot = ReferenceRoot(validRoot);
+        WriteBaseVisuals(referenceRoot);
+        StoreEngine engine = new(validRoot);
+        ReferenceContract contract =
+            engine.ValidateReferenceContractStructure(engine.DiscoverAssets().Single());
+        Require(
+            contract.Version == 3 &&
+            contract.Target?.Image == "target.png" &&
+            contract.Target.Provenance == "target.provenance.json" &&
+            contract.Fidelity == "fidelity.audit.json",
+            "valid target-driven v3 mappings must be preserved");
+    }
+    finally
+    {
+        DeleteTree(validRoot);
+    }
+
+    void ExpectV3StructureFailure(
+        string yaml,
+        string expected,
+        Action<string>? arrange = null)
+    {
+        string root = PrepareReferenceFixture(sourceRoot, yaml);
+        try
+        {
+            string referenceRoot = ReferenceRoot(root);
+            WriteBaseVisuals(referenceRoot);
+            arrange?.Invoke(referenceRoot);
+            StoreEngine engine = new(root);
+            AssetRecord asset = engine.DiscoverAssets().Single();
+            ExpectFailure(
+                () => engine.ValidateReferenceContractStructure(asset),
+                expected);
+        }
+        finally
+        {
+            DeleteTree(root);
+        }
+    }
+
+    ExpectV3StructureFailure(
+        """
+        version: 3
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        fidelity: fidelity.audit.json
+        """,
+        "requires a Product Target");
+
+    ExpectV3StructureFailure(
+        """
+        version: 3
+        target:
+          image: target.png
+          provenance: target.provenance.json
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        """,
+        "requires target image, target provenance, and fidelity");
+
+    ExpectV3StructureFailure(
+        """
+        version: 3
+        target:
+          image: target.png
+          provenance: target.provenance.json
+        composition: composition.png
+        requiredParts:
+          - Body
+          - Head
+        partSheets:
+          Body: Parts/Body.png
+        fidelity: fidelity.audit.json
+        """,
+        "match RequiredParts exactly");
+
+    ExpectV3StructureFailure(
+        """
+        version: 3
+        target:
+          image: target.svg
+          provenance: target.provenance.json
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        fidelity: fidelity.audit.json
+        """,
+        "Product Target must be a PNG",
+        referenceRoot =>
+            WritePngHeader(Path.Combine(referenceRoot, "target.svg"), 1200, 900));
+
+    ExpectV3StructureFailure(
+        validV3,
+        "Invalid PNG signature",
+        referenceRoot =>
+            WritePngHeader(
+                Path.Combine(referenceRoot, "target.png"),
+                1200,
+                900,
+                validSignature: false));
+
+    ExpectV3StructureFailure(
+        """
+        version: 3
+        target:
+          image: target.png
+          provenance: target.provenance.json
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        fidelity: fidelity.audit.json
+        vpu: 32
+        """,
+        "vpu");
+
+    ExpectV3StructureFailure(
+        """
+        version: 3
+        target:
+          image: target.png
+          provenance: target.provenance.json
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        fidelity: fidelity.audit.json
+        targetBounds: [6, 3, 10]
+        """,
+        "targetBounds");
+
+    ExpectV3StructureFailure(
+        validV3,
+        "Product Target provenance is missing",
+        referenceRoot =>
+            File.Delete(Path.Combine(referenceRoot, "target.provenance.json")));
+
+    ExpectV3StructureFailure(
+        validV3,
+        "Target fidelity evidence is missing",
+        referenceRoot =>
+            File.Delete(Path.Combine(referenceRoot, "fidelity.audit.json")));
+}
+
+
+static void RunTargetProvenanceTests(string sourceRoot)
+{
+    const string validV3 =
+        """
+        version: 3
+        target:
+          image: target.png
+          provenance: target.provenance.json
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        fidelity: fidelity.audit.json
+        """;
+
+    static string ReferenceRoot(string root) => Path.Combine(
+        root,
+        "Art",
+        "CombatFoundation",
+        "Units",
+        "Avatars",
+        "FixtureAvatar",
+        "Reference");
+
+    static void WriteV3Visuals(string referenceRoot)
+    {
+        Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
+        WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
+        WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
+        WritePngHeader(Path.Combine(referenceRoot, "target.png"), 1200, 900);
+        File.WriteAllText(Path.Combine(referenceRoot, "fidelity.audit.json"), "{}");
+    }
+
+    static void UpgradeTargetStyle(string root)
+    {
+        string stylePath = Path.Combine(
+            root, "Art", "Style", "low-resolution-voxel.v1", "style.yaml");
+        string style = File.ReadAllText(stylePath);
+        style = style
+            .Replace("version: 2", "version: 3", StringComparison.Ordinal)
+            .Replace(
+                "traits:",
+                """
+                targetReferences:
+                  common:
+                    - reference-02.png
+                  avatar:
+                    - reference-01.png
+                  equipment:
+                    - equipment-bow-source.png
+                traits:
+                """,
+                StringComparison.Ordinal);
+        File.WriteAllText(stylePath, style);
+    }
+
+    static Dictionary<string, string> StyleHashes(
+        string root,
+        ReferenceStyleAuthority style) =>
+        style.CommonReferencePaths
+            .Concat(style.KindReferencePaths)
+            .ToDictionary(
+                path => Path.GetRelativePath(root, path).Replace('\\', '/'),
+                HeroVoxelProvider.HashFile,
+                StringComparer.Ordinal);
+
+    string generatedRoot = PrepareReferenceFixture(sourceRoot, validV3);
+    try
+    {
+        string referenceRoot = ReferenceRoot(generatedRoot);
+        WriteV3Visuals(referenceRoot);
+        UpgradeTargetStyle(generatedRoot);
+
+        StoreEngine engine = new(generatedRoot);
+        AssetRecord asset = engine.DiscoverAssets().Single();
+        ReferenceStyleAuthority targetStyle =
+            engine.ResolveTargetReferenceStyle(asset.Manifest.Kind);
+        var provenance = new ReferenceTargetProvenance
+        {
+            Version = 1,
+            Origin = "generated",
+            TargetSha256 = HeroVoxelProvider.HashFile(
+                Path.Combine(referenceRoot, "target.png")),
+            TargetStyleAuthoritySha256 =
+                engine.ReferenceStyleAuthoritySha256(targetStyle),
+            TargetStyleSha256 = StyleHashes(generatedRoot, targetStyle)
+        };
+        string provenancePath = Path.Combine(referenceRoot, "target.provenance.json");
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+
+        string first = JsonSerializer.Serialize(engine.ValidateTargetProvenance(asset));
+        string second = JsonSerializer.Serialize(engine.ValidateTargetProvenance(asset));
+        Require(
+            first == second,
+            "unchanged generated Product Target provenance must validate deterministically");
+
+        string targetPath = Path.Combine(referenceRoot, "target.png");
+        byte[] originalTarget = File.ReadAllBytes(targetPath);
+        WritePngHeader(targetPath, 1201, 900);
+        ExpectFailure(
+            () => engine.ValidateTargetProvenance(asset),
+            "stale for target.png");
+        File.WriteAllBytes(targetPath, originalTarget);
+
+        string styleInput = Path.Combine(
+            generatedRoot,
+            "Art",
+            "Style",
+            "low-resolution-voxel.v1",
+            "reference-02.png");
+        byte[] originalStyle = File.ReadAllBytes(styleInput);
+        WritePngHeader(styleInput, 1201, 900);
+        ExpectFailure(
+            () => new StoreEngine(generatedRoot).ValidateTargetProvenance(asset),
+            "generated style authority is stale");
+        File.WriteAllBytes(styleInput, originalStyle);
+        engine.ValidateTargetProvenance(asset);
+    }
+    finally
+    {
+        DeleteTree(generatedRoot);
+    }
+
+    string importedRoot = PrepareReferenceFixture(sourceRoot, validV3);
+    try
+    {
+        string referenceRoot = ReferenceRoot(importedRoot);
+        WriteV3Visuals(referenceRoot);
+        string sourceDir = Path.Combine(referenceRoot, "Source");
+        Directory.CreateDirectory(sourceDir);
+        string sourcePath = Path.Combine(sourceDir, "imported.png");
+        WritePngHeader(sourcePath, 1200, 900);
+        string targetPath = Path.Combine(referenceRoot, "target.png");
+        File.Copy(sourcePath, targetPath, true);
+
+        var provenance = new ReferenceTargetProvenance
+        {
+            Version = 1,
+            Origin = "imported",
+            TargetSha256 = HeroVoxelProvider.HashFile(targetPath),
+            Source = new ReferenceTargetSourceProvenance
+            {
+                Path = "Source/imported.png",
+                Sha256 = HeroVoxelProvider.HashFile(sourcePath),
+                Relation = "exact"
+            }
+        };
+        string provenancePath = Path.Combine(referenceRoot, "target.provenance.json");
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+
+        StoreEngine engine = new(importedRoot);
+        AssetRecord asset = engine.DiscoverAssets().Single();
+        engine.ValidateTargetProvenance(asset);
+
+        byte[] originalSource = File.ReadAllBytes(sourcePath);
+        WritePngHeader(sourcePath, 1201, 900);
+        ExpectFailure(
+            () => engine.ValidateTargetProvenance(asset),
+            "imported source provenance is stale");
+        File.WriteAllBytes(sourcePath, originalSource);
+
+        WritePngHeader(sourcePath, 1000, 900);
+        provenance.Source.Sha256 = HeroVoxelProvider.HashFile(sourcePath);
+        provenance.Source.Relation = "canonical-derivative";
+        provenance.TargetSha256 = HeroVoxelProvider.HashFile(targetPath);
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+        engine.ValidateTargetProvenance(asset);
+
+        provenance.Source.Relation = "unknown";
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+        ExpectFailure(
+            () => engine.ValidateTargetProvenance(asset),
+            "exact or canonical-derivative");
+    }
+    finally
+    {
+        DeleteTree(importedRoot);
+    }
+}
+
+
+static void RunTargetFidelityTests(string sourceRoot)
+{
+    const string validV3 =
+        """
+        version: 3
+        target:
+          image: target.png
+          provenance: target.provenance.json
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        fidelity: fidelity.audit.json
+        """;
+
+    static string ReferenceRoot(string root) => Path.Combine(
+        root,
+        "Art",
+        "CombatFoundation",
+        "Units",
+        "Avatars",
+        "FixtureAvatar",
+        "Reference");
+
+    static Dictionary<string, string> PassingCriteria() => new(StringComparer.Ordinal)
+    {
+        ["silhouette"] = "pass",
+        ["proportions"] = "pass",
+        ["constructionRichness"] = "pass",
+        ["materialColorHierarchy"] = "pass",
+        ["meaningfulDetailDensity"] = "pass",
+        ["visualEvidenceDominance"] = "pass",
+        ["implementationNeutral"] = "pass"
+    };
+
+    static ReferenceFidelityAudit ValidAudit(string referenceRoot)
+    {
+        string target = Path.Combine(referenceRoot, "target.png");
+        string composition = Path.Combine(referenceRoot, "composition.png");
+        string part = Path.Combine(referenceRoot, "Parts", "Body.png");
+        return new ReferenceFidelityAudit
+        {
+            Version = 1,
+            Target = new ReferenceFidelityTargetEvidence
+            {
+                Path = "target.png",
+                Sha256 = HeroVoxelProvider.HashFile(target)
+            },
+            Sheets = new Dictionary<string, ReferenceFidelitySheetEvidence>(StringComparer.Ordinal)
+            {
+                ["composition.png"] = new()
+                {
+                    Sha256 = HeroVoxelProvider.HashFile(composition),
+                    Criteria = PassingCriteria()
+                },
+                ["Parts/Body.png"] = new()
+                {
+                    Sha256 = HeroVoxelProvider.HashFile(part),
+                    Criteria = PassingCriteria()
+                }
+            }
+        };
+    }
+
+    static void WriteAudit(string referenceRoot, ReferenceFidelityAudit audit) =>
+        File.WriteAllText(
+            Path.Combine(referenceRoot, "fidelity.audit.json"),
+            JsonSerializer.Serialize(
+                audit,
+                new JsonSerializerOptions { WriteIndented = true }));
+
+    string root = PrepareReferenceFixture(sourceRoot, validV3);
+    try
+    {
+        string referenceRoot = ReferenceRoot(root);
+        Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
+        WritePngHeader(Path.Combine(referenceRoot, "target.png"), 1200, 900);
+        WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
+        WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
+        File.WriteAllText(Path.Combine(referenceRoot, "target.provenance.json"), "{}");
+
+        StoreEngine engine = new(root);
+        AssetRecord asset = engine.DiscoverAssets().Single();
+
+        ReferenceFidelityAudit valid = ValidAudit(referenceRoot);
+        WriteAudit(referenceRoot, valid);
+        string first = JsonSerializer.Serialize(engine.ValidateFidelityAudit(asset));
+        string second = JsonSerializer.Serialize(engine.ValidateFidelityAudit(asset));
+        Require(first == second, "unchanged target fidelity evidence must validate deterministically");
+
+        ReferenceFidelityAudit missingCriterion = ValidAudit(referenceRoot);
+        missingCriterion.Sheets["composition.png"].Criteria.Remove("constructionRichness");
+        WriteAudit(referenceRoot, missingCriterion);
+        ExpectFailure(
+            () => engine.ValidateFidelityAudit(asset),
+            "required criteria exactly");
+
+        ReferenceFidelityAudit failedCriterion = ValidAudit(referenceRoot);
+        failedCriterion.Sheets["composition.png"].Criteria["constructionRichness"] = "fail";
+        WriteAudit(referenceRoot, failedCriterion);
+        ExpectFailure(
+            () => engine.ValidateFidelityAudit(asset),
+            "constructionRichness");
+
+        ReferenceFidelityAudit missingSheet = ValidAudit(referenceRoot);
+        missingSheet.Sheets.Remove("Parts/Body.png");
+        WriteAudit(referenceRoot, missingSheet);
+        ExpectFailure(
+            () => engine.ValidateFidelityAudit(asset),
+            "cover exactly");
+
+        ReferenceFidelityAudit unknownSheet = ValidAudit(referenceRoot);
+        unknownSheet.Sheets["Parts/Unknown.png"] = new()
+        {
+            Sha256 = new string('0', 64),
+            Criteria = PassingCriteria()
+        };
+        WriteAudit(referenceRoot, unknownSheet);
+        ExpectFailure(
+            () => engine.ValidateFidelityAudit(asset),
+            "cover exactly");
+
+        ReferenceFidelityAudit staleSheet = ValidAudit(referenceRoot);
+        WriteAudit(referenceRoot, staleSheet);
+        string compositionPath = Path.Combine(referenceRoot, "composition.png");
+        byte[] compositionBytes = File.ReadAllBytes(compositionPath);
+        File.WriteAllBytes(
+            compositionPath,
+            compositionBytes.Concat(new byte[] { 0 }).ToArray());
+        ExpectFailure(
+            () => engine.ValidateFidelityAudit(asset),
+            "stale for 'composition.png'");
+        File.WriteAllBytes(compositionPath, compositionBytes);
+
+        ReferenceFidelityAudit staleTarget = ValidAudit(referenceRoot);
+        WriteAudit(referenceRoot, staleTarget);
+        string targetPath = Path.Combine(referenceRoot, "target.png");
+        byte[] targetBytes = File.ReadAllBytes(targetPath);
+        WritePngHeader(targetPath, 1201, 900);
+        ExpectFailure(
+            () => engine.ValidateFidelityAudit(asset),
+            "Product Target evidence is stale");
+        File.WriteAllBytes(targetPath, targetBytes);
+
+        WriteAudit(referenceRoot, ValidAudit(referenceRoot));
+        engine.ValidateFidelityAudit(asset);
+    }
+    finally
+    {
+        DeleteTree(root);
+    }
+}
+
+
+static void RunReferenceSealVersionTests(string sourceRoot)
+{
+    static string ReferenceRoot(string root) => Path.Combine(
+        root,
+        "Art",
+        "CombatFoundation",
+        "Units",
+        "Avatars",
+        "FixtureAvatar",
+        "Reference");
+
+    string v2Root = PrepareReferenceFixture(
+        sourceRoot,
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        """);
+    try
+    {
+        string referenceRoot = ReferenceRoot(v2Root);
+        Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
+        WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
+        WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
+        StoreEngine engine = new(v2Root);
+        ExpectFailure(() => engine.Seal("fixture.avatar"), "Cannot seal missing proof input");
+        string auditPath = Path.Combine(referenceRoot, "audit.generated.json");
+        byte[] first = File.ReadAllBytes(auditPath);
+        ExpectFailure(() => engine.Seal("fixture.avatar"), "Cannot seal missing proof input");
+        byte[] second = File.ReadAllBytes(auditPath);
+        Require(
+            first.SequenceEqual(second),
+            "legacy v2 reference resealing must remain byte-identical");
+    }
+    finally
+    {
+        DeleteTree(v2Root);
+    }
+
+    string v3Root = PrepareReferenceFixture(
+        sourceRoot,
+        """
+        version: 3
+        target:
+          image: target.png
+          provenance: target.provenance.json
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        fidelity: fidelity.audit.json
+        """);
+    try
+    {
+        string referenceRoot = ReferenceRoot(v3Root);
+        Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
+        Directory.CreateDirectory(Path.Combine(referenceRoot, "Source"));
+        WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
+        WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
+        string imported = Path.Combine(referenceRoot, "Source", "imported.png");
+        string target = Path.Combine(referenceRoot, "target.png");
+        WritePngHeader(imported, 1200, 900);
+        File.Copy(imported, target, true);
+
+        var provenance = new ReferenceTargetProvenance
+        {
+            Version = 1,
+            Origin = "imported",
+            TargetSha256 = HeroVoxelProvider.HashFile(target),
+            Source = new ReferenceTargetSourceProvenance
+            {
+                Path = "Source/imported.png",
+                Sha256 = HeroVoxelProvider.HashFile(imported),
+                Relation = "exact"
+            }
+        };
+        File.WriteAllText(
+            Path.Combine(referenceRoot, "target.provenance.json"),
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+
+        Dictionary<string, string> criteria = new(StringComparer.Ordinal)
+        {
+            ["silhouette"] = "pass",
+            ["proportions"] = "pass",
+            ["constructionRichness"] = "pass",
+            ["materialColorHierarchy"] = "pass",
+            ["meaningfulDetailDensity"] = "pass",
+            ["visualEvidenceDominance"] = "pass",
+            ["implementationNeutral"] = "pass"
+        };
+        var fidelity = new ReferenceFidelityAudit
+        {
+            Version = 1,
+            Target = new ReferenceFidelityTargetEvidence
+            {
+                Path = "target.png",
+                Sha256 = HeroVoxelProvider.HashFile(target)
+            },
+            Sheets = new Dictionary<string, ReferenceFidelitySheetEvidence>(StringComparer.Ordinal)
+            {
+                ["composition.png"] = new()
+                {
+                    Sha256 = HeroVoxelProvider.HashFile(
+                        Path.Combine(referenceRoot, "composition.png")),
+                    Criteria = new Dictionary<string, string>(criteria, StringComparer.Ordinal)
+                },
+                ["Parts/Body.png"] = new()
+                {
+                    Sha256 = HeroVoxelProvider.HashFile(
+                        Path.Combine(referenceRoot, "Parts", "Body.png")),
+                    Criteria = new Dictionary<string, string>(criteria, StringComparer.Ordinal)
+                }
+            }
+        };
+        File.WriteAllText(
+            Path.Combine(referenceRoot, "fidelity.audit.json"),
+            JsonSerializer.Serialize(
+                fidelity,
+                new JsonSerializerOptions { WriteIndented = true }));
+
+        StoreEngine engine = new(v3Root);
+        ExpectFailure(() => engine.Seal("fixture.avatar"), "Cannot seal missing proof input");
+        string auditPath = Path.Combine(referenceRoot, "audit.generated.json");
+        byte[] first = File.ReadAllBytes(auditPath);
+        using (JsonDocument audit = JsonDocument.Parse(first))
+        {
+            string[] keys = audit.RootElement
+                .GetProperty("Sha256")
+                .EnumerateObject()
+                .Select(x => x.Name)
+                .OrderBy(x => x, StringComparer.Ordinal)
+                .ToArray();
+            string[] expected =
+            {
+                "Parts/Body.png",
+                "composition.png",
+                "fidelity.audit.json",
+                "reference.yaml",
+                "target.png",
+                "target.provenance.json"
+            };
+            Require(
+                keys.SequenceEqual(expected.OrderBy(x => x, StringComparer.Ordinal), StringComparer.Ordinal),
+                "v3 reference audit must cover exactly target/provenance/Composition/Parts/fidelity plus contract");
+            Require(
+                !keys.Contains("Source/imported.png", StringComparer.Ordinal),
+                "import source provenance must not become construction reference audit authority");
+        }
+
+        ExpectFailure(() => engine.Seal("fixture.avatar"), "Cannot seal missing proof input");
+        byte[] second = File.ReadAllBytes(auditPath);
+        Require(
+            first.SequenceEqual(second),
+            "target-driven v3 reference resealing must be byte-identical");
+    }
+    finally
+    {
+        DeleteTree(v3Root);
+    }
+}
+
+
+static void RunReferenceV3PublicationTests(string sourceRoot)
+{
+    static string ReferenceRoot(string root) => Path.Combine(
+        root, "Art", "CombatFoundation", "Units", "Avatars", "FixtureAvatar", "Reference");
+
+    static Dictionary<string, string> PassingCriteria() => new(StringComparer.Ordinal)
+    {
+        ["silhouette"] = "pass",
+        ["proportions"] = "pass",
+        ["constructionRichness"] = "pass",
+        ["materialColorHierarchy"] = "pass",
+        ["meaningfulDetailDensity"] = "pass",
+        ["visualEvidenceDominance"] = "pass",
+        ["implementationNeutral"] = "pass"
+    };
+
+    static void WriteV3Package(string referenceRoot)
+    {
+        Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
+        Directory.CreateDirectory(Path.Combine(referenceRoot, "Source"));
+        WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
+        WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
+        string source = Path.Combine(referenceRoot, "Source", "imported.png");
+        string target = Path.Combine(referenceRoot, "target.png");
+        WritePngHeader(source, 1200, 900);
+        File.Copy(source, target, true);
+
+        var provenance = new ReferenceTargetProvenance
+        {
+            Version = 1,
+            Origin = "imported",
+            TargetSha256 = HeroVoxelProvider.HashFile(target),
+            Source = new ReferenceTargetSourceProvenance
+            {
+                Path = "Source/imported.png",
+                Sha256 = HeroVoxelProvider.HashFile(source),
+                Relation = "exact"
+            }
+        };
+        File.WriteAllText(
+            Path.Combine(referenceRoot, "target.provenance.json"),
+            JsonSerializer.Serialize(provenance, new JsonSerializerOptions { WriteIndented = true }));
+
+        var fidelity = new ReferenceFidelityAudit
+        {
+            Version = 1,
+            Target = new ReferenceFidelityTargetEvidence
+            {
+                Path = "target.png",
+                Sha256 = HeroVoxelProvider.HashFile(target)
+            },
+            Sheets = new Dictionary<string, ReferenceFidelitySheetEvidence>(StringComparer.Ordinal)
+            {
+                ["composition.png"] = new()
+                {
+                    Sha256 = HeroVoxelProvider.HashFile(Path.Combine(referenceRoot, "composition.png")),
+                    Criteria = PassingCriteria()
+                },
+                ["Parts/Body.png"] = new()
+                {
+                    Sha256 = HeroVoxelProvider.HashFile(Path.Combine(referenceRoot, "Parts", "Body.png")),
+                    Criteria = PassingCriteria()
+                }
+            }
+        };
+        File.WriteAllText(
+            Path.Combine(referenceRoot, "fidelity.audit.json"),
+            JsonSerializer.Serialize(fidelity, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    string v3Root = PrepareReferenceFixture(
+        sourceRoot,
+        """
+        version: 3
+        target:
+          image: target.png
+          provenance: target.provenance.json
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        fidelity: fidelity.audit.json
+        """);
+    try
+    {
+        string referenceRoot = ReferenceRoot(v3Root);
+        WriteV3Package(referenceRoot);
+        StoreEngine engine = new(v3Root);
+        ExpectFailure(() => engine.Seal("fixture.avatar"), "Cannot seal missing proof input");
+        Require(
+            ReferenceGate(engine.Scan(false, false)).Passed,
+            "current v3 Product Target/provenance/fidelity package must pass reference gate");
+
+        string provenancePath = Path.Combine(referenceRoot, "target.provenance.json");
+        byte[] provenanceBytes = File.ReadAllBytes(provenancePath);
+        File.Delete(provenancePath);
+        GateResult missingProvenance = ReferenceGate(engine.Scan(false, false));
+        Require(
+            !missingProvenance.Passed &&
+            missingProvenance.Message.Contains("provenance is missing", StringComparison.OrdinalIgnoreCase),
+            "missing v3 target provenance must fail at reference");
+        File.WriteAllBytes(provenancePath, provenanceBytes);
+
+        string targetPath = Path.Combine(referenceRoot, "target.png");
+        byte[] targetBytes = File.ReadAllBytes(targetPath);
+        File.WriteAllBytes(targetPath, targetBytes.Concat(new byte[] { 0 }).ToArray());
+        GateResult staleTarget = ReferenceGate(engine.Scan(false, false));
+        Require(
+            !staleTarget.Passed &&
+            staleTarget.Message.Contains("stale for target.png", StringComparison.OrdinalIgnoreCase),
+            "changed Product Target must fail reference provenance before outer seal validation");
+        File.WriteAllBytes(targetPath, targetBytes);
+
+        string fidelityPath = Path.Combine(referenceRoot, "fidelity.audit.json");
+        byte[] fidelityBytes = File.ReadAllBytes(fidelityPath);
+        ReferenceFidelityAudit failed =
+            JsonSerializer.Deserialize<ReferenceFidelityAudit>(File.ReadAllText(fidelityPath))
+            ?? throw new InvalidDataException("fixture fidelity missing");
+        failed.Sheets["composition.png"].Criteria["constructionRichness"] = "fail";
+        File.WriteAllText(
+            fidelityPath,
+            JsonSerializer.Serialize(failed, new JsonSerializerOptions { WriteIndented = true }));
+        GateResult failedFidelity = ReferenceGate(engine.Scan(false, false));
+        Require(
+            !failedFidelity.Passed &&
+            failedFidelity.Message.Contains("constructionRichness", StringComparison.Ordinal),
+            "failed v3 fidelity criterion must fail at reference");
+        File.WriteAllBytes(fidelityPath, fidelityBytes);
+
+        ReferenceFidelityAudit implementationOwned =
+            JsonSerializer.Deserialize<ReferenceFidelityAudit>(File.ReadAllText(fidelityPath))
+            ?? throw new InvalidDataException("fixture fidelity missing");
+        implementationOwned.Sheets["composition.png"].Criteria["implementationNeutral"] = "fail";
+        File.WriteAllText(
+            fidelityPath,
+            JsonSerializer.Serialize(
+                implementationOwned,
+                new JsonSerializerOptions { WriteIndented = true }));
+        StoreSnapshot implementationBlocked = engine.Scan(false, false);
+        GateResult implementationGate = ReferenceGate(implementationBlocked);
+        Require(
+            !implementationGate.Passed &&
+            implementationGate.Message.Contains("implementationNeutral", StringComparison.Ordinal) &&
+            implementationBlocked.Assets.Single().Gates
+                .Single(x => x.Id == "source").Message.Contains("Blocked", StringComparison.OrdinalIgnoreCase),
+            "implementation-density authority must block at reference before source");
+        File.WriteAllBytes(fidelityPath, fidelityBytes);
+        File.WriteAllBytes(fidelityPath, fidelityBytes);
+        Require(
+            ReferenceGate(engine.Scan(false, false)).Passed,
+            "restored byte-identical v3 package must pass reference again");
+    }
+    finally
+    {
+        DeleteTree(v3Root);
+    }
+
+    string v2Root = PrepareReferenceFixture(
+        sourceRoot,
+        """
+        version: 2
+        composition: composition.png
+        requiredParts:
+          - Body
+        partSheets:
+          Body: Parts/Body.png
+        """);
+    try
+    {
+        string referenceRoot = ReferenceRoot(v2Root);
+        Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
+        WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
+        WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
+        StoreEngine engine = new(v2Root);
+        ExpectFailure(() => engine.Seal("fixture.avatar"), "Cannot seal missing proof input");
+        Require(
+            ReferenceGate(engine.Scan(false, false)).Passed,
+            "unchanged v2 asset must continue to pass reference without target migration");
+    }
+    finally
+    {
+        DeleteTree(v2Root);
+    }
+}
+
+
+static void RunV3DensityBoundaryTests(string sourceRoot)
+{
+    string root = TempRoot();
+    try
+    {
+        CopyDirectory(Path.Combine(sourceRoot, "policy"), Path.Combine(root, "policy"));
+        CopyDirectory(
+            Path.Combine(sourceRoot, "Art", "Style"),
+            Path.Combine(root, "Art", "Style"));
+        CopyFile(sourceRoot, root, "toolchain/hero-voxel.lock.yaml");
+
+        string sourceAsset = Path.Combine(
+            sourceRoot,
+            "Art",
+            "CombatFoundation",
+            "Units",
+            "Equipment",
+            "Staff01");
+        string assetRoot = Path.Combine(
+            root,
+            "Art",
+            "CombatFoundation",
+            "Units",
+            "Equipment",
+            "Staff01");
+        CopyDirectory(sourceAsset, assetRoot);
+
+        string referenceRoot = Path.Combine(assetRoot, "Reference");
+        string targetPath = Path.Combine(referenceRoot, "target.png");
+        string importedSource = Path.Combine(referenceRoot, "Source", "target-source.png");
+        Directory.CreateDirectory(Path.GetDirectoryName(importedSource)!);
+        File.Copy(Path.Combine(referenceRoot, "composition.png"), targetPath, true);
+        File.Copy(targetPath, importedSource, true);
+
+        var provenance = new ReferenceTargetProvenance
+        {
+            Version = 1,
+            Origin = "imported",
+            TargetSha256 = HeroVoxelProvider.HashFile(targetPath),
+            Source = new ReferenceTargetSourceProvenance
+            {
+                Path = "Source/target-source.png",
+                Sha256 = HeroVoxelProvider.HashFile(importedSource),
+                Relation = "exact"
+            }
+        };
+        File.WriteAllText(
+            Path.Combine(referenceRoot, "target.provenance.json"),
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+
+        static Dictionary<string, string> PassingCriteria() => new(StringComparer.Ordinal)
+        {
+            ["silhouette"] = "pass",
+            ["proportions"] = "pass",
+            ["constructionRichness"] = "pass",
+            ["materialColorHierarchy"] = "pass",
+            ["meaningfulDetailDensity"] = "pass",
+            ["visualEvidenceDominance"] = "pass",
+            ["implementationNeutral"] = "pass"
+        };
+
+        var fidelity = new ReferenceFidelityAudit
+        {
+            Version = 1,
+            Target = new ReferenceFidelityTargetEvidence
+            {
+                Path = "target.png",
+                Sha256 = HeroVoxelProvider.HashFile(targetPath)
+            },
+            Sheets = new Dictionary<string, ReferenceFidelitySheetEvidence>(StringComparer.Ordinal)
+            {
+                ["composition.png"] = new()
+                {
+                    Sha256 = HeroVoxelProvider.HashFile(
+                        Path.Combine(referenceRoot, "composition.png")),
+                    Criteria = PassingCriteria()
+                },
+                ["Parts/Staff.png"] = new()
+                {
+                    Sha256 = HeroVoxelProvider.HashFile(
+                        Path.Combine(referenceRoot, "Parts", "Staff.png")),
+                    Criteria = PassingCriteria()
+                }
+            }
+        };
+        File.WriteAllText(
+            Path.Combine(referenceRoot, "fidelity.audit.json"),
+            JsonSerializer.Serialize(
+                fidelity,
+                new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(
+            Path.Combine(referenceRoot, "reference.yaml"),
+            """
+            version: 3
+            target:
+              image: target.png
+              provenance: target.provenance.json
+            composition: composition.png
+            requiredParts:
+              - Staff
+            partSheets:
+              Staff: Parts/Staff.png
+            fidelity: fidelity.audit.json
+            """);
+
+        StoreEngine engine = new(root);
+        engine.Seal("foundation.equipment.staff.01");
+        AssetRecord staff = engine.DiscoverAssets().Single();
+        Require(
+            engine.ValidateReferenceContractStructure(staff).Version == 3,
+            "temporary Staff reference must be valid v3");
+        engine.ValidateTargetProvenance(staff);
+        engine.ValidateFidelityAudit(staff);
+
+        ReferenceDensityEvidence evidence =
+            engine.SelectDensity("foundation.equipment.staff.01", write: false);
+        Require(
+            evidence.SelectedVpu == 80,
+            $"valid v3 reference must preserve existing Staff density selection; got {evidence.SelectedVpu}");
+    }
+    finally
+    {
+        DeleteTree(root);
+    }
+}
+
+
+static void RunTargetDrivenSampleTests(string sourceRoot)
+{
+    string sampleRoot = Path.Combine(
+        sourceRoot, "Art", "Samples", "TargetDrivenReferenceProof");
+    string referenceRoot = Path.Combine(sampleRoot, "Reference");
+    Require(
+        Directory.Exists(referenceRoot) &&
+        !File.Exists(Path.Combine(sampleRoot, "asset.yaml")),
+        "target-driven reference proof must remain non-published and have no asset.yaml");
+
+    var asset = new AssetRecord(
+        new AssetManifest
+        {
+            Version = 2,
+            Id = "sample.target-driven-reference-proof",
+            Kind = "equipment",
+            UnitRef = "Sample.TargetDrivenReferenceProof"
+        },
+        Path.Combine(sampleRoot, "__nonpublished__.asset.yaml"),
+        sampleRoot,
+        Path.Combine(sampleRoot, "Source", "TargetDrivenBowProof"),
+        Path.Combine(sampleRoot, "Source", "TargetDrivenBowProof.palette.yaml"),
+        referenceRoot,
+        Path.Combine(sampleRoot, "Proof"));
+
+    StoreEngine engine = new(sourceRoot);
+    ReferenceContract contract = engine.ValidateReferenceContractStructure(asset);
+    Require(
+        contract.Version == 3 &&
+        contract.RequiredParts.SequenceEqual(new[] { "Bow" }, StringComparer.Ordinal),
+        "target-driven sample must expose one valid v3 Bow construction package");
+
+    string firstProvenance =
+        JsonSerializer.Serialize(engine.ValidateTargetProvenance(asset));
+    string secondProvenance =
+        JsonSerializer.Serialize(engine.ValidateTargetProvenance(asset));
+    string firstFidelity =
+        JsonSerializer.Serialize(engine.ValidateFidelityAudit(asset));
+    string secondFidelity =
+        JsonSerializer.Serialize(engine.ValidateFidelityAudit(asset));
+    Require(
+        firstProvenance == secondProvenance &&
+        firstFidelity == secondFidelity,
+        "target-driven sample v3 validation must be deterministic");
+
+    Hero.Voxel.Tool.VoxelSpecDocument sampleSpec =
+        Hero.Voxel.Tool.VoxelSpecYaml.LoadSpec(asset.SourceBase + ".voxel.yaml");
+    Hero.Voxel.Tool.PaletteSpec samplePalette =
+        Hero.Voxel.Tool.VoxelSpecYaml.LoadPalette(asset.PalettePath);
+    Hero.Voxel.Tool.VoxelCompilation sampleCompilation =
+        Hero.Voxel.Tool.VoxelSpecCompiler.Compile(sampleSpec, samplePalette);
+    Require(
+        sampleCompilation.Parts.Select(x => x.Name).SequenceEqual(new[] { "Bow" }, StringComparer.Ordinal),
+        "target-driven sample model must compile to exactly the accepted Bow rigid part");
+
+    string generatedVox = Path.Combine(
+        sampleRoot, "Generated", "TargetDrivenBowProof.generated.vox");
+    Require(
+        File.Exists(generatedVox) &&
+        File.ReadAllBytes(generatedVox).SequenceEqual(
+            Hero.Voxel.Tool.MagicaVoxelWriter.WriteToBytes(sampleCompilation)),
+        "target-driven sample generated VOX must match deterministic compilation");
+
+    string[] partViews = { "hero.png", "front.png", "back.png", "left.png", "right.png", "top.png", "bottom.png" };
+    string[] assembledViews =
+    {
+        "hero.png", "front.png", "back.png", "left.png", "right.png", "top.png", "bottom.png",
+        "front-left-3q.png", "front-right-3q.png", "back-left-3q.png", "back-right-3q.png"
+    };
+    Require(
+        partViews.All(x => File.Exists(Path.Combine(sampleRoot, "Proof", "Part", "parts", "000", x))) &&
+        assembledViews.All(x => File.Exists(Path.Combine(sampleRoot, "Proof", "Standalone", x))) &&
+        File.Exists(Path.Combine(sampleRoot, "Proof", "model-fidelity.audit.json")),
+        "target-driven sample must include individual-part, assembled, and target-to-model proof evidence");
+}
+
+
+static void RunAxeNegativeFidelityFixture(string sourceRoot)
+{
+    const string contract =
+        """
+        version: 3
+        target:
+          image: target.png
+          provenance: target.provenance.json
+        composition: composition.png
+        requiredParts:
+          - Axe
+        partSheets:
+          Axe: Parts/Axe.png
+        fidelity: fidelity.audit.json
+        """;
+
+    string root = PrepareReferenceFixture(sourceRoot, contract);
+    try
+    {
+        string fixtureRoot = Path.Combine(
+            root,
+            "Art",
+            "CombatFoundation",
+            "Units",
+            "Avatars",
+            "FixtureAvatar",
+            "Reference");
+        Directory.CreateDirectory(Path.Combine(fixtureRoot, "Parts"));
+        Directory.CreateDirectory(Path.Combine(fixtureRoot, "Source"));
+        WritePngHeader(Path.Combine(fixtureRoot, "target.png"), 1200, 900);
+        WritePngHeader(Path.Combine(fixtureRoot, "composition.png"), 1200, 800);
+        WritePngHeader(Path.Combine(fixtureRoot, "Parts", "Axe.png"), 800, 800);
+        string source = Path.Combine(fixtureRoot, "Source", "target-source.png");
+        File.Copy(Path.Combine(fixtureRoot, "target.png"), source, true);
+
+        var provenance = new ReferenceTargetProvenance
+        {
+            Version = 1,
+            Origin = "imported",
+            TargetSha256 = HeroVoxelProvider.HashFile(Path.Combine(fixtureRoot, "target.png")),
+            Source = new ReferenceTargetSourceProvenance
+            {
+                Path = "Source/target-source.png",
+                Sha256 = HeroVoxelProvider.HashFile(source),
+                Relation = "exact"
+            }
+        };
+        File.WriteAllText(
+            Path.Combine(fixtureRoot, "target.provenance.json"),
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+
+        Dictionary<string, string> axeLikeCriteria = new(StringComparer.Ordinal)
+        {
+            ["silhouette"] = "pass",
+            ["proportions"] = "pass",
+            ["constructionRichness"] = "fail",
+            ["materialColorHierarchy"] = "pass",
+            ["meaningfulDetailDensity"] = "fail",
+            ["visualEvidenceDominance"] = "fail",
+            ["implementationNeutral"] = "fail"
+        };
+        var fidelity = new ReferenceFidelityAudit
+        {
+            Version = 1,
+            Target = new ReferenceFidelityTargetEvidence
+            {
+                Path = "target.png",
+                Sha256 = HeroVoxelProvider.HashFile(Path.Combine(fixtureRoot, "target.png"))
+            },
+            Sheets = new Dictionary<string, ReferenceFidelitySheetEvidence>(StringComparer.Ordinal)
+            {
+                ["composition.png"] = new()
+                {
+                    Sha256 = HeroVoxelProvider.HashFile(Path.Combine(fixtureRoot, "composition.png")),
+                    Criteria = new Dictionary<string, string>(axeLikeCriteria, StringComparer.Ordinal)
+                },
+                ["Parts/Axe.png"] = new()
+                {
+                    Sha256 = HeroVoxelProvider.HashFile(Path.Combine(fixtureRoot, "Parts", "Axe.png")),
+                    Criteria = new Dictionary<string, string>(axeLikeCriteria, StringComparer.Ordinal)
+                }
+            }
+        };
+        File.WriteAllText(
+            Path.Combine(fixtureRoot, "fidelity.audit.json"),
+            JsonSerializer.Serialize(
+                fidelity,
+                new JsonSerializerOptions { WriteIndented = true }));
+
+        StoreEngine engine = new(root);
+        AssetRecord asset = engine.DiscoverAssets().Single();
+        ExpectFailure(
+            () => engine.ValidateFidelityAudit(asset),
+            "constructionRichness");
+    }
+    finally
+    {
+        DeleteTree(root);
+    }
+}
 
 static void RunReferenceAuthorityContractTests(string sourceRoot)
 {
@@ -531,6 +2324,30 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
             File.WriteAllBytes(equipmentStylePng, originalEquipmentStyle);
         }
 
+        string styleManifestForScopedTraits = Path.Combine(
+            validRoot,
+            "Art",
+            "Style",
+            "low-resolution-voxel.v1",
+            "style.yaml");
+        string originalScopedTraitManifest = File.ReadAllText(styleManifestForScopedTraits);
+        try
+        {
+            File.WriteAllText(
+                styleManifestForScopedTraits,
+                originalScopedTraitManifest.Replace(
+                    "purposeful secondary construction detail",
+                    "purposeful secondary construction detail adjusted",
+                    StringComparison.Ordinal));
+            Require(
+                ReferenceGate(fixtureEngine.Scan(false, false)).Passed,
+                "equipment-only style trait mutation must not stale avatar reference evidence");
+        }
+        finally
+        {
+            File.WriteAllText(styleManifestForScopedTraits, originalScopedTraitManifest);
+        }
+
         string stylePng = Path.Combine(
             validRoot,
             "Art",
@@ -657,13 +2474,14 @@ static void RunRetirementContractTests()
             File.WriteAllText(
                 manifestPath,
                 $"""
-                version: 1
+                version: 2
                 id: {id}
                 kind: equipment
                 unitRef: {unitRef}
+                form: fixture
                 mount:
-                  profile: humanoid.medium.v1
-                  socket: Hand.L
+                  profile: humanoid.medium.v2
+                  capability: Hand
                 source:
                   base: ./Source/Fixture
                   palette: ./Source/Palette.yaml
@@ -686,6 +2504,36 @@ static void RunRetirementContractTests()
             new StoreEngine(root).DiscoverAssets().Count == 1,
             "fresh replacement identity must remain valid");
 
+        string validV2Manifest = File.ReadAllText(manifestPath);
+        File.WriteAllText(
+            manifestPath,
+            validV2Manifest.Replace(
+                "  capability: Hand",
+                "  capability: Hand\n  socket: Legacy.Hand",
+                StringComparison.Ordinal));
+        ExpectFailure(
+            () => new StoreEngine(root).DiscoverAssets(),
+            "socket");
+
+        File.WriteAllText(
+            manifestPath,
+            validV2Manifest.Replace("form: fixture\n", "", StringComparison.Ordinal));
+        ExpectFailure(
+            () => new StoreEngine(root).DiscoverAssets(),
+            "Equipment must declare form plus logical capability");
+        File.WriteAllText(manifestPath, validV2Manifest);
+
+        File.WriteAllText(
+            manifestPath,
+            validV2Manifest.Replace(
+                "form: fixture",
+                "form: fixture\ndensity: arbitrary",
+                StringComparison.Ordinal));
+        ExpectFailure(
+            () => new StoreEngine(root).DiscoverAssets(),
+            "density must be 'reference-driven'");
+        File.WriteAllText(manifestPath, validV2Manifest);
+
         RunGit(root, "init");
         RunGit(root, "config", "user.email", "voxel-store-tests@example.invalid");
         RunGit(root, "config", "user.name", "Voxel Store Tests");
@@ -696,6 +2544,15 @@ static void RunRetirementContractTests()
         ExpectFailure(
             () => new StoreEngine(root).DiscoverAssets(),
             "Published semantic identity changed in-place");
+
+        RunGit(root, "checkout", "--", "Art/Fixture/asset.yaml");
+        string publishedManifest = File.ReadAllText(manifestPath);
+        File.WriteAllText(
+            manifestPath,
+            publishedManifest.Replace("form: fixture", "form: changed-form", StringComparison.Ordinal));
+        ExpectFailure(
+            () => new StoreEngine(root).DiscoverAssets(),
+            "form changed in-place");
 
         RunGit(root, "checkout", "--", "Art/Fixture/asset.yaml");
         File.Delete(manifestPath);
@@ -710,6 +2567,64 @@ static void RunRetirementContractTests()
 }
 
 string repositoryRoot = StoreEngine.FindRoot(AppContext.BaseDirectory);
+if (args.Contains("--axe-negative-fidelity-only", StringComparer.Ordinal))
+{
+    RunAxeNegativeFidelityFixture(repositoryRoot);
+    Console.WriteLine("PASS: Axe01-equivalent negative target-fidelity fixture rejected");
+    return;
+}
+if (args.Contains("--target-sample-only", StringComparer.Ordinal))
+{
+    RunTargetDrivenSampleTests(repositoryRoot);
+    Console.WriteLine("PASS: non-published target-driven sample v3 validation");
+    return;
+}
+if (args.Contains("--implementation-neutral-only", StringComparer.Ordinal))
+{
+    RunReferenceV3StructureTests(repositoryRoot);
+    RunReferenceV3PublicationTests(repositoryRoot);
+    RunV3DensityBoundaryTests(repositoryRoot);
+    Console.WriteLine("PASS: implementation-neutral reference and downstream density boundary tests");
+    return;
+}
+if (args.Contains("--reference-v3-publication-only", StringComparer.Ordinal))
+{
+    RunReferenceV3PublicationTests(repositoryRoot);
+    Console.WriteLine("PASS: v2/v3 reference publication gate tests");
+    return;
+}
+if (args.Contains("--reference-seal-only", StringComparer.Ordinal))
+{
+    RunReferenceSealVersionTests(repositoryRoot);
+    Console.WriteLine("PASS: v2/v3 reference sealing and deterministic audit tests");
+    return;
+}
+if (args.Contains("--target-fidelity-only", StringComparer.Ordinal))
+{
+    RunTargetFidelityTests(repositoryRoot);
+    Console.WriteLine("PASS: Product Target fidelity evidence tests");
+    return;
+}
+if (args.Contains("--target-provenance-only", StringComparer.Ordinal))
+{
+    RunTargetProvenanceTests(repositoryRoot);
+    Console.WriteLine("PASS: Product Target provenance tests");
+    return;
+}
+if (args.Contains("--reference-v3-structure-only", StringComparer.Ordinal))
+{
+    RunReferenceV3StructureTests(repositoryRoot);
+    Console.WriteLine("PASS: ReferenceContract v2/v3 structural authority tests");
+    return;
+}
+if (args.Contains("--target-style-only", StringComparer.Ordinal))
+{
+    RunTargetStyleAuthorityTests(repositoryRoot);
+    Console.WriteLine("PASS: target-style v2 compatibility and v3 target authority tests");
+    return;
+}
+RunReferenceDensitySelectorTests();
+RunReferenceDensityEvidenceTests(repositoryRoot);
 if (args.Contains("--reference-authority-only", StringComparer.Ordinal))
 {
     RunReferenceAuthorityContractTests(repositoryRoot);
@@ -719,6 +2634,37 @@ if (args.Contains("--reference-authority-only", StringComparer.Ordinal))
 }
 
 var engine = new StoreEngine(repositoryRoot);
+
+var highDensityEquipment = new Hero.Voxel.Tool.VoxelCompilation(
+    "HighDensityEquipment",
+    64,
+    Array.Empty<Hero.Voxel.Tool.PaletteEntry>(),
+    Array.Empty<Hero.Voxel.Tool.CompiledPart>(),
+    Array.Empty<Hero.Voxel.Tool.CompiledSocket>(),
+    Array.Empty<Hero.Voxel.Tool.CompiledAnimationClip>())
+{
+    AssemblyOrigin = new Hero.Voxel.Tool.CompiledAssemblyOrigin("Staff")
+};
+Require(
+    StoreEngine.IsEquipmentMountFrameValid(highDensityEquipment),
+    "VPU64 equipment with a canonical assembly origin must remain compatibility-eligible");
+Require(
+    !StoreEngine.IsEquipmentMountFrameValid(highDensityEquipment with { AssemblyOrigin = null }),
+    "equipment without a canonical assembly origin must remain compatibility-ineligible");
+Require(
+    !StoreEngine.IsEquipmentMountFrameValid(highDensityEquipment with { VoxelsPerUnit = 0 }),
+    "equipment with non-positive VPU must remain compatibility-ineligible");
+
+StorePolicy activePolicy = ContractYaml.Load<StorePolicy>(
+    Path.Combine(repositoryRoot, "policy", "store.yaml"));
+Require(
+    activePolicy.Budget.MaxVoxelsPerAsset == 65536 &&
+    activePolicy.Budget.MaxPartsPerAsset == 16,
+    "active store budget must allow bounded high-resolution authoring without changing part capacity");
+StoreEngine.ValidatePublicationBudget(8357, 1, activePolicy.Budget);
+ExpectFailure(
+    () => StoreEngine.ValidatePublicationBudget(65537, 1, activePolicy.Budget),
+    "65537>65536");
 
 // Provider resolution and public Hero.Voxel integration.
 HeroVoxelProvider.Resolution resolution = engine.ResolveProvider();
@@ -799,14 +2745,15 @@ finally
 ExpectFailure(
     () => ContractYaml.Parse<AssetManifest>(
         """
-        version: 1
+        version: 2
         id: invalid.gameplay
         kind: equipment
         unitRef: invalid/gameplay
+        form: fixture
         damage: 10
         mount:
-          profile: humanoid.medium.v1
-          socket: Hand.R
+          profile: humanoid.medium.v2
+          capability: Hand
         source:
           base: ./Source/Item
           palette: ./Palette.yaml
@@ -818,13 +2765,14 @@ ExpectFailure(
 ExpectFailure(
     () => ContractYaml.Parse<AssetManifest>(
         """
-        version: 1
+        version: 2
         id: invalid.correction
         kind: equipment
         unitRef: invalid/correction
+        form: fixture
         mount:
-          profile: humanoid.medium.v1
-          socket: Hand.R
+          profile: humanoid.medium.v2
+          capability: Hand
           correction: [1, 2, 3]
         source:
           base: ./Source/Item
@@ -843,11 +2791,11 @@ try
     File.WriteAllText(
         Path.Combine(assetDir, "asset.yaml"),
         """
-        version: 1
+        version: 2
         id: bad.path
         kind: avatar
         unitRef: bad/path
-        family: humanoid.medium.v1
+        family: humanoid.medium.v2
         source:
           base: ../../../../outside
           palette: ./Palette.yaml
@@ -871,7 +2819,7 @@ try
     File.WriteAllText(
         Path.Combine(assetDir, "asset.yaml"),
         """
-        version: 1
+        version: 2
         id: bad.kind
         kind: weapon
         unitRef: bad/kind
@@ -900,11 +2848,11 @@ try
         File.WriteAllText(
             Path.Combine(assetDir, "asset.yaml"),
             $"""
-             version: 1
+             version: 2
              id: duplicate.asset
              kind: avatar
              unitRef: duplicate/unit-{i}
-             family: humanoid.medium.v1
+             family: humanoid.medium.v2
              source:
                base: ./Source/Item
                palette: ./Palette.yaml
@@ -932,11 +2880,11 @@ try
         File.WriteAllText(
             Path.Combine(assetDir, "asset.yaml"),
             $"""
-             version: 1
+             version: 2
              id: duplicate.unitref-{i}
              kind: avatar
              unitRef: duplicate/shared-unit
-             family: humanoid.medium.v1
+             family: humanoid.medium.v2
              source:
                base: ./Source/Item
                palette: ./Palette.yaml
@@ -964,11 +2912,11 @@ try
     string originalManifest = Path.Combine(originalDir, "asset.yaml");
     const string originalIdentity =
         """
-        version: 1
+        version: 2
         id: history.original
         kind: avatar
         unitRef: history/original
-        family: humanoid.medium.v1
+        family: humanoid.medium.v2
         source:
           base: ./Source/Item
           palette: ./Palette.yaml
@@ -1020,14 +2968,14 @@ try
     File.WriteAllText(
         Path.Combine(profileHistoryRoot, "policy", "coverage.yaml"),
         """
-        version: 1
+        version: 2
         foundation: history
         requirements: []
         """);
     CopyFile(
         repositoryRoot,
         profileHistoryRoot,
-        "policy/families/humanoid.medium.v1.yaml");
+        "policy/families/humanoid.medium.v2.yaml");
     RunGit(profileHistoryRoot, "init");
     RunGit(profileHistoryRoot, "config", "user.email", "test@example.invalid");
     RunGit(profileHistoryRoot, "config", "user.name", "Voxel Store Test");
@@ -1038,13 +2986,44 @@ try
         profileHistoryRoot,
         "policy",
         "families",
-        "humanoid.medium.v1.yaml");
+        "humanoid.medium.v2.yaml");
     string originalProfile = File.ReadAllText(profilePath);
     File.WriteAllText(
         profilePath,
         originalProfile.Replace(
-            "envelope: [4, 4, 12]",
-            "envelope: [5, 4, 12]",
+            "      - Hand.1",
+            "      - Hand.0",
+            StringComparison.Ordinal));
+    ExpectFailure(
+        () => new StoreEngine(profileHistoryRoot).Scan(false, false),
+        "duplicate socket");
+
+    File.WriteAllText(
+        profilePath,
+        originalProfile.Replace(
+            "    forward: [0, 0, 1]",
+            "    forward: [0, 0, 2]",
+            StringComparison.Ordinal));
+    ExpectFailure(
+        () => new StoreEngine(profileHistoryRoot).Scan(false, false),
+        "normalized and orthogonal");
+
+    File.WriteAllText(
+        profilePath,
+        originalProfile.Replace(
+            "    envelope: [6, 8, 12]",
+            "    envelope: [0, 8, 12]",
+            StringComparison.Ordinal));
+    ExpectFailure(
+        () => new StoreEngine(profileHistoryRoot).Scan(false, false),
+        "envelope components must be positive");
+
+
+    File.WriteAllText(
+        profilePath,
+        originalProfile.Replace(
+            "envelope: [6, 8, 12]",
+            "envelope: [7, 8, 12]",
             StringComparison.Ordinal));
     ExpectFailure(
         () => new StoreEngine(profileHistoryRoot).Scan(false, false),
@@ -1056,10 +3035,10 @@ try
             profileHistoryRoot,
             "policy",
             "families",
-            "humanoid.medium.v2.yaml"),
+            "humanoid.medium.v3.yaml"),
         originalProfile.Replace(
-            "id: humanoid.medium.v1",
             "id: humanoid.medium.v2",
+            "id: humanoid.medium.v3",
             StringComparison.Ordinal));
     new StoreEngine(profileHistoryRoot).Scan(false, false);
 }
@@ -1070,8 +3049,10 @@ finally
 
 IReadOnlyList<AssetRecord> assets = engine.DiscoverAssets();
 Require(
-    assets.Count == 2,
-    "CombatFoundation.v1 must contain exactly two active assets");
+    assets.Count == 11 &&
+    assets.Count(x => x.Manifest.Kind == "avatar") == 1 &&
+    assets.Count(x => x.Manifest.Kind == "equipment") == 10,
+    "CombatFoundation.v1 must contain one avatar plus ten active equipment assets");
 Require(
     assets.Select(x => x.Manifest.Id)
         .Distinct(StringComparer.Ordinal).Count() == assets.Count,
@@ -1099,10 +3080,10 @@ StoreSnapshot first =
     engine.Scan(writeDerived: true, writeCompatibility: true);
 StoreSnapshot second =
     engine.Scan(writeDerived: true, writeCompatibility: true);
-Require(first.Healthy && second.Healthy, "completed V1 store must be healthy");
+Require(first.Healthy && second.Healthy, "completed v2 store must be healthy");
 Require(
     first.CoverageGaps.Count == 0,
-    "completed V1 store must have no required coverage gaps");
+    "completed v2 store must have no required coverage gaps");
 Require(
     first.NextJob == null && second.NextJob == null,
     "healthy store must plan no creative job");
@@ -1110,21 +3091,64 @@ Require(
     first.Assets.Count == second.Assets.Count,
     "scan must be deterministic");
 Require(
-    first.Compatibility.Count == 2 &&
-    first.Compatibility.All(x => x.Passed),
-    "one bow pair across two required pose samples must pass");
+    first.Compatibility.Count == 40 &&
+    first.Compatibility.All(x =>
+        x.Passed &&
+        x.Capability == "Hand" &&
+        (x.Attachment == "Hand.0" || x.Attachment == "Hand.1")),
+    "ten hand-capability assets must each pass both neutral attachments across both required pose samples");
+Require(
+    first.Compatibility
+        .Where(x => !string.IsNullOrWhiteSpace(x.Equipment))
+        .GroupBy(x => x.Equipment, StringComparer.Ordinal)
+        .All(x =>
+            x.Count() == 4 &&
+            x.Select(row => row.Attachment).Distinct(StringComparer.Ordinal).Count() == 2),
+    "each equipment asset must contribute exactly four compatibility rows across both neutral hand attachments");
+
+string formCoveragePath = Path.Combine(repositoryRoot, "policy", "coverage.yaml");
+string formCoverageOriginal = File.ReadAllText(formCoveragePath);
+try
+{
+    File.WriteAllText(
+        formCoveragePath,
+        formCoverageOriginal.Replace(
+            "    form: sword",
+            "    form: sword-missing",
+            StringComparison.Ordinal));
+    StoreSnapshot formGap = engine.Scan(writeDerived: false, writeCompatibility: false);
+    Require(
+        formGap.CoverageGaps.Count == 1 &&
+        formGap.CoverageGaps[0].Id == "foundation.equipment.sword" &&
+        formGap.CoverageGaps[0].Capability == "Hand" &&
+        formGap.CoverageGaps[0].Form == "sword-missing" &&
+        formGap.NextJob?.Target == "foundation.equipment.sword",
+        "coverage must match physical form exactly in addition to profile and Hand capability");
+}
+finally
+{
+    File.WriteAllText(formCoveragePath, formCoverageOriginal);
+}
 
 string compatibilityEvidence = Path.Combine(
     assets.Single(x => x.Manifest.Kind == "avatar").ProofDirectory,
     "Compatibility",
-    "foundation.equipment.bow.left-01.json");
+    "foundation.equipment.bow.01.json");
 using (JsonDocument evidence =
        JsonDocument.Parse(File.ReadAllText(compatibilityEvidence)))
 {
     JsonElement samples = evidence.RootElement.GetProperty("samples");
     Require(
-        samples.GetArrayLength() == 2,
-        "compatibility evidence must contain required pose samples");
+        evidence.RootElement.GetProperty("capability").GetString() == "Hand" &&
+        samples.GetArrayLength() == 4,
+        "compatibility evidence must bind Hand capability and contain both neutral attachments across required poses");
+    Require(
+        samples.EnumerateArray()
+            .Select(x => x.GetProperty("attachment").GetString())
+            .Where(x => x != null)
+            .Distinct(StringComparer.Ordinal)
+            .Count() == 2,
+        "compatibility evidence must identify both physical Hand attachment instances");
     JsonElement frame = samples[0].GetProperty("frame");
     Require(
         frame.GetProperty("origin").GetArrayLength() == 3 &&
@@ -1153,7 +3177,7 @@ Require(
 
 // A stale generated sibling is diagnosed before expansion work.
 AssetRecord bow = assets.Single(
-    x => x.Manifest.Id == "foundation.equipment.bow.left-01");
+    x => x.Manifest.Id == "foundation.equipment.bow.01");
 string bowGenerated = bow.SourceBase + ".generated.vox";
 byte[] originalGenerated = File.ReadAllBytes(bowGenerated);
 string coveragePath = Path.Combine(repositoryRoot, "policy", "coverage.yaml");
@@ -1271,7 +3295,7 @@ finally
     File.WriteAllBytes(heroProof, originalHeroProof);
 }
 
-// Initial bootstrap with only the canonical avatar exposes exactly one bow gap.
+// Initial bootstrap with only the canonical avatar exposes all ten form gaps.
 string bootstrapRoot = TempRoot();
 try
 {
@@ -1279,7 +3303,7 @@ try
              {
                  "policy/store.yaml",
                  "policy/coverage.yaml",
-                 "policy/families/humanoid.medium.v1.yaml",
+                 "policy/families/humanoid.medium.v2.yaml",
                  "toolchain/hero-voxel.lock.yaml",
                  "Art/CombatFoundation/Palette.yaml"
              })
@@ -1321,12 +3345,16 @@ try
         bootstrap.Assets.Count == 1 && bootstrap.Assets[0].Published,
         "bootstrap avatar must publish");
     Require(
-        bootstrap.CoverageGaps.Count == 1 &&
-        bootstrap.CoverageGaps.All(x => x.Kind == "equipment"),
-        "avatar-only bootstrap must expose exactly one bow equipment gap");
+        bootstrap.CoverageGaps.Count == 10 &&
+        bootstrap.CoverageGaps.All(x =>
+            x.Kind == "equipment" &&
+            x.Capability == "Hand" &&
+            !string.IsNullOrWhiteSpace(x.Form)),
+        "avatar-only bootstrap must expose exactly ten hand-neutral form gaps");
     Require(
-        bootstrap.NextJob?.Priority == "required-coverage",
-        "bootstrap must select required coverage after healthy avatar");
+        bootstrap.NextJob?.Priority == "required-coverage" &&
+        bootstrap.NextJob.Target == "foundation.equipment.sword",
+        "bootstrap must select the first deterministic form gap after healthy avatar");
 }
 finally
 {
@@ -1350,7 +3378,7 @@ try
         incompatibleRoot,
         "policy",
         "families",
-        "humanoid.medium.v1.yaml");
+        "humanoid.medium.v2.yaml");
     string compatibleProfile = File.ReadAllText(profilePath);
     File.WriteAllText(
         profilePath,
@@ -1360,31 +3388,25 @@ try
             StringComparison.Ordinal));
     StoreSnapshot incompatible =
         new StoreEngine(incompatibleRoot).Scan(false, false);
-    CompatibilityResult failedPair = incompatible.Compatibility.First(
-        x => !x.Passed && !string.IsNullOrEmpty(x.Equipment));
+    CompatibilityResult failedAvatar = incompatible.Compatibility.First(
+        x => !x.Passed && string.IsNullOrEmpty(x.Equipment));
     Require(
-        failedPair.Avatar == "foundation.avatar.humanoid.guard-01" &&
-        !string.IsNullOrWhiteSpace(failedPair.Equipment) &&
-        failedPair.Profile == "humanoid.medium.v1" &&
-        !string.IsNullOrWhiteSpace(failedPair.Mount) &&
-        !string.IsNullOrWhiteSpace(failedPair.Pose) &&
-        !string.IsNullOrWhiteSpace(failedPair.Evidence),
-        "failed pair must identify avatar, equipment, profile, mount, pose, and evidence");
+        failedAvatar.Avatar == "foundation.avatar.humanoid.guard-01" &&
+        failedAvatar.Equipment == "" &&
+        failedAvatar.Profile == "humanoid.medium.v2" &&
+        failedAvatar.Capability == "Hand" &&
+        (failedAvatar.Attachment == "Hand.0" || failedAvatar.Attachment == "Hand.1") &&
+        failedAvatar.Pose == "bind" &&
+        failedAvatar.Evidence.Contains("voxelsPerUnit mismatch", StringComparison.Ordinal),
+        "profile VPU mismatch must remain an avatar conformance failure, not an equipment-density failure");
     Require(
         incompatible.Assets.Any(x => !x.Published),
-        "physical incompatibility must prevent affected assets from publishing healthy");
-
+        "avatar/profile VPU incompatibility must prevent affected assets from publishing healthy");
     File.WriteAllText(
         profilePath,
         compatibleProfile.Replace(
-            "optionalMounts: []",
-            """
-              - socket: Missing
-                forward: [0, 0, 1]
-                up: [0, 1, 0]
-                envelope: [4, 4, 4]
-            optionalMounts: []
-            """,
+            "      - Hand.1",
+            "      - Hand.1\n      - Missing",
             StringComparison.Ordinal));
     StoreSnapshot missingSocket =
         new StoreEngine(incompatibleRoot).Scan(false, false);
@@ -1392,8 +3414,9 @@ try
         missingSocket.Compatibility.Any(
             x => !x.Passed &&
                  x.Equipment == "" &&
-                 x.Mount == "Missing"),
-        "missing required avatar socket must produce profile conformance failure");
+                 x.Capability == "Hand" &&
+                 x.Attachment == "Missing"),
+        "missing required neutral hand attachment must produce profile conformance failure");
     Require(
         !missingSocket.Assets.Single(
             x => x.Id == "foundation.avatar.humanoid.guard-01").Published,

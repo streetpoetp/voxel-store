@@ -49,6 +49,14 @@ try
                 Console.WriteLine($"sealed {args[1]}");
                 return 0;
             }
+        case "density":
+            {
+                if (args.Length < 2)
+                    throw new ArgumentException("density requires <asset-id>.");
+                ReferenceDensityEvidence evidence = engine.SelectDensity(args[1], write);
+                Console.WriteLine(JsonSerializer.Serialize(evidence, json));
+                return evidence.SelectedVpu.HasValue ? 0 : 2;
+            }
         case "provider":
             {
                 Console.WriteLine(JsonSerializer.Serialize(engine.ResolveProvider(), json));
