@@ -3,129 +3,96 @@
 ## Bootstrap
 
 1. Read `AGENTS.md`.
-2. Resolve `HERO_STUDIO_ROOT` (or pass `-p:HeroStudioRoot=...`) and validate `toolchain/hero-voxel.lock.yaml`.
-3. Run the store tool tests before changing deterministic contracts.
-4. Use OpenSpec for architecture, ownership, schema, workflow, or cross-cutting changes.
+2. Resolve the pinned Hero.Voxel provider through `toolchain/hero-voxel.lock.yaml` and `HERO_STUDIO_ROOT` when the current command requires the Tool to build or Hero.Voxel to run.
+3. Use OpenSpec for architecture, ownership, schema, workflow, or other cross-cutting changes.
+4. Start maintenance from deterministic Tool state; do not choose work from generated catalog/status files by hand.
 
-## Deterministic commands
+Repository domain roots are explicit: `Assets` is reusable product content; `Styles` is visual authority; `Profiles` is physical compatibility; `Collections` is desired coverage; `Samples` is non-published experimentation; `Store` is global policy/history; `Catalog` is derived state.
+
+## Lifecycle
+
+The maintenance workflow has one primary path:
+
+```text
+PLAN
+  -> REFERENCE
+  -> SOURCE
+  -> PROOF
+  -> PUBLISH
+```
+
+These are navigation stages only. Existing Tool gates, OpenSpec contracts, policy, and Hero.Voxel rules remain authoritative.
+
+### 1. Plan
+
+Run deterministic scan/plan state and claim only the first asset-scoped job plus its earliest unresolved/current gate.
+
+- If no job exists, the store is healthy: stop.
+- Never skip an earlier unresolved gate to work on a later stage.
+- One maintenance invocation owns only that selected asset.
+
+### 2. Reference
+
+Reference work establishes accepted visual/construction authority for the current asset.
+
+- Product Target creation is owned by `.agents/skills/voxel-store-product-target/SKILL.md`.
+- Style and target fidelity are owned by `openspec/specs/reference-style-authority/spec.md` and `openspec/specs/reference-target-fidelity/spec.md`.
+- Composition/Part construction semantics are owned by the pinned Hero.Voxel `voxel-art-workflow.md`.
+- New or intentionally redesigned assets use the target-driven flow selected by current contracts.
+- Compatibility exception: an unchanged legacy v2 repair may preserve its existing reference flow when the Tool selects that work; do not migrate it merely to follow the primary diagram.
+
+### 3. Source
+
+Source work turns accepted reference authority into implementation source.
+
+- If the current asset requires reference-driven density, run the density gate first; `openspec/specs/reference-density-selection/spec.md` and `Store/vpu-ruler.yaml` own that behavior.
+- Author/repair VoxelSpec only after upstream gates pass.
+- Hero.Voxel owns VoxelSpec parsing/compilation and canonical voxel-authoring semantics.
+
+### 4. Proof
+
+Generate deterministic output and proof for the current source, visually inspect the required evidence, and seal only accepted proof.
+
+Compilation is not visual acceptance. If proof fails, repair the same current asset/gate.
+
+### 5. Publish
+
+Re-scan and verify derived state after the asset passes its upstream gates. Compatibility, budget, derived catalog, selected-collection coverage, and publication remain Tool/spec/domain-contract-owned.
+
+Commit only verified repository-owned work. Push only when a real upstream remote and usable authentication exist.
+
+## Gate loop
+
+After every gate:
+
+```text
+PASS    -> re-derive Tool state for the same asset and follow its next gate
+FAIL    -> repair the same gate on the same asset
+BLOCKED -> report the blocking authority/evidence/dependency and stop
+HEALTHY -> stop
+```
+
+Do not maintain a second manual stage tracker beside deterministic Tool state.
+
+## Common commands
 
 From the repository root:
 
-    dotnet run --project Tool/VoxelStore.Tool -- scan --write
-    dotnet run --project Tool/VoxelStore.Tool -- verify
-    dotnet run --project Tool/VoxelStore.Tool -- plan
-    dotnet run --project Tool/VoxelStore.Tool -- density <asset-id> [--write]
-    dotnet run --project Tool/VoxelStore.Tool -- generate <asset-id>
-    dotnet run --project Tool/VoxelStore.Tool -- seal-reference <asset-id>
-    dotnet run --project Tool/VoxelStore.Tool -- seal <asset-id>
+```text
+dotnet run --project Tool/VoxelStore.Tool -- plan
+dotnet run --project Tool/VoxelStore.Tool -- scan --write
+dotnet run --project Tool/VoxelStore.Tool -- verify
+dotnet run --project Tool/VoxelStore.Tool -- density <asset-id> [--write]
+dotnet run --project Tool/VoxelStore.Tool -- generate <asset-id>
+dotnet run --project Tool/VoxelStore.Tool -- seal-reference <asset-id>
+dotnet run --project Tool/VoxelStore.Tool -- seal <asset-id>
+```
 
-Set `HERO_STUDIO_ROOT` to a compatible Hero Studio checkout before building/running because the Tool references Hero.Voxel's standalone .NET project, not copied source.
-
-## Visual and construction authority
-
-The project has three distinct visual-authority layers:
-
-    shared style authority
-        -> Product Target
-        -> Hero.Voxel construction sheets
-        -> density (when reference-driven)
-        -> VoxelSpec source
-
-- **Shared style authority** defines reusable visual grammar and the family quality bar. Construction-style `references` keep legacy sheet/style behavior; target-specific `targetReferences` provide the polished common + matching-kind inputs used to create Product Targets. Exemplar-specific palette, material hierarchy, accent colors, wrap/decorative motifs, or other identity choices are **not** automatically global style rules; they become family-wide only when active style authority explicitly declares them as such.
-- **Product Target** is per-asset visual-fidelity authority for target-driven work. It answers “what should this asset look like?” and preserves silhouette, proportions, material/color hierarchy, and meaningful construction richness.
-- **Composition/Part Sheets** are Hero.Voxel construction authority. They answer “how is this visual target constructed?” while retaining Hero.Voxel view/orientation/part semantics.
-
-No layer silently substitutes for another. A Product Target cannot replace required orthographic construction sheets, and a structurally valid sheet cannot pass merely because its labels describe detail that is not visibly present.
-
-### Generated Product Target authoring
-
-For a new target-driven asset with no approved supplied Product Target, creative target generation is an **image-model stage**. Use `.agents/skills/voxel-store-product-target/SKILL.md`.
-
-- The image-generation model consumes the applicable polished `targetReferences` plus asset/form intent.
-- Treat style references as grammar/quality evidence rather than copy templates. Preserve explicitly global style invariants, but let asset intent establish a distinct silhouette, palette, material hierarchy, accent family, and motif where those choices are not globally constrained. Do not mechanically repeat another asset's colors/material recipe merely because it appears in the style exemplars.
-- `System.Drawing`, SVG/canvas/PIL scripts, procedural pixel/voxel rendering, and VoxelSpec previews are not valid substitutes for newly generated Product Target authority. Those tools remain valid downstream for construction layout, diagnostics, or proof where appropriate.
-- The exact visually accepted image-model output must become the repository `target.png`. If the result is visible but cannot be transferred into the project byte-for-byte, stop at Product Target authoring; do not redraw it locally.
-- For the same-desktop ChatGPT/WebCodex path, an accepted image downloaded to the Runner-visible filesystem may be imported with `Tool/import-product-target.ps1`; the importer copies the PNG and verifies source/destination SHA-256 equality. This is a transport bridge only—the downloaded image-model output remains the creative authority.
-- Newly generated targets use provenance v2 with `generator.kind: image-model`, provider/model identity, and a hash-bound repository `target.request.json` (or equivalent request artifact). Existing accepted generated provenance v1 may remain unchanged until an intentional redesign.
-- Generate/review/iterate candidates before freezing authority. After acceptance, downstream construction and voxel geometry converge to the target; the target is not simplified merely to make modeling easier.
-
-## Reference package versions
-
-### Legacy v2
-
-Unchanged published assets may keep the existing v2 package:
-
-    Composition
-        -> freeze RequiredParts
-        -> Part Sheet(s)
-        -> source
-
-A v2 repair does not force target-driven migration.
-
-### Target-driven v3
-
-New asset design and intentional visual redesign use v3:
-
-    applicable target style authority
-        -> imported approved target OR image-model Product Target generation
-        -> exact-byte project delivery + current target provenance
-        -> target visual acceptance
-        -> Composition
-        -> target-fidelity audit
-        -> freeze RequiredParts
-        -> one Part Sheet at a time
-        -> target-fidelity + Hero.Voxel audit
-        -> density when applicable
-        -> source
-        -> generation/proof
-        -> model-to-Product-Target visual convergence
-        -> compatibility/publication
-
-A v3 package declares `target.png` (or its mapped equivalent), target provenance, Composition, every required Part Sheet, and fidelity evidence. Any changed target/sheet/upstream target authority stales the corresponding evidence.
-
-The fidelity audit must pass:
-
-- silhouette
-- proportions
-- construction richness
-- material/color hierarchy
-- meaningful detail density
-- visual-evidence dominance
-- implementation neutrality
-
-Product Target/Composition/Part authority must not freeze exact VPU, exact voxel W x H x D dimensions, source voxel budgets, pivots, sockets, or runtime transforms. For `density: reference-driven` equipment, VPU is selected only after the v3 reference gate passes.
-
-### Per-unit VPU ruler authority
-
-VPU is a **per-unit implementation property**, not a global project or equipment-class density.
-
-- `openspec/specs/reference-density-selection/spec.md` owns density-selection behavior.
-- `policy/vpu-ruler.yaml` owns the shared numeric candidate ladder and broad search priors. Its ranges guide candidate search only; they are not hard bounds and never directly select VPU.
-- Each unit's accepted Part Sheets plus intended world extent provide apparent voxel-cadence measurements.
-- Each unit's `Density/input.yaml` owns those measurements; `Density/evidence.generated.json` owns evaluated candidates and the selected VPU for that unit.
-- Intentional one-voxel highlights, bevels, edge bands, straps, gaps, and silhouette steps are valid when readable and faithful to the accepted reference. Density must not be raised merely to make every feature multiple voxels thick.
-- `policy/coverage.yaml` remains catalog coverage authority and must not contain VPU policy.
-- Product Target, Composition, and Part Sheets remain implementation-neutral and must not declare the selected VPU.
-
-Publication order for target-driven density equipment is:
-
-    manifest
-        -> reference (target/provenance/fidelity included)
-        -> density
-        -> source
-        -> generation
-        -> proof
-        -> budget
-        -> compatibility
-
-## Agent maintenance
-
-Use `.agents/skills/voxel-store-maintain/SKILL.md`. The skill consumes deterministic plan output, claims one job, reads the pinned Hero.Voxel authoring workflow, and owns visual/creative decisions only for that job. A failed Product Target, Composition, Part, density, source, proof, or compatibility gate remains owned by that same asset until repaired or explicitly blocked.
+Current Tool builds require a compatible `HERO_STUDIO_ROOT`. Making repository-local planning independent of that provider is a separate architecture change: `decouple-store-planning-from-hero-voxel-provider`.
 
 ## Finalization
 
-- Run `dotnet run --project Tool/VoxelStore.Tool.Tests`.
-- Regenerate and verify catalog/health.
-- Run strict OpenSpec validation and `git diff --check`.
-- Commit only verified repository-owned work.
-- Push only when a real upstream remote exists; never invent or force a push target.
+- Run the applicable deterministic validation and Tool tests when the pinned provider is available.
+- Run strict OpenSpec validation for spec/workflow changes.
+- Run `git diff --check`.
+- Preserve unrelated dirty work.

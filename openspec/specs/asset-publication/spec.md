@@ -25,6 +25,13 @@ Each authored asset SHALL have one repository-owned manifest that declares a uni
 - **WHEN** previously published equipment changes its reusable physical-form classification without an explicit migration
 - **THEN** validation fails instead of silently moving the same published identity between coverage forms
 
+### Requirement: Published identity is independent of repository collection paths
+Moving a published asset between repository organization roots SHALL NOT change its published asset id or UnitRef unless an explicit identity migration is approved. Filesystem structure is organizational authority, not published identity authority.
+
+#### Scenario: Foundation-owned asset path moves to reusable Assets root
+- **WHEN** a published asset moves from a collection-specific legacy path to `Assets/**` with unchanged manifest id and UnitRef
+- **THEN** the move is treated as repository-structure migration rather than retirement/republication under a new identity
+
 ### Requirement: Hero.Voxel source ownership remains canonical
 Spec-driven assets SHALL keep editable VoxelSpec sources and machine-owned generated Hero.Voxel siblings at the canonical unit source base. Generated siblings SHALL be reproducible outputs and SHALL NOT become manually edited authoring authority or be moved into a separate generated-art hierarchy.
 

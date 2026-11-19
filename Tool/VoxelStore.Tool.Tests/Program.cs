@@ -377,14 +377,16 @@ static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string rep
     string root = TempRoot();
     try
     {
-        CopyDirectory(Path.Combine(repositoryRoot, "policy"), Path.Combine(root, "policy"));
+        CopyDirectory(Path.Combine(repositoryRoot, "Store"), Path.Combine(root, "Store"));
+        CopyDirectory(Path.Combine(repositoryRoot, "Collections"), Path.Combine(root, "Collections"));
+        CopyDirectory(Path.Combine(repositoryRoot, "Profiles"), Path.Combine(root, "Profiles"));
         CopyFile(repositoryRoot, root, "toolchain/hero-voxel.lock.yaml");
         CopyDirectory(
-            Path.Combine(repositoryRoot, "Art", "Style", "low-resolution-voxel.v1"),
-            Path.Combine(root, "Art", "Style", "low-resolution-voxel.v1"));
+            Path.Combine(repositoryRoot, "Styles", "low-resolution-voxel.v1"),
+            Path.Combine(root, "Styles", "low-resolution-voxel.v1"));
 
         string assetRoot = Path.Combine(
-            root, "Art", "CombatFoundation", "Units", "Equipment", "FixtureStaff");
+            root, "Assets", "Equipment", "FixtureStaff");
         Directory.CreateDirectory(Path.Combine(assetRoot, "Reference", "Parts"));
         Directory.CreateDirectory(Path.Combine(assetRoot, "Source"));
 
@@ -403,7 +405,7 @@ static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string rep
               base: ./Source/FixtureStaff
               palette: ./Source/FixtureStaff.palette.yaml
             style:
-              family: combat-foundation.v1
+              family: low-resolution-voxel.v1
             """);
         File.WriteAllText(
             Path.Combine(assetRoot, "Reference", "reference.yaml"),
@@ -606,7 +608,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
         File.WriteAllText(canonicalSpec, originalCanonicalSpec);
 
         StorePolicy storePolicy = ContractYaml.Load<StorePolicy>(
-            Path.Combine(root, "policy", "store.yaml"));
+            Path.Combine(root, "Store", "policy.yaml"));
         engine.ValidateDensityEvidence(staff, storePolicy);
 
         (int ExitCode, string StdOut, string StdErr) RunDensityCli(bool write)
@@ -669,7 +671,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
         File.WriteAllText(inputPath, originalInput);
         engine.SelectDensity(densityFixtureId, write: true);
 
-        string rulerPath = Path.Combine(root, "policy", "vpu-ruler.yaml");
+        string rulerPath = Path.Combine(root, "Store", "vpu-ruler.yaml");
         string originalRuler = File.ReadAllText(rulerPath);
         File.WriteAllText(rulerPath, originalRuler + Environment.NewLine + "# ruler-revision-test");
         ExpectFailure(
@@ -706,36 +708,38 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
 static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
 {
     string root = TempRoot();
-    Directory.CreateDirectory(Path.Combine(root, "policy", "families"));
+    Directory.CreateDirectory(Path.Combine(root, "Store"));
+    Directory.CreateDirectory(Path.Combine(root, "Collections"));
+    Directory.CreateDirectory(Path.Combine(root, "Profiles"));
     File.WriteAllText(
-        Path.Combine(root, "policy", "store.yaml"),
+        Path.Combine(root, "Store", "policy.yaml"),
         """
-        version: 1
+        version: 2
         name: ReferenceFixture
-        styleFamily: combat-foundation.v1
-        referenceStyle: low-resolution-voxel.v1
+        collection: combat-foundation.v1
+        defaultStyle: low-resolution-voxel.v1
         allowOptionalExpansion: false
         budget:
           maxVoxelsPerAsset: 4096
           maxPartsPerAsset: 16
         """);
     File.WriteAllText(
-        Path.Combine(root, "policy", "coverage.yaml"),
+        Path.Combine(root, "Collections", "combat-foundation.v1.yaml"),
         """
-        version: 2
-        foundation: ReferenceFixture
+        version: 1
+        id: combat-foundation.v1
         requirements: []
         """);
     CopyFile(
         sourceRoot,
         root,
-        "policy/families/humanoid.medium.v2.yaml");
+        "Profiles/humanoid.medium.v2.yaml");
     CopyFile(
         sourceRoot,
         root,
         "toolchain/hero-voxel.lock.yaml");
 
-    string styleRoot = Path.Combine(root, "Art", "Style", "low-resolution-voxel.v1");
+    string styleRoot = Path.Combine(root, "Styles", "low-resolution-voxel.v1");
     Directory.CreateDirectory(styleRoot);
     File.WriteAllText(
         Path.Combine(styleRoot, "style.yaml"),
@@ -762,7 +766,7 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
     WritePngHeader(Path.Combine(styleRoot, "equipment-bow-source.png"), 1200, 900);
 
     string assetRoot = Path.Combine(
-        root, "Art", "CombatFoundation", "Units", "Avatars", "FixtureAvatar");
+        root, "Assets", "Avatars", "FixtureAvatar");
     Directory.CreateDirectory(assetRoot);
     File.WriteAllText(
         Path.Combine(assetRoot, "asset.yaml"),
@@ -774,9 +778,9 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
         family: humanoid.medium.v2
         source:
           base: ./Source/FixtureAvatar
-          palette: ../../../Palette.yaml
+          palette: ./Source/FixtureAvatar.palette.yaml
         style:
-          family: combat-foundation.v1
+          family: low-resolution-voxel.v1
         """);
     string referenceRoot = Path.Combine(assetRoot, "Reference");
     Directory.CreateDirectory(referenceRoot);
@@ -815,7 +819,7 @@ static void RunTargetStyleAuthorityTests(string sourceRoot)
             "version 3");
 
         string stylePath = Path.Combine(
-            root, "Art", "Style", "low-resolution-voxel.v1", "style.yaml");
+            root, "Styles", "low-resolution-voxel.v1", "style.yaml");
         string v2 = File.ReadAllText(stylePath);
         string v3 = v2
             .Replace("version: 2", "version: 3", StringComparison.Ordinal)
@@ -896,9 +900,7 @@ static void RunReferenceV3StructureTests(string sourceRoot)
 {
     static string ReferenceRoot(string root) => Path.Combine(
         root,
-        "Art",
-        "CombatFoundation",
-        "Units",
+        "Assets",
         "Avatars",
         "FixtureAvatar",
         "Reference");
@@ -1129,9 +1131,7 @@ static void RunTargetProvenanceTests(string sourceRoot)
 
     static string ReferenceRoot(string root) => Path.Combine(
         root,
-        "Art",
-        "CombatFoundation",
-        "Units",
+        "Assets",
         "Avatars",
         "FixtureAvatar",
         "Reference");
@@ -1148,7 +1148,7 @@ static void RunTargetProvenanceTests(string sourceRoot)
     static void UpgradeTargetStyle(string root)
     {
         string stylePath = Path.Combine(
-            root, "Art", "Style", "low-resolution-voxel.v1", "style.yaml");
+            root, "Styles", "low-resolution-voxel.v1", "style.yaml");
         string style = File.ReadAllText(stylePath);
         style = style
             .Replace("version: 2", "version: 3", StringComparison.Ordinal)
@@ -1222,8 +1222,7 @@ static void RunTargetProvenanceTests(string sourceRoot)
 
         string styleInput = Path.Combine(
             generatedRoot,
-            "Art",
-            "Style",
+            "Styles",
             "low-resolution-voxel.v1",
             "reference-02.png");
         byte[] originalStyle = File.ReadAllBytes(styleInput);
@@ -1401,9 +1400,7 @@ static void RunTargetFidelityTests(string sourceRoot)
 
     static string ReferenceRoot(string root) => Path.Combine(
         root,
-        "Art",
-        "CombatFoundation",
-        "Units",
+        "Assets",
         "Avatars",
         "FixtureAvatar",
         "Reference");
@@ -1542,9 +1539,7 @@ static void RunReferenceSealVersionTests(string sourceRoot)
 {
     static string ReferenceRoot(string root) => Path.Combine(
         root,
-        "Art",
-        "CombatFoundation",
-        "Units",
+        "Assets",
         "Avatars",
         "FixtureAvatar",
         "Reference");
@@ -1709,7 +1704,7 @@ static void RunReferenceSealVersionTests(string sourceRoot)
 static void RunReferenceV3PublicationTests(string sourceRoot)
 {
     static string ReferenceRoot(string root) => Path.Combine(
-        root, "Art", "CombatFoundation", "Units", "Avatars", "FixtureAvatar", "Reference");
+        root, "Assets", "Avatars", "FixtureAvatar", "Reference");
 
     static Dictionary<string, string> PassingCriteria() => new(StringComparer.Ordinal)
     {
@@ -2065,7 +2060,7 @@ static void RunV3DensityBoundaryTests(string sourceRoot)
 static void RunTargetDrivenSampleTests(string sourceRoot)
 {
     string sampleRoot = Path.Combine(
-        sourceRoot, "Art", "Samples", "TargetDrivenReferenceProof");
+        sourceRoot, "Samples", "TargetDrivenReferenceProof");
     string referenceRoot = Path.Combine(sampleRoot, "Reference");
     Require(
         Directory.Exists(referenceRoot) &&
@@ -2160,10 +2155,8 @@ static void RunAxeNegativeFidelityFixture(string sourceRoot)
     {
         string fixtureRoot = Path.Combine(
             root,
-            "Art",
-            "CombatFoundation",
-            "Units",
-            "Avatars",
+            "Assets",
+        "Avatars",
             "FixtureAvatar",
             "Reference");
         Directory.CreateDirectory(Path.Combine(fixtureRoot, "Parts"));
@@ -2256,7 +2249,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
         """);
     try
     {
-        string styleDir = Path.Combine(styleRoot, "Art", "Style", "low-resolution-voxel.v1");
+        string styleDir = Path.Combine(styleRoot, "Styles", "low-resolution-voxel.v1");
         ReferenceStyleAuthority style =
             new StoreEngine(styleRoot).ResolveReferenceStyle("avatar");
         Require(style.Id == "low-resolution-voxel.v1", "style id must resolve");
@@ -2325,13 +2318,13 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
             "Required PNG is missing");
         WritePngHeader(Path.Combine(styleDir, "reference-03.png"), 1200, 900);
 
-        string policyPath = Path.Combine(styleRoot, "policy", "store.yaml");
+        string policyPath = Path.Combine(styleRoot, "Store", "policy.yaml");
         string originalPolicy = File.ReadAllText(policyPath);
         File.WriteAllText(
             policyPath,
             originalPolicy.Replace(
-                "referenceStyle: low-resolution-voxel.v1",
-                "referenceStyle:",
+                "defaultStyle: low-resolution-voxel.v1",
+                "defaultStyle:",
                 StringComparison.Ordinal));
         ExpectFailure(
             () => new StoreEngine(styleRoot).ResolveReferenceStyle("avatar"),
@@ -2350,10 +2343,8 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
         {
             string referenceRoot = Path.Combine(
                 root,
-                "Art",
-                "CombatFoundation",
-                "Units",
-                "Avatars",
+                "Assets",
+        "Avatars",
                 "FixtureAvatar",
                 "Reference");
             Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
@@ -2519,10 +2510,8 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
     {
         string referenceRoot = Path.Combine(
             validRoot,
-            "Art",
-            "CombatFoundation",
-            "Units",
-            "Avatars",
+            "Assets",
+        "Avatars",
             "FixtureAvatar",
             "Reference");
         Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
@@ -2571,8 +2560,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
 
         string equipmentStylePng = Path.Combine(
             validRoot,
-            "Art",
-            "Style",
+            "Styles",
             "low-resolution-voxel.v1",
             "equipment-bow-source.png");
         byte[] originalEquipmentStyle = File.ReadAllBytes(equipmentStylePng);
@@ -2592,8 +2580,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
 
         string styleManifestForScopedTraits = Path.Combine(
             validRoot,
-            "Art",
-            "Style",
+            "Styles",
             "low-resolution-voxel.v1",
             "style.yaml");
         string originalScopedTraitManifest = File.ReadAllText(styleManifestForScopedTraits);
@@ -2616,8 +2603,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
 
         string stylePng = Path.Combine(
             validRoot,
-            "Art",
-            "Style",
+            "Styles",
             "low-resolution-voxel.v1",
             "reference-01.png");
         byte[] original = File.ReadAllBytes(stylePng);
@@ -2648,8 +2634,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
 
         string styleManifest = Path.Combine(
             validRoot,
-            "Art",
-            "Style",
+            "Styles",
             "low-resolution-voxel.v1",
             "style.yaml");
         string originalStyleManifest = File.ReadAllText(styleManifest);
@@ -2723,9 +2708,9 @@ static void RunRetirementContractTests()
     string root = TempRoot();
     try
     {
-        Directory.CreateDirectory(Path.Combine(root, "policy"));
+        Directory.CreateDirectory(Path.Combine(root, "Store"));
         File.WriteAllText(
-            Path.Combine(root, "policy", "retired-assets.yaml"),
+            Path.Combine(root, "Store", "retired-assets.yaml"),
             """
             version: 1
             assets:
@@ -2733,7 +2718,7 @@ static void RunRetirementContractTests()
                 unitRef: retired/unit
             """);
 
-        string assetRoot = Path.Combine(root, "Art", "Fixture");
+        string assetRoot = Path.Combine(root, "Assets", "Fixture");
         Directory.CreateDirectory(assetRoot);
         string manifestPath = Path.Combine(assetRoot, "asset.yaml");
         void WriteManifest(string id, string unitRef) =>
@@ -2752,7 +2737,7 @@ static void RunRetirementContractTests()
                   base: ./Source/Fixture
                   palette: ./Source/Palette.yaml
                 style:
-                  family: combat-foundation.v1
+                  family: low-resolution-voxel.v1
                 """);
 
         WriteManifest("retired.asset", "fresh/unit");
@@ -2811,7 +2796,7 @@ static void RunRetirementContractTests()
             () => new StoreEngine(root).DiscoverAssets(),
             "Published semantic identity changed in-place");
 
-        RunGit(root, "checkout", "--", "Art/Fixture/asset.yaml");
+        RunGit(root, "checkout", "--", "Assets/Fixture/asset.yaml");
         string publishedManifest = File.ReadAllText(manifestPath);
         File.WriteAllText(
             manifestPath,
@@ -2820,7 +2805,7 @@ static void RunRetirementContractTests()
             () => new StoreEngine(root).DiscoverAssets(),
             "form changed in-place");
 
-        RunGit(root, "checkout", "--", "Art/Fixture/asset.yaml");
+        RunGit(root, "checkout", "--", "Assets/Fixture/asset.yaml");
         File.Delete(manifestPath);
         Require(
             new StoreEngine(root).DiscoverAssets().Count == 0,
@@ -2927,7 +2912,7 @@ Require(
     "equipment with non-positive VPU must remain compatibility-ineligible");
 
 StorePolicy activePolicy = ContractYaml.Load<StorePolicy>(
-    Path.Combine(repositoryRoot, "policy", "store.yaml"));
+    Path.Combine(repositoryRoot, "Store", "policy.yaml"));
 Require(
     activePolicy.Budget.MaxVoxelsPerAsset == 65536 &&
     activePolicy.Budget.MaxPartsPerAsset == 16,
@@ -3029,7 +3014,7 @@ ExpectFailure(
           base: ./Source/Item
           palette: ./Palette.yaml
         style:
-          family: combat-foundation.v1
+          family: low-resolution-voxel.v1
         """),
     "damage");
 
@@ -3049,7 +3034,7 @@ ExpectFailure(
           base: ./Source/Item
           palette: ./Palette.yaml
         style:
-          family: combat-foundation.v1
+          family: low-resolution-voxel.v1
         """),
     "correction");
 
@@ -3057,7 +3042,7 @@ ExpectFailure(
 string invalidPathRoot = TempRoot();
 try
 {
-    string assetDir = Path.Combine(invalidPathRoot, "Art", "Bad");
+    string assetDir = Path.Combine(invalidPathRoot, "Assets", "Bad");
     Directory.CreateDirectory(assetDir);
     File.WriteAllText(
         Path.Combine(assetDir, "asset.yaml"),
@@ -3071,7 +3056,7 @@ try
           base: ../../../../outside
           palette: ./Palette.yaml
         style:
-          family: combat-foundation.v1
+          family: low-resolution-voxel.v1
         """);
     ExpectFailure(
         () => new StoreEngine(invalidPathRoot).DiscoverAssets(),
@@ -3085,7 +3070,7 @@ finally
 string invalidKindRoot = TempRoot();
 try
 {
-    string assetDir = Path.Combine(invalidKindRoot, "Art", "BadKind");
+    string assetDir = Path.Combine(invalidKindRoot, "Assets", "BadKind");
     Directory.CreateDirectory(assetDir);
     File.WriteAllText(
         Path.Combine(assetDir, "asset.yaml"),
@@ -3098,7 +3083,7 @@ try
           base: ./Source/Item
           palette: ./Palette.yaml
         style:
-          family: combat-foundation.v1
+          family: low-resolution-voxel.v1
         """);
     ExpectFailure(
         () => new StoreEngine(invalidKindRoot).DiscoverAssets(),
@@ -3114,7 +3099,7 @@ try
 {
     for (int i = 0; i < 2; i++)
     {
-        string assetDir = Path.Combine(duplicateRoot, "Art", "A" + i);
+        string assetDir = Path.Combine(duplicateRoot, "Assets", "A" + i);
         Directory.CreateDirectory(assetDir);
         File.WriteAllText(
             Path.Combine(assetDir, "asset.yaml"),
@@ -3128,7 +3113,7 @@ try
                base: ./Source/Item
                palette: ./Palette.yaml
              style:
-               family: combat-foundation.v1
+               family: low-resolution-voxel.v1
              """);
     }
 
@@ -3146,7 +3131,7 @@ try
 {
     for (int i = 0; i < 2; i++)
     {
-        string assetDir = Path.Combine(duplicateUnitRefRoot, "Art", "U" + i);
+        string assetDir = Path.Combine(duplicateUnitRefRoot, "Assets", "U" + i);
         Directory.CreateDirectory(assetDir);
         File.WriteAllText(
             Path.Combine(assetDir, "asset.yaml"),
@@ -3160,7 +3145,7 @@ try
                base: ./Source/Item
                palette: ./Palette.yaml
              style:
-               family: combat-foundation.v1
+               family: low-resolution-voxel.v1
              """);
     }
     ExpectFailure(
@@ -3178,7 +3163,7 @@ try
     RunGit(identityHistoryRoot, "init");
     RunGit(identityHistoryRoot, "config", "user.email", "test@example.invalid");
     RunGit(identityHistoryRoot, "config", "user.name", "Voxel Store Test");
-    string originalDir = Path.Combine(identityHistoryRoot, "Art", "Original");
+    string originalDir = Path.Combine(identityHistoryRoot, "Assets", "Original");
     Directory.CreateDirectory(originalDir);
     string originalManifest = Path.Combine(originalDir, "asset.yaml");
     const string originalIdentity =
@@ -3192,7 +3177,7 @@ try
           base: ./Source/Item
           palette: ./Palette.yaml
         style:
-          family: combat-foundation.v1
+          family: low-resolution-voxel.v1
         """;
     File.WriteAllText(originalManifest, originalIdentity);
     RunGit(identityHistoryRoot, "add", ".");
@@ -3209,7 +3194,7 @@ try
         "semantic identity changed");
 
     File.WriteAllText(originalManifest, originalIdentity);
-    string newDir = Path.Combine(identityHistoryRoot, "Art", "New");
+    string newDir = Path.Combine(identityHistoryRoot, "Assets", "New");
     Directory.CreateDirectory(newDir);
     File.WriteAllText(
         Path.Combine(newDir, "asset.yaml"),
@@ -3234,19 +3219,19 @@ finally
 string profileHistoryRoot = TempRoot();
 try
 {
-    CopyFile(repositoryRoot, profileHistoryRoot, "policy/store.yaml");
-    Directory.CreateDirectory(Path.Combine(profileHistoryRoot, "policy"));
+    CopyFile(repositoryRoot, profileHistoryRoot, "Store/policy.yaml");
+    Directory.CreateDirectory(Path.Combine(profileHistoryRoot, "Collections"));
     File.WriteAllText(
-        Path.Combine(profileHistoryRoot, "policy", "coverage.yaml"),
+        Path.Combine(profileHistoryRoot, "Collections", "combat-foundation.v1.yaml"),
         """
-        version: 2
-        foundation: history
+        version: 1
+        id: combat-foundation.v1
         requirements: []
         """);
     CopyFile(
         repositoryRoot,
         profileHistoryRoot,
-        "policy/families/humanoid.medium.v2.yaml");
+        "Profiles/humanoid.medium.v2.yaml");
     RunGit(profileHistoryRoot, "init");
     RunGit(profileHistoryRoot, "config", "user.email", "test@example.invalid");
     RunGit(profileHistoryRoot, "config", "user.name", "Voxel Store Test");
@@ -3255,8 +3240,7 @@ try
 
     string profilePath = Path.Combine(
         profileHistoryRoot,
-        "policy",
-        "families",
+        "Profiles",
         "humanoid.medium.v2.yaml");
     string originalProfile = File.ReadAllText(profilePath);
     File.WriteAllText(
@@ -3304,9 +3288,8 @@ try
     File.WriteAllText(
         Path.Combine(
             profileHistoryRoot,
-            "policy",
-            "families",
-            "humanoid.medium.v3.yaml"),
+            "Profiles",
+        "humanoid.medium.v3.yaml"),
         originalProfile.Replace(
             "id: humanoid.medium.v2",
             "id: humanoid.medium.v3",
@@ -3393,7 +3376,7 @@ Require(
             x.Select(row => row.Attachment).Distinct(StringComparer.Ordinal).Count() == 2),
     "each equipment asset must contribute exactly four compatibility rows across both neutral hand attachments");
 
-string formCoveragePath = Path.Combine(repositoryRoot, "policy", "coverage.yaml");
+string formCoveragePath = Path.Combine(repositoryRoot, "Collections", "combat-foundation.v1.yaml");
 string formCoverageOriginal = File.ReadAllText(formCoveragePath);
 try
 {
@@ -3448,9 +3431,9 @@ using (JsonDocument evidence =
 
 // Derived catalog/health can be deleted and regenerated byte-identically.
 string catalogPath =
-    Path.Combine(repositoryRoot, "catalog", "catalog.generated.json");
+    Path.Combine(repositoryRoot, "Catalog", "catalog.generated.json");
 string healthPath =
-    Path.Combine(repositoryRoot, "catalog", "health.generated.json");
+    Path.Combine(repositoryRoot, "Catalog", "health.generated.json");
 string catalogBefore = File.ReadAllText(catalogPath);
 string healthBefore = File.ReadAllText(healthPath);
 File.Delete(catalogPath);
@@ -3468,7 +3451,7 @@ AssetRecord sword = assets.Single(
     x => x.Manifest.Id == "foundation.equipment.sword.02");
 string swordGenerated = sword.SourceBase + ".generated.vox";
 byte[] originalGenerated = File.ReadAllBytes(swordGenerated);
-string coveragePath = Path.Combine(repositoryRoot, "policy", "coverage.yaml");
+string coveragePath = Path.Combine(repositoryRoot, "Collections", "combat-foundation.v1.yaml");
 string originalCoverage = File.ReadAllText(coveragePath);
 try
 {
@@ -3589,11 +3572,11 @@ try
 {
     foreach (string relative in new[]
              {
-                 "policy/store.yaml",
-                 "policy/coverage.yaml",
-                 "policy/families/humanoid.medium.v2.yaml",
+                 "Store/policy.yaml",
+                 "Collections/combat-foundation.v1.yaml",
+                 "Profiles/humanoid.medium.v2.yaml",
                  "toolchain/hero-voxel.lock.yaml",
-                 "Art/CombatFoundation/Palette.yaml"
+                 "Assets/Avatars/FoundationGuard01/Source/FoundationGuard01.palette.yaml"
              })
     {
         CopyFile(repositoryRoot, bootstrapRoot, relative);
@@ -3602,29 +3585,23 @@ try
     CopyDirectory(
         Path.Combine(
             repositoryRoot,
-            "Art",
-            "Style",
+            "Styles",
             "low-resolution-voxel.v1"),
         Path.Combine(
             bootstrapRoot,
-            "Art",
-            "Style",
+            "Styles",
             "low-resolution-voxel.v1"));
 
     CopyDirectory(
         Path.Combine(
             repositoryRoot,
-            "Art",
-            "CombatFoundation",
-            "Units",
-            "Avatars",
+            "Assets",
+        "Avatars",
             "FoundationGuard01"),
         Path.Combine(
             bootstrapRoot,
-            "Art",
-            "CombatFoundation",
-            "Units",
-            "Avatars",
+            "Assets",
+        "Avatars",
             "FoundationGuard01"));
 
     StoreSnapshot bootstrap =
@@ -3656,26 +3633,32 @@ string fullCatalogRoot = TempRoot();
 try
 {
     CopyDirectory(
-        Path.Combine(repositoryRoot, "policy"),
-        Path.Combine(fullCatalogRoot, "policy"));
+        Path.Combine(repositoryRoot, "Store"),
+        Path.Combine(fullCatalogRoot, "Store"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Collections"),
+        Path.Combine(fullCatalogRoot, "Collections"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Profiles"),
+        Path.Combine(fullCatalogRoot, "Profiles"));
     CopyDirectory(
         Path.Combine(repositoryRoot, "toolchain"),
         Path.Combine(fullCatalogRoot, "toolchain"));
     CopyDirectory(
-        Path.Combine(repositoryRoot, "Art", "Style", "low-resolution-voxel.v1"),
-        Path.Combine(fullCatalogRoot, "Art", "Style", "low-resolution-voxel.v1"));
-    CopyFile(repositoryRoot, fullCatalogRoot, "Art/CombatFoundation/Palette.yaml");
+        Path.Combine(repositoryRoot, "Styles", "low-resolution-voxel.v1"),
+        Path.Combine(fullCatalogRoot, "Styles", "low-resolution-voxel.v1"));
+    CopyFile(repositoryRoot, fullCatalogRoot, "Assets/Avatars/FoundationGuard01/Source/FoundationGuard01.palette.yaml");
     CopyDirectory(
-        Path.Combine(repositoryRoot, "Art", "CombatFoundation", "Units", "Avatars", "FoundationGuard01"),
-        Path.Combine(fullCatalogRoot, "Art", "CombatFoundation", "Units", "Avatars", "FoundationGuard01"));
+        Path.Combine(repositoryRoot, "Assets", "Avatars", "FoundationGuard01"),
+        Path.Combine(fullCatalogRoot, "Assets", "Avatars", "FoundationGuard01"));
 
     string fixtureEquipmentRoot = Path.Combine(
-        fullCatalogRoot, "Art", "CombatFoundation", "Units", "Equipment");
+        fullCatalogRoot, "Assets", "Equipment");
     Directory.CreateDirectory(fixtureEquipmentRoot);
     string sourceSwordRoot = Path.Combine(
-        repositoryRoot, "Art", "CombatFoundation", "Units", "Equipment", "Sword02");
+        repositoryRoot, "Assets", "Equipment", "Sword02");
     string sourceDaggerRoot = Path.Combine(
-        repositoryRoot, "Art", "CombatFoundation", "Units", "Equipment", "Dagger02");
+        repositoryRoot, "Assets", "Equipment", "Dagger02");
     CopyDirectory(sourceSwordRoot, Path.Combine(fixtureEquipmentRoot, "Sword02"));
     CopyDirectory(sourceDaggerRoot, Path.Combine(fixtureEquipmentRoot, "Dagger02"));
 
@@ -3727,19 +3710,27 @@ string incompatibleRoot = TempRoot();
 try
 {
     CopyDirectory(
-        Path.Combine(repositoryRoot, "policy"),
-        Path.Combine(incompatibleRoot, "policy"));
+        Path.Combine(repositoryRoot, "Store"),
+        Path.Combine(incompatibleRoot, "Store"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Collections"),
+        Path.Combine(incompatibleRoot, "Collections"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Profiles"),
+        Path.Combine(incompatibleRoot, "Profiles"));
     CopyDirectory(
         Path.Combine(repositoryRoot, "toolchain"),
         Path.Combine(incompatibleRoot, "toolchain"));
     CopyDirectory(
-        Path.Combine(repositoryRoot, "Art"),
-        Path.Combine(incompatibleRoot, "Art"));
+        Path.Combine(repositoryRoot, "Assets"),
+        Path.Combine(incompatibleRoot, "Assets"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Styles"),
+        Path.Combine(incompatibleRoot, "Styles"));
 
     string profilePath = Path.Combine(
         incompatibleRoot,
-        "policy",
-        "families",
+        "Profiles",
         "humanoid.medium.v2.yaml");
     string compatibleProfile = File.ReadAllText(profilePath);
     File.WriteAllText(
@@ -3806,12 +3797,34 @@ string skill = File.ReadAllText(
         "SKILL.md"));
 Require(
     skill.Contains(
-        "only the first returned job",
+        "Claim only the first asset-scoped job",
         StringComparison.OrdinalIgnoreCase) &&
     skill.Contains(
-        "Never select a second asset",
+        "select a second asset",
         StringComparison.OrdinalIgnoreCase),
     "maintenance skill must enforce one claimed job per invocation");
+
+string sampleIsolationRoot = TempRoot();
+try
+{
+    string sampleAssetRoot = Path.Combine(sampleIsolationRoot, "Samples", "IgnoredAssetLikeSample");
+    Directory.CreateDirectory(sampleAssetRoot);
+    File.WriteAllText(
+        Path.Combine(sampleAssetRoot, "asset.yaml"),
+        """
+        version: 2
+        id: sample.must-not-publish
+        kind: equipment
+        unitRef: sample/must-not-publish
+        """);
+    Require(
+        new StoreEngine(sampleIsolationRoot).DiscoverAssets().Count == 0,
+        "Samples must remain outside published asset discovery even when they contain asset-like manifests");
+}
+finally
+{
+    DeleteTree(sampleIsolationRoot);
+}
 
 Console.WriteLine(
     $"PASS: {assets.Count} assets, healthy={first.Healthy}, " +

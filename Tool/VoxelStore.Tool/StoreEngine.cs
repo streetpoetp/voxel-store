@@ -65,6 +65,7 @@ public sealed class AssetHealth
 public sealed class StoreSnapshot
 {
     public string Store { get; set; } = string.Empty;
+    public string Collection { get; set; } = string.Empty;
     public List<AssetHealth> Assets { get; set; } = new();
     public List<CoverageGap> CoverageGaps { get; set; } = new();
     public List<CompatibilityResult> Compatibility { get; set; } = new();
@@ -101,23 +102,23 @@ public sealed class StoreEngine
         string current = Path.GetFullPath(start ?? Environment.CurrentDirectory);
         while (true)
         {
-            if (File.Exists(Path.Combine(current, "policy", "store.yaml")))
+            if (File.Exists(Path.Combine(current, "Store", "policy.yaml")))
                 return current;
             DirectoryInfo? parent = Directory.GetParent(current);
             if (parent == null)
-                throw new DirectoryNotFoundException("Could not locate voxel-store root (policy/store.yaml).");
+                throw new DirectoryNotFoundException("Could not locate voxel-store root (Store/policy.yaml).");
             current = parent.FullName;
         }
     }
 
     public IReadOnlyList<AssetRecord> DiscoverAssets()
     {
-        string art = Path.Combine(_root, "Art");
-        if (!Directory.Exists(art))
+        string assetsRoot = Path.Combine(_root, "Assets");
+        if (!Directory.Exists(assetsRoot))
             return Array.Empty<AssetRecord>();
 
         var assets = new List<AssetRecord>();
-        foreach (string manifestPath in Directory.GetFiles(art, "asset.yaml", SearchOption.AllDirectories)
+        foreach (string manifestPath in Directory.GetFiles(assetsRoot, "asset.yaml", SearchOption.AllDirectories)
                      .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
         {
             AssetManifest manifest = ContractYaml.Load<AssetManifest>(manifestPath);
@@ -154,7 +155,7 @@ public sealed class StoreEngine
 
     private IReadOnlyList<RetiredAssetIdentity> LoadRetiredIdentities()
     {
-        string path = Path.Combine(_root, "policy", "retired-assets.yaml");
+        string path = Path.Combine(_root, "Store", "retired-assets.yaml");
         if (!File.Exists(path))
             return Array.Empty<RetiredAssetIdentity>();
 
@@ -174,12 +175,32 @@ public sealed class StoreEngine
         return policy.Assets;
     }
 
+    private StorePolicy LoadStorePolicy()
+    {
+        StorePolicy policy = ContractYaml.Load<StorePolicy>(Path.Combine(_root, "Store", "policy.yaml"));
+        ValidatePolicy(policy);
+        return policy;
+    }
+
+    private CollectionManifest LoadCollection(StorePolicy policy)
+    {
+        string collectionRoot = Path.Combine(_root, "Collections");
+        string collectionPath = ResolveContained(
+            collectionRoot,
+            policy.Collection + ".yaml",
+            "Collection manifest");
+        CollectionManifest collection = ContractYaml.Load<CollectionManifest>(collectionPath);
+        ValidateCollection(collection);
+        if (!string.Equals(collection.Id, policy.Collection, StringComparison.Ordinal))
+            throw new InvalidDataException(
+                $"Selected collection '{policy.Collection}' does not match manifest id '{collection.Id}'.");
+        return collection;
+    }
+
     public StoreSnapshot Scan(bool writeDerived, bool writeCompatibility)
     {
-        StorePolicy policy = ContractYaml.Load<StorePolicy>(Path.Combine(_root, "policy", "store.yaml"));
-        ValidatePolicy(policy);
-        CoveragePolicy coverage = ContractYaml.Load<CoveragePolicy>(Path.Combine(_root, "policy", "coverage.yaml"));
-        ValidateCoverage(coverage);
+        StorePolicy policy = LoadStorePolicy();
+        CollectionManifest collection = LoadCollection(policy);
         IReadOnlyList<AssetRecord> assets = DiscoverAssets();
         Dictionary<string, CompatibilityProfile> profiles = LoadProfiles();
         var healthById = new Dictionary<string, AssetHealth>(StringComparer.Ordinal);
@@ -200,11 +221,12 @@ public sealed class StoreEngine
                 health.FailedGate = "compatibility";
         }
 
-        List<CoverageGap> gaps = EvaluateCoverage(coverage, assets, healthById);
+        List<CoverageGap> gaps = EvaluateCoverage(collection, assets, healthById);
         MaintenanceJob? next = PlanNext(assets, healthById, gaps, policy);
         var snapshot = new StoreSnapshot
         {
             Store = policy.Name,
+            Collection = collection.Id,
             Assets = healthById.Values.OrderBy(x => x.Id, StringComparer.Ordinal).ToList(),
             CoverageGaps = gaps,
             Compatibility = compatibility,
@@ -226,9 +248,7 @@ public sealed class StoreEngine
     public void SealReference(string assetId)
     {
         AssetRecord asset = RequireAsset(assetId);
-        StorePolicy policy = ContractYaml.Load<StorePolicy>(Path.Combine(_root, "policy", "store.yaml"));
-        ValidatePolicy(policy);
-        WriteReferenceAudit(asset, policy);
+        WriteReferenceAudit(asset);
     }
 
     public void Seal(string assetId)
@@ -246,9 +266,8 @@ public sealed class StoreEngine
         if (!string.Equals(asset.Manifest.Kind, "equipment", StringComparison.Ordinal))
             throw new InvalidOperationException("Reference-density selection applies only to equipment.");
 
-        StorePolicy policy = ContractYaml.Load<StorePolicy>(Path.Combine(_root, "policy", "store.yaml"));
-        ValidatePolicy(policy);
-        ValidateReference(asset, policy);
+        StorePolicy policy = LoadStorePolicy();
+        ValidateReference(asset);
 
         ReferenceDensityEvidence evidence = BuildDensityEvidence(asset, policy);
         if (write)
@@ -265,7 +284,7 @@ public sealed class StoreEngine
 
     internal string ValidateDensityEvidence(AssetRecord asset, StorePolicy policy)
     {
-        ValidateReference(asset, policy);
+        ValidateReference(asset);
         string evidencePath = Path.Combine(asset.RootDirectory, "Density", "evidence.generated.json");
         if (!File.Exists(evidencePath))
             throw new InvalidDataException("Density evidence is missing.");
@@ -306,7 +325,7 @@ public sealed class StoreEngine
             if (!string.Equals(input.AssetClass, asset.Manifest.Kind, StringComparison.Ordinal))
                 throw new InvalidDataException(
                     $"Density input assetClass '{input.AssetClass}' must match asset kind '{asset.Manifest.Kind}'.");
-            rulerPath = Path.Combine(_root, "policy", "vpu-ruler.yaml");
+            rulerPath = Path.Combine(_root, "Store", "vpu-ruler.yaml");
             if (!File.Exists(rulerPath))
                 throw new InvalidDataException("Shared VPU ruler is missing.");
             ruler = ReferenceDensitySelector.LoadRuler(rulerPath);
@@ -386,16 +405,14 @@ public sealed class StoreEngine
 
     public ReferenceStyleAuthority ResolveReferenceStyle(string assetKind)
     {
-        StorePolicy policy = ContractYaml.Load<StorePolicy>(Path.Combine(_root, "policy", "store.yaml"));
-        ValidatePolicy(policy);
-        return ResolveReferenceStyle(policy.ReferenceStyle, assetKind);
+        StorePolicy policy = LoadStorePolicy();
+        return ResolveReferenceStyle(policy.DefaultStyle, assetKind);
     }
 
     public ReferenceStyleAuthority ResolveTargetReferenceStyle(string assetKind)
     {
-        StorePolicy policy = ContractYaml.Load<StorePolicy>(Path.Combine(_root, "policy", "store.yaml"));
-        ValidatePolicy(policy);
-        return ResolveReferenceStyle(policy.ReferenceStyle, assetKind, targetAuthority: true);
+        StorePolicy policy = LoadStorePolicy();
+        return ResolveReferenceStyle(policy.DefaultStyle, assetKind, targetAuthority: true);
     }
 
     internal string ReferenceStyleAuthoritySha256(ReferenceStyleAuthority style) =>
@@ -415,8 +432,8 @@ public sealed class StoreEngine
             Profile = asset.Manifest.Family ?? asset.Manifest.Mount?.Profile,
             Capability = asset.Manifest.Mount?.Capability
         };
-        AddGate(health, "manifest", () => ValidateManifest(asset, policy, profiles));
-        AddGate(health, "reference", () => ValidateReference(asset, policy));
+        AddGate(health, "manifest", () => ValidateManifest(asset, profiles));
+        AddGate(health, "reference", () => ValidateReference(asset));
         if (IsReferenceDrivenDensity(asset.Manifest))
             AddGate(health, "density", () => ValidateDensityEvidence(asset, policy));
         AddGate(health, "source", () => ValidateSource(asset));
@@ -490,14 +507,12 @@ public sealed class StoreEngine
 
         return Path.GetRelativePath(_root, full).Replace('\\', '/');    }
 
-    private static string ValidateManifest(
+    private string ValidateManifest(
         AssetRecord asset,
-        StorePolicy policy,
         IReadOnlyDictionary<string, CompatibilityProfile> profiles)
     {
         AssetManifest m = asset.Manifest;
-        if (!string.Equals(m.Style.Family, policy.StyleFamily, StringComparison.Ordinal))
-            throw new InvalidDataException($"Style family '{m.Style.Family}' does not match store policy '{policy.StyleFamily}'.");
+        ResolveReferenceStyle(m.Style.Family, m.Kind);
         if (m.Kind == "avatar")
         {
             if (string.IsNullOrWhiteSpace(m.Family) || !profiles.ContainsKey(m.Family))
@@ -519,7 +534,7 @@ public sealed class StoreEngine
         return asset.ManifestPath;
     }
 
-    private string ValidateReference(AssetRecord asset, StorePolicy policy)
+    private string ValidateReference(AssetRecord asset)
     {
         string auditPath = Path.Combine(asset.ReferenceDirectory, "audit.generated.json");
         if (!File.Exists(auditPath))
@@ -532,7 +547,7 @@ public sealed class StoreEngine
         }
 
         ReferenceStyleAuthority style = ResolveReferenceStyle(
-            policy.ReferenceStyle,
+            asset.Manifest.Style.Family,
             asset.Manifest.Kind);
         VerifyAudit(
             asset.ReferenceDirectory,
@@ -705,7 +720,10 @@ public sealed class StoreEngine
                         "Product Target generation request provenance is stale.");
             }
             ReferenceStyleAuthority targetStyle =
-                ResolveTargetReferenceStyle(asset.Manifest.Kind);
+                ResolveReferenceStyle(
+                    asset.Manifest.Style.Family,
+                    asset.Manifest.Kind,
+                    targetAuthority: true);
             string expectedAuthority = BuildStyleAuthoritySha256(targetStyle);
             if (!IsSha256(provenance.TargetStyleAuthoritySha256) ||
                 !string.Equals(
@@ -915,7 +933,7 @@ public sealed class StoreEngine
 
     private Dictionary<string, CompatibilityProfile> LoadProfiles()
     {
-        string root = Path.Combine(_root, "policy", "families");
+        string root = Path.Combine(_root, "Profiles");
         var profiles = new Dictionary<string, CompatibilityProfile>(StringComparer.Ordinal);
         if (!Directory.Exists(root))
             return profiles;
@@ -1193,7 +1211,7 @@ public sealed class StoreEngine
     private static float[] Vector(Vector3 value) => new[] { value.X, value.Y, value.Z };
 
     private static List<CoverageGap> EvaluateCoverage(
-        CoveragePolicy coverage,
+        CollectionManifest coverage,
         IReadOnlyList<AssetRecord> assets,
         IReadOnlyDictionary<string, AssetHealth> health)
     {
@@ -1254,11 +1272,12 @@ public sealed class StoreEngine
 
     private void WriteDerived(StoreSnapshot snapshot)
     {
-        string catalogDir = Path.Combine(_root, "catalog");
+        string catalogDir = Path.Combine(_root, "Catalog");
         Directory.CreateDirectory(catalogDir);
         File.WriteAllText(Path.Combine(catalogDir, "catalog.generated.json"), JsonSerializer.Serialize(new
         {
             store = snapshot.Store,
+            collection = snapshot.Collection,
             assets = snapshot.Assets.Where(x => x.Published).Select(x => new
             {
                 x.Id,
@@ -1299,7 +1318,7 @@ public sealed class StoreEngine
                 contract.Fidelity,
                 "Target fidelity evidence");
     }
-    private void WriteReferenceAudit(AssetRecord asset, StorePolicy policy)
+    private void WriteReferenceAudit(AssetRecord asset)
     {
         ReferenceContract contract = ValidateReferenceContractStructure(asset);
         if (contract.Version == 3)
@@ -1309,7 +1328,7 @@ public sealed class StoreEngine
         }
 
         ReferenceStyleAuthority style = ResolveReferenceStyle(
-            policy.ReferenceStyle,
+            asset.Manifest.Style.Family,
             asset.Manifest.Kind);
         HeroVoxelLock lockFile = ContractYaml.Load<HeroVoxelLock>(
             Path.Combine(_root, "toolchain", "hero-voxel.lock.yaml"));
@@ -1496,12 +1515,12 @@ public sealed class StoreEngine
         bool targetAuthority)
     {
         if (string.IsNullOrWhiteSpace(styleId))
-            throw new InvalidDataException("Store referenceStyle is required.");
+            throw new InvalidDataException("Asset style family is required.");
         if (assetKind is not ("avatar" or "equipment"))
             throw new InvalidDataException(
                 $"Reference style does not support asset kind '{assetKind}'.");
 
-        string styleBase = Path.Combine(_root, "Art", "Style");
+        string styleBase = Path.Combine(_root, "Styles");
         string manifestPath = ResolveContained(
             styleBase,
             styleId.Replace('\\', '/') + "/style.yaml",
@@ -1668,6 +1687,8 @@ public sealed class StoreEngine
             throw new InvalidDataException($"Unsupported asset kind '{m.Kind}' in {path}.");
         if (string.IsNullOrWhiteSpace(m.Source.Base) || string.IsNullOrWhiteSpace(m.Source.Palette))
             throw new InvalidDataException($"Asset source base/palette are required in {path}.");
+        if (string.IsNullOrWhiteSpace(m.Style.Family))
+            throw new InvalidDataException($"Asset style family is required in {path}.");
         if (Path.IsPathRooted(m.Source.Base) || Path.IsPathRooted(m.Source.Palette))
             throw new InvalidDataException($"Asset source paths must be repository-portable relative paths in {path}.");
 
@@ -1689,37 +1710,37 @@ public sealed class StoreEngine
 
     private static void ValidatePolicy(StorePolicy policy)
     {
-        if (policy.Version != 1 ||
+        if (policy.Version != 2 ||
             string.IsNullOrWhiteSpace(policy.Name) ||
-            string.IsNullOrWhiteSpace(policy.StyleFamily) ||
-            string.IsNullOrWhiteSpace(policy.ReferenceStyle))
+            string.IsNullOrWhiteSpace(policy.Collection) ||
+            string.IsNullOrWhiteSpace(policy.DefaultStyle))
             throw new InvalidDataException("Store policy is incomplete.");
         if (policy.Budget.MaxVoxelsPerAsset <= 0 || policy.Budget.MaxPartsPerAsset <= 0)
             throw new InvalidDataException("Store budgets must be positive.");
     }
 
-    private static void ValidateCoverage(CoveragePolicy policy)
+    private static void ValidateCollection(CollectionManifest collection)
     {
-        if (policy.Version != 2 || string.IsNullOrWhiteSpace(policy.Foundation))
-            throw new InvalidDataException("Active coverage policy must use version 2.");
-        if (policy.Requirements.Select(x => x.Id).Distinct(StringComparer.Ordinal).Count() != policy.Requirements.Count)
-            throw new InvalidDataException("Coverage requirement ids must be unique.");
+        if (collection.Version != 1 || string.IsNullOrWhiteSpace(collection.Id))
+            throw new InvalidDataException("Active collection manifest must use version 1.");
+        if (collection.Requirements.Select(x => x.Id).Distinct(StringComparer.Ordinal).Count() != collection.Requirements.Count)
+            throw new InvalidDataException("Collection requirement ids must be unique.");
 
-        foreach (CoverageRequirement requirement in policy.Requirements)
+        foreach (CoverageRequirement requirement in collection.Requirements)
         {
             if (requirement.Kind is not ("avatar" or "equipment"))
-                throw new InvalidDataException($"Unsupported coverage kind '{requirement.Kind}'.");
+                throw new InvalidDataException($"Unsupported collection requirement kind '{requirement.Kind}'.");
 
             if (string.IsNullOrWhiteSpace(requirement.Profile))
-                throw new InvalidDataException("V2 coverage requires a profile.");
+                throw new InvalidDataException("Collection requirements require a profile.");
             if (requirement.Kind == "equipment")
             {
                 if (string.IsNullOrWhiteSpace(requirement.Capability) || string.IsNullOrWhiteSpace(requirement.Form))
-                    throw new InvalidDataException("V2 equipment coverage requires capability and form.");
+                    throw new InvalidDataException("Equipment collection requirements require capability and form.");
             }
             else if (!string.IsNullOrWhiteSpace(requirement.Capability) || !string.IsNullOrWhiteSpace(requirement.Form))
             {
-                throw new InvalidDataException("V2 avatar coverage cannot declare equipment capability/form.");
+                throw new InvalidDataException("Avatar collection requirements cannot declare equipment capability/form.");
             }
         }
     }

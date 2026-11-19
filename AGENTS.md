@@ -4,10 +4,19 @@
 
 ## Authority
 
-- `policy/**`, `toolchain/**`, `Art/**/asset.yaml`, accepted `Art/**/Reference/**`, editable `*.voxel.yaml`, optional editable `*.vox`, and optional editable `*.animation.yaml` are authoritative.
+- `Store/**`, `Collections/**`, `Profiles/**`, `Styles/**`, `toolchain/**`, `Assets/**/asset.yaml`, accepted `Assets/**/Reference/**`, editable `*.voxel.yaml`, optional editable `*.vox`, and optional editable `*.animation.yaml` are authoritative.
 - `*.generated.vox` and `*.animation.generated.yaml` are machine-owned reproducible Hero.Voxel siblings. Never edit them manually and never move them to a separate generated-art tree.
-- `Art/**/Proof/**` is evidence. Visual PASS must be explicitly sealed against exact input hashes; compilation alone is not visual acceptance.
-- `catalog/*.generated.json` is derived state. Never use it as the sole authority for identity, compatibility, coverage, or publication.
+- `Assets/**/Proof/**` is evidence. Visual PASS must be explicitly sealed against exact input hashes; compilation alone is not visual acceptance.
+- `Catalog/*.generated.json` is derived state. Never use it as the sole authority for identity, compatibility, collection coverage, or publication.
+- `Samples/**` is experimental/non-published content. Store discovery must not treat it as reusable product inventory.
+
+## Domain ownership
+
+- `Assets/**` owns reusable product content.
+- `Styles/**` owns reusable visual grammar; a collection is not a style family.
+- `Profiles/**` owns reusable physical compatibility contracts.
+- `Collections/**` owns desired reusable asset coverage; collections select assets but do not contain or own their published identity.
+- `Store/**` owns global store configuration, numeric authoring policy, and retired identity history only.
 
 ## Hero.Voxel boundary
 
@@ -24,7 +33,7 @@
 ## Maintenance
 
 - Begin from deterministic `Tool` scan/plan output.
-- Repair broken published foundation assets before filling coverage gaps.
+- Repair broken published assets before filling selected-collection gaps.
 - One maintenance invocation owns at most one asset-scoped creative/repair job.
 - A failed gate stays with the same asset and earliest owning stage; do not silently skip to the next asset.
 - A healthy/no-gap store is a valid no-op.

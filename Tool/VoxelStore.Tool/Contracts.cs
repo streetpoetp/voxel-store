@@ -8,8 +8,8 @@ public sealed class StorePolicy
 {
     public int Version { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string StyleFamily { get; set; } = string.Empty;
-    public string ReferenceStyle { get; set; } = string.Empty;
+    public string Collection { get; set; } = string.Empty;
+    public string DefaultStyle { get; set; } = string.Empty;
     public bool AllowOptionalExpansion { get; set; }
     public StoreBudget Budget { get; set; } = new();
 }
@@ -20,10 +20,10 @@ public sealed class StoreBudget
     public int MaxPartsPerAsset { get; set; }
 }
 
-public sealed class CoveragePolicy
+public sealed class CollectionManifest
 {
     public int Version { get; set; }
-    public string Foundation { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty;
     public List<CoverageRequirement> Requirements { get; set; } = new();
 }
 
