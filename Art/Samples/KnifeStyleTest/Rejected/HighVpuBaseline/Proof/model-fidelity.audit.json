@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "target": {
+    "path": "../Reference/target.png",
+    "sha256": "ff3b01cf4bfb90b0f2bb663b1081dcb24882a39d704d394cf259df830888a707"
+  },
+  "model": {
+    "voxelsPerUnit": 80,
+    "occupiedVoxels": 24908,
+    "source": {
+      "path": "../Source/KnifeStyleTest.voxel.yaml",
+      "sha256": "918d05963bd549814e162124fc47cffc794ebc765ca8a5f975ee1906db7c39fa"
+    },
+    "palette": {
+      "path": "../Source/KnifeStyleTest.palette.yaml",
+      "sha256": "2709b9261442151d2745de6859a5124a8f8889e04a6395d8e9d1a811e028a621"
+    },
+    "generatedVox": {
+      "path": "../Generated/KnifeStyleTest.generated.vox",
+      "sha256": "f41222b6b6037ff05dbe988bbf761d9a789daa5a083b7d465ccd5ed624648513"
+    },
+    "hero": {
+      "path": "hero.png",
+      "sha256": "b57cbb4f4989a028be138fc2a474a6c3b453c9680e656700e56a643240d47837"
+    },
+    "front": {
+      "path": "front.png",
+      "sha256": "2ece390624d10aaa641ec2d42631f4b1d16473a1c474698ad2004205b9dc564d"
+    },
+    "left": {
+      "path": "left.png",
+      "sha256": "79067e69fbf13a431dd68ae1dd6da9600aa3ef1f0a5648b9e664141f34219d4f"
+    },
+    "comparison": {
+      "path": "model-vs-target.png",
+      "sha256": "247cf3c4b1ce33c77a797e59059ff8515e28cebbc06c3fc4974844f1aae4d5b7"
+    }
+  },
+  "criteria": {
+    "semanticForm": "pass",
+    "silhouette": "pass",
+    "proportions": "pass",
+    "materialColorHierarchy": "pass",
+    "meaningfulConstruction": "pass",
+    "targetAuthorityPreserved": "pass"
+  },
+  "iterationEvidence": [
+    {
+      "iteration": 1,
+      "result": "reject",
+      "reason": "Grip wraps read as horizontal rings and the blade lacked a separate light bevel hierarchy. Rejected VPU80 hero/front are retained under Rejected/Iteration1."
+    },
+    {
+      "iteration": 2,
+      "result": "accept",
+      "reason": "Diagonal stepped wraps, layered steel bevel/edge, broad asymmetric blade, guard/gold inset, and pommel/gold inset converge to the accepted target at the lowest sufficient VPU80 density."
+    }
+  ],
+  "note": "Hero.Voxel proof uses neutral presentation. Acceptance compares silhouette, proportions, construction, and material/color hierarchy rather than target studio lighting/background."
+}

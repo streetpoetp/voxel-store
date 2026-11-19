@@ -56,7 +56,7 @@ def build(vpu: int):
     add_box(boxes, x2, 0, z1+q(0.03,vpu), q(0.06,vpu), 1, q(0.13,vpu), "purple.mid")
     add_box(boxes, x3, 0, z2+q(0.03,vpu), q(0.05,vpu), 1, q(0.07,vpu), "gold.mid")
 
-    # Cyan energy channel: at VPU64 this quantizes to 2 voxels, at VPU80 to 3.
+    # Cyan energy channel: one voxel is valid when it remains distinct; density is chosen from overall per-unit cadence and structural readability.
     channel_w=q(0.035,vpu)
     channel_x=cx-channel_w//2
     add_box(boxes, channel_x, 0, blade_z+q(0.16,vpu), channel_w, 1, q(0.56,vpu), "cyan.mid")

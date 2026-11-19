@@ -115,49 +115,98 @@ static void RunReferenceDensitySelectorTests()
             ["Staff"] = "Parts/Staff.png"
         }
     };
-    var input = new ReferenceDensityInput
+
+    var ruler = new VpuRulerPolicy
     {
         Version = 1,
+        Scope = "per-unit",
+        CandidateVpu = new List<int> { 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48 },
+        Priors = new Dictionary<string, VpuRulerPrior>(StringComparer.Ordinal)
+        {
+            ["equipment"] = new() { Typical = new[] { 8, 24 } }
+        },
+        FeatureReadability = new VpuRulerFeatureReadability
+        {
+            AllowIntentionalOneVoxelFeature = true,
+            UniversalMinimumFeatureVoxels = null
+        },
+        Selection = new VpuRulerSelection
+        {
+            Mode = "lowest-sufficient",
+            PriorsAreHardBounds = false,
+            PreserveWorldExtent = true,
+            PreserveReferenceCadence = true
+        }
+    };
+    ReferenceDensitySelector.ValidateRuler(ruler);
+
+    var input = new ReferenceDensityInput
+    {
+        Version = 2,
+        AssetClass = "equipment",
         TargetWorldLongAxis = 1.5,
         Parts = new Dictionary<string, ReferenceDensityPartInput>(StringComparer.Ordinal)
         {
-            ["Staff"] = new ReferenceDensityPartInput
+            ["Staff"] = new()
             {
                 PartSheet = "Parts/Staff.png",
                 ObjectLongAxisPixels = 520,
+                ApparentVoxelCount = 24,
                 Features = new List<ReferenceDensityFeatureInput>
                 {
-                    new()
-                    {
-                        Id = "purple-cage-bar",
-                        PixelSpan = 10,
-                        Importance = "secondary",
-                        RequiredVoxelSpan = 3
-                    },
-                    new()
-                    {
-                        Id = "crystal-facet",
-                        PixelSpan = 8,
-                        Importance = "tertiary",
-                        RequiredVoxelSpan = 2
-                    }
+                    new() { Id = "one-voxel-edge", Importance = "primary" },
+                    new() { Id = "cage-gap", Importance = "secondary" }
                 }
             }
         }
     };
 
     ReferenceDensitySelector.ValidateInput(input, reference);
+    Require(
+        Math.Abs(ReferenceDensitySelector.EstimateVpu(input) - 16.0) < 1e-9,
+        "cadence estimate must derive per-unit VPU from apparent voxel count / world extent");
 
-    var wrongSheet = new ReferenceDensityInput
+    int[] candidates = ReferenceDensitySelector.BuildCandidateSequence(input, ruler).ToArray();
+    int[] candidatesAgain = ReferenceDensitySelector.BuildCandidateSequence(input, ruler).ToArray();
+    Require(
+        candidates.SequenceEqual(new[] { 8, 10, 12, 16, 20, 24 }) &&
+        candidates.SequenceEqual(candidatesAgain),
+        "v2 candidate neighborhood must be deterministic and use canonical low ruler values");
+
+    var coarserUnit = new ReferenceDensityInput
     {
-        Version = 1,
+        Version = 2,
+        AssetClass = "equipment",
         TargetWorldLongAxis = 1.5,
         Parts = new Dictionary<string, ReferenceDensityPartInput>(StringComparer.Ordinal)
         {
-            ["Staff"] = new ReferenceDensityPartInput
+            ["Staff"] = new()
+            {
+                PartSheet = "Parts/Staff.png",
+                ObjectLongAxisPixels = 520,
+                ApparentVoxelCount = 12,
+                Features = input.Parts["Staff"].Features
+            }
+        }
+    };
+    ReferenceDensitySelector.ValidateInput(coarserUnit, reference);
+    Require(
+        Math.Abs(ReferenceDensitySelector.EstimateVpu(coarserUnit) - 8.0) < 1e-9 &&
+        !ReferenceDensitySelector.BuildCandidateSequence(coarserUnit, ruler).SequenceEqual(candidates),
+        "two units with different apparent cadence must derive different per-unit estimates/search neighborhoods");
+
+    var wrongSheet = new ReferenceDensityInput
+    {
+        Version = 2,
+        AssetClass = "equipment",
+        TargetWorldLongAxis = 1.5,
+        Parts = new Dictionary<string, ReferenceDensityPartInput>(StringComparer.Ordinal)
+        {
+            ["Staff"] = new()
             {
                 PartSheet = "Parts/Stale.png",
                 ObjectLongAxisPixels = 520,
+                ApparentVoxelCount = 24,
                 Features = input.Parts["Staff"].Features
             }
         }
@@ -166,76 +215,42 @@ static void RunReferenceDensitySelectorTests()
         () => ReferenceDensitySelector.ValidateInput(wrongSheet, reference),
         "must match accepted reference authority");
 
-    var invalidImportance = new ReferenceDensityInput
+    var invalidV2Feature = new ReferenceDensityInput
     {
-        Version = 1,
+        Version = 2,
+        AssetClass = "equipment",
         TargetWorldLongAxis = 1.5,
         Parts = new Dictionary<string, ReferenceDensityPartInput>(StringComparer.Ordinal)
         {
-            ["Staff"] = new ReferenceDensityPartInput
+            ["Staff"] = new()
             {
                 PartSheet = "Parts/Staff.png",
                 ObjectLongAxisPixels = 520,
+                ApparentVoxelCount = 24,
                 Features = new List<ReferenceDensityFeatureInput>
                 {
                     new()
                     {
-                        Id = "bad",
-                        PixelSpan = 10,
-                        Importance = "noise",
-                        RequiredVoxelSpan = 3
+                        Id = "legacy-span",
+                        Importance = "primary",
+                        RequiredVoxelSpan = 2
                     }
                 }
             }
         }
     };
     ExpectFailure(
-        () => ReferenceDensitySelector.ValidateInput(invalidImportance, reference),
-        "unsupported importance");
+        () => ReferenceDensitySelector.ValidateInput(invalidV2Feature, reference),
+        "must not declare requiredVoxelSpan");
 
-    var duplicateFeature = new ReferenceDensityInput
+    // Legacy v1 remains readable during migration.
+    var legacy = new ReferenceDensityInput
     {
         Version = 1,
         TargetWorldLongAxis = 1.5,
         Parts = new Dictionary<string, ReferenceDensityPartInput>(StringComparer.Ordinal)
         {
-            ["Staff"] = new ReferenceDensityPartInput
-            {
-                PartSheet = "Parts/Staff.png",
-                ObjectLongAxisPixels = 520,
-                Features = new List<ReferenceDensityFeatureInput>
-                {
-                    new() { Id = "dup", PixelSpan = 10, Importance = "primary", RequiredVoxelSpan = 2 },
-                    new() { Id = "dup", PixelSpan = 12, Importance = "secondary", RequiredVoxelSpan = 2 }
-                }
-            }
-        }
-    };
-    ExpectFailure(
-        () => ReferenceDensitySelector.ValidateInput(duplicateFeature, reference),
-        "globally unique");
-
-    double estimate = ReferenceDensitySelector.EstimateVpu(input);
-    Require(
-        Math.Abs(estimate - 104.0) < 1e-9,
-        $"unexpected reference-density estimate: {estimate}");
-    int[] candidates = ReferenceDensitySelector.BuildCandidateSequence(input).ToArray();
-    int[] candidatesAgain = ReferenceDensitySelector.BuildCandidateSequence(input).ToArray();
-    Require(
-        candidates.SequenceEqual(candidatesAgain) &&
-        candidates.Length > 1 &&
-        candidates[0] == 96 &&
-        candidates[1] == 112 &&
-        candidates.SequenceEqual(candidates.OrderBy(x => x)),
-        "density candidate sequence must be deterministic, monotonic, and start one quantum below the rounded estimate");
-
-    var impossible = new ReferenceDensityInput
-    {
-        Version = 1,
-        TargetWorldLongAxis = 1.5,
-        Parts = new Dictionary<string, ReferenceDensityPartInput>(StringComparer.Ordinal)
-        {
-            ["Staff"] = new ReferenceDensityPartInput
+            ["Staff"] = new()
             {
                 PartSheet = "Parts/Staff.png",
                 ObjectLongAxisPixels = 520,
@@ -243,8 +258,8 @@ static void RunReferenceDensitySelectorTests()
                 {
                     new()
                     {
-                        Id = "too-fine",
-                        PixelSpan = 4,
+                        Id = "legacy-bar",
+                        PixelSpan = 10,
                         Importance = "secondary",
                         RequiredVoxelSpan = 3
                     }
@@ -252,15 +267,19 @@ static void RunReferenceDensitySelectorTests()
             }
         }
     };
-    ExpectFailure(
-        () => ReferenceDensitySelector.BuildCandidateSequence(impossible),
-        "256-voxel");
+    ReferenceDensitySelector.ValidateInput(legacy, reference);
+    Require(
+        Math.Abs(ReferenceDensitySelector.EstimateVpu(legacy) - 104.0) < 1e-9 &&
+        ReferenceDensitySelector.BuildCandidateSequence(legacy).Take(2).SequenceEqual(new[] { 96, 112 }),
+        "legacy v1 density behavior must remain readable until published assets migrate");
 
     var budget = new StoreBudget { MaxVoxelsPerAsset = 65536, MaxPartsPerAsset = 16 };
     ReferenceDensityCandidateAudit Candidate(
         int vpu,
-        bool cage,
-        bool facet,
+        bool edge,
+        bool gap,
+        bool cadence = true,
+        int edgeSpan = 1,
         int occupied = 8000) =>
         new()
         {
@@ -268,46 +287,88 @@ static void RunReferenceDensitySelectorTests()
             Vpu = vpu,
             Features = new Dictionary<string, bool>(StringComparer.Ordinal)
             {
-                ["purple-cage-bar"] = cage,
-                ["crystal-facet"] = facet
+                ["one-voxel-edge"] = edge,
+                ["cage-gap"] = gap
             },
+            FeatureVoxelSpans = new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                ["one-voxel-edge"] = edgeSpan,
+                ["cage-gap"] = 1
+            },
+            CadencePreserved = cadence,
             NormalizedWorldSize = new[] { 0.4, 0.4, 1.5 },
-            IntegerBounds = new[] { 40, 40, Math.Min(256, (int)Math.Round(1.5 * vpu)) },
+            IntegerBounds = new[] { 4, 4, Math.Max(1, (int)Math.Round(1.5 * vpu)) },
             OccupiedVoxels = occupied,
             AxisCompliant = true,
-            GreedyMergedQuads = 900,
-            Vertices = 3600,
-            Triangles = 1800,
+            GreedyMergedQuads = 120,
+            Vertices = 480,
+            Triangles = 240,
             SourceSha256 = new string('a', 64),
             PreviewSha256 = new string('b', 64)
         };
 
-    ReferenceDensityCandidateEvidence rejected =
-        ReferenceDensitySelector.ValidateCandidate(input, Candidate(96, true, false), budget, new string('c', 64));
-    ReferenceDensityCandidateEvidence pass112 =
-        ReferenceDensitySelector.ValidateCandidate(input, Candidate(112, true, true), budget, new string('d', 64));
-    ReferenceDensityCandidateEvidence pass128 =
-        ReferenceDensitySelector.ValidateCandidate(input, Candidate(128, true, true), budget, new string('e', 64));
-    Require(!rejected.Passed && rejected.LostFeatures.SequenceEqual(new[] { "crystal-facet" }),
-        "candidate losing a declared feature must be rejected");
+    ReferenceDensityCandidateEvidence oneVoxelPass =
+        ReferenceDensitySelector.ValidateCandidate(
+            input,
+            Candidate(8, true, true, edgeSpan: 1),
+            budget,
+            new string('c', 64));
+    Require(
+        oneVoxelPass.Passed &&
+        oneVoxelPass.FeatureVoxelSpans["one-voxel-edge"] == 1,
+        "intentional one-voxel feature must be allowed when preserved and readable");
+
+    ReferenceDensityCandidateEvidence lostFeature =
+        ReferenceDensitySelector.ValidateCandidate(
+            input,
+            Candidate(10, false, true),
+            budget,
+            new string('d', 64));
+    Require(
+        !lostFeature.Passed &&
+        lostFeature.LostFeatures.SequenceEqual(new[] { "one-voxel-edge" }),
+        "candidate losing a meaningful feature must fail");
+
+    ReferenceDensityCandidateEvidence cadenceMismatch =
+        ReferenceDensitySelector.ValidateCandidate(
+            input,
+            Candidate(12, true, true, cadence: false),
+            budget,
+            new string('e', 64));
+    Require(!cadenceMismatch.Passed, "candidate that materially changes reference cadence must fail");
+
+    ReferenceDensityCandidateEvidence pass16 =
+        ReferenceDensitySelector.ValidateCandidate(
+            input,
+            Candidate(16, true, true, edgeSpan: 1),
+            budget,
+            new string('f', 64));
     Require(
         ReferenceDensitySelector.SelectLowestSufficient(
-            new[] { 96, 112, 128 },
-            new[] { rejected, pass112, pass128 }) == 112,
-        "selector must choose the lowest sufficient evaluated VPU");
+            new[] { 8, 10, 12, 16 },
+            new[] { lostFeature, cadenceMismatch, pass16, oneVoxelPass }) == 8,
+        "selector must choose the lowest sufficient evaluated ruler candidate");
+
+    ReferenceDensityCandidateEvidence coarserPass6 =
+        ReferenceDensitySelector.ValidateCandidate(
+            coarserUnit,
+            Candidate(6, true, true, edgeSpan: 1),
+            budget,
+            new string('2', 64));
+    int? coarserSelected = ReferenceDensitySelector.SelectLowestSufficient(
+        ReferenceDensitySelector.BuildCandidateSequence(coarserUnit, ruler),
+        new[] { coarserPass6 });
+    Require(
+        coarserSelected == 6,
+        $"different per-unit cadence must be able to select a different VPU; expected 6 got {coarserSelected}");
 
     ReferenceDensityCandidateEvidence overBudget =
         ReferenceDensitySelector.ValidateCandidate(
             input,
-            Candidate(112, true, true, 65537),
+            Candidate(20, true, true, occupied: 65537),
             budget,
-            new string('f', 64));
+            new string('1', 64));
     Require(!overBudget.Passed, "over-budget density candidate must be rejected");
-    Require(
-        ReferenceDensitySelector.SelectLowestSufficient(
-            new[] { 96, 112 },
-            new[] { rejected, overBudget }) == null,
-        "selector must return no selection when all candidates fail");
 }
 
 
@@ -407,34 +468,40 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
             legacySnapshot.Assets.Single().Published &&
             legacySnapshot.Assets.Single().Gates.All(x => x.Id != "density"),
             "legacy equipment must remain publishable without density evidence during migration");
+
         File.WriteAllText(
             manifestPath,
             legacyManifest.Replace(
                 "form: staff",
                 "form: staff\ndensity: reference-driven",
-                StringComparison.Ordinal));        Directory.CreateDirectory(densityRoot);
+                StringComparison.Ordinal));
+
+        Directory.CreateDirectory(densityRoot);
         string inputPath = Path.Combine(densityRoot, "input.yaml");
         string originalInput =
             """
-            version: 1
+            version: 2
+            assetClass: equipment
             targetWorldLongAxis: 1.5
             parts:
               Staff:
                 partSheet: Parts/Staff.png
                 objectLongAxisPixels: 520
+                apparentVoxelCount: 18
                 features:
-                  - id: purple-cage-bar
-                    pixelSpan: 10
+                  - id: one-voxel-edge
+                    importance: primary
+                  - id: cage-gap
                     importance: secondary
-                    requiredVoxelSpan: 3
-                  - id: crystal-facet
-                    pixelSpan: 8
-                    importance: tertiary
-                    requiredVoxelSpan: 2
             """;
         File.WriteAllText(inputPath, originalInput);
 
-        void WriteCandidate(int vpu, bool cage, bool facet)
+        void WriteCandidate(
+            int vpu,
+            bool edge,
+            bool gap,
+            bool cadencePreserved,
+            int edgeSpan = 1)
         {
             string candidateRoot = Path.Combine(
                 densityRoot, "Candidates", $"vpu-{vpu:D3}");
@@ -450,21 +517,27 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
                 Vpu = vpu,
                 Features = new Dictionary<string, bool>(StringComparer.Ordinal)
                 {
-                    ["purple-cage-bar"] = cage,
-                    ["crystal-facet"] = facet
+                    ["one-voxel-edge"] = edge,
+                    ["cage-gap"] = gap
                 },
+                FeatureVoxelSpans = new Dictionary<string, int>(StringComparer.Ordinal)
+                {
+                    ["one-voxel-edge"] = edgeSpan,
+                    ["cage-gap"] = 1
+                },
+                CadencePreserved = cadencePreserved,
                 NormalizedWorldSize = new[] { 0.4, 0.4, 1.5 },
                 IntegerBounds = new[]
                 {
-                    40,
-                    40,
+                    4,
+                    4,
                     (int)Math.Round(1.5 * vpu)
                 },
-                OccupiedVoxels = 8000 + vpu,
+                OccupiedVoxels = 600 + vpu,
                 AxisCompliant = true,
-                GreedyMergedQuads = 900 + vpu,
-                Vertices = (900 + vpu) * 4,
-                Triangles = (900 + vpu) * 2,
+                GreedyMergedQuads = 90 + vpu,
+                Vertices = (90 + vpu) * 4,
+                Triangles = (90 + vpu) * 2,
                 SourceSha256 = HeroVoxelProvider.HashFile(sourcePath),
                 PreviewSha256 = HeroVoxelProvider.HashFile(previewPath)
             };
@@ -473,8 +546,8 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
                 JsonSerializer.Serialize(audit, new JsonSerializerOptions { WriteIndented = true }));
         }
 
-        WriteCandidate(96, true, false);
-        WriteCandidate(112, true, true);
+        WriteCandidate(8, edge: true, gap: false, cadencePreserved: true, edgeSpan: 1);
+        WriteCandidate(12, edge: true, gap: true, cadencePreserved: true, edgeSpan: 1);
 
         StoreSnapshot missingDensity = new StoreEngine(root).Scan(false, false);
         AssetHealth missingDensityStaff = missingDensity.Assets.Single();
@@ -495,8 +568,16 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
         string firstJson = JsonSerializer.Serialize(first);
         string secondJson = JsonSerializer.Serialize(second);
         Require(
-            first.SelectedVpu == 112 && firstJson == secondJson,
-            "density engine operation must be deterministic and select the lowest passing candidate");
+            first.Version == 2 &&
+            first.RulerVersion == 1 &&
+            !string.IsNullOrWhiteSpace(first.RulerSha256) &&
+            Math.Abs(first.EstimatedVpu - 12.0) < 1e-9 &&
+            first.ApparentVoxelCounts["Staff"] == 18 &&
+            first.CandidateSequence.SequenceEqual(new[] { 8, 10, 12, 16, 20, 24 }) &&
+            first.SelectedVpu == 12 &&
+            first.Candidates.Single(x => x.Vpu == 12).FeatureVoxelSpans["one-voxel-edge"] == 1 &&
+            firstJson == secondJson,
+            "v2 density operation must bind ruler/cadence evidence and select the lowest passing low-VPU candidate deterministically");
 
         engine.SelectDensity(densityFixtureId, write: true);
         AssetRecord staff = engine.DiscoverAssets().Single();
@@ -515,13 +596,15 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
             System.Text.RegularExpressions.Regex.Replace(
                 originalCanonicalSpec,
                 @"(?m)^voxelsPerUnit:\s*\d+\s*$",
-                "voxelsPerUnit: 112"));        StoreSnapshot densityAndSourceCurrent = new StoreEngine(root).Scan(false, false);
+                "voxelsPerUnit: 12"));
+        StoreSnapshot densityAndSourceCurrent = new StoreEngine(root).Scan(false, false);
         Require(
             densityAndSourceCurrent.Assets.Single().Gates.Single(x => x.Id == "density").Passed &&
             densityAndSourceCurrent.Assets.Single().Gates.Single(x => x.Id == "source").Passed &&
             densityAndSourceCurrent.Assets.Single().FailedGate == "generation",
-            "matching density/source VPU must advance beyond the source gate");
+            "matching per-unit density/source VPU must advance beyond the source gate");
         File.WriteAllText(canonicalSpec, originalCanonicalSpec);
+
         StorePolicy storePolicy = ContractYaml.Load<StorePolicy>(
             Path.Combine(root, "policy", "store.yaml"));
         engine.ValidateDensityEvidence(staff, storePolicy);
@@ -560,7 +643,10 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
 
         File.WriteAllText(
             inputPath,
-            originalInput.Replace("targetWorldLongAxis: 1.5", "targetWorldLongAxis: 1.6", StringComparison.Ordinal));
+            originalInput.Replace(
+                "targetWorldLongAxis: 1.5",
+                "targetWorldLongAxis: 1.6",
+                StringComparison.Ordinal));
         ExpectFailure(
             () => engine.ValidateDensityEvidence(staff, storePolicy),
             "stale");
@@ -570,13 +656,26 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
             "changed target extent must stale density at the density gate");
         File.WriteAllText(inputPath, originalInput);
         engine.SelectDensity(densityFixtureId, write: true);
+
         File.WriteAllText(
             inputPath,
-            originalInput.Replace("pixelSpan: 10", "pixelSpan: 11", StringComparison.Ordinal));
+            originalInput.Replace(
+                "apparentVoxelCount: 18",
+                "apparentVoxelCount: 20",
+                StringComparison.Ordinal));
         ExpectFailure(
             () => engine.ValidateDensityEvidence(staff, storePolicy),
             "stale");
         File.WriteAllText(inputPath, originalInput);
+        engine.SelectDensity(densityFixtureId, write: true);
+
+        string rulerPath = Path.Combine(root, "policy", "vpu-ruler.yaml");
+        string originalRuler = File.ReadAllText(rulerPath);
+        File.WriteAllText(rulerPath, originalRuler + Environment.NewLine + "# ruler-revision-test");
+        ExpectFailure(
+            () => engine.ValidateDensityEvidence(staff, storePolicy),
+            "stale");
+        File.WriteAllText(rulerPath, originalRuler);
         engine.SelectDensity(densityFixtureId, write: true);
 
         string partSheet = Path.Combine(assetRoot, "Reference", "Parts", "Staff.png");
@@ -589,7 +688,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
         engine.SelectDensity(densityFixtureId, write: true);
 
         string candidatePreview = Path.Combine(
-            densityRoot, "Candidates", "vpu-112", "Proof", "hero.png");
+            densityRoot, "Candidates", "vpu-012", "Proof", "hero.png");
         byte[] previewBytes = File.ReadAllBytes(candidatePreview);
         WritePngHeader(candidatePreview, 513, 512);
         ExpectFailure(
@@ -1133,6 +1232,80 @@ static void RunTargetProvenanceTests(string sourceRoot)
             () => new StoreEngine(generatedRoot).ValidateTargetProvenance(asset),
             "generated style authority is stale");
         File.WriteAllBytes(styleInput, originalStyle);
+        engine.ValidateTargetProvenance(asset);
+
+        string requestPath = Path.Combine(referenceRoot, "target.request.json");
+        File.WriteAllText(
+            requestPath,
+            """
+            {
+              "version": 1,
+              "intent": "Generate a polished voxel avatar Product Target from current style authority."
+            }
+            """);
+        provenance.Version = 2;
+        provenance.Generator = new ReferenceTargetGeneratorProvenance
+        {
+            Kind = "image-model",
+            Provider = "fixture-provider",
+            Model = "fixture-image-model",
+            Request = new ReferenceTargetGeneratorRequestProvenance
+            {
+                Path = "target.request.json",
+                Sha256 = HeroVoxelProvider.HashFile(requestPath)
+            }
+        };
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+        engine.ValidateTargetProvenance(asset);
+
+        byte[] originalRequest = File.ReadAllBytes(requestPath);
+        File.AppendAllText(requestPath, Environment.NewLine);
+        ExpectFailure(
+            () => engine.ValidateTargetProvenance(asset),
+            "generation request provenance is stale");
+        File.WriteAllBytes(requestPath, originalRequest);
+
+        provenance.Generator.Kind = "procedural";
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+        ExpectFailure(
+            () => engine.ValidateTargetProvenance(asset),
+            "generator kind must be 'image-model'");
+
+        provenance.Generator.Kind = "image-model";
+        provenance.Generator = null;
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+        ExpectFailure(
+            () => engine.ValidateTargetProvenance(asset),
+            "requires image-model generator evidence");
+
+        provenance.Generator = new ReferenceTargetGeneratorProvenance
+        {
+            Kind = "image-model",
+            Provider = "fixture-provider",
+            Model = "fixture-image-model",
+            Request = new ReferenceTargetGeneratorRequestProvenance
+            {
+                Path = "target.request.json",
+                Sha256 = HeroVoxelProvider.HashFile(requestPath)
+            }
+        };
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
         engine.ValidateTargetProvenance(asset);
     }
     finally
@@ -1739,20 +1912,20 @@ static void RunV3DensityBoundaryTests(string sourceRoot)
         File.WriteAllText(
             Path.Combine(densityRoot, "input.yaml"),
             """
-            version: 1
+            version: 2
+            assetClass: equipment
             targetWorldLongAxis: 1.5
             parts:
               Staff:
                 partSheet: Parts/Staff.png
                 objectLongAxisPixels: 600
+                apparentVoxelCount: 18
                 features:
                   - id: staff-band
-                    pixelSpan: 15
                     importance: secondary
-                    requiredVoxelSpan: 3
             """);
 
-        void WriteCandidate(int vpu, bool featurePass)
+        void WriteCandidate(int vpu, bool featurePass, bool cadencePreserved)
         {
             string candidateRoot = Path.Combine(
                 densityRoot, "Candidates", $"vpu-{vpu:D3}");
@@ -1770,13 +1943,18 @@ static void RunV3DensityBoundaryTests(string sourceRoot)
                 {
                     ["staff-band"] = featurePass
                 },
+                FeatureVoxelSpans = new Dictionary<string, int>(StringComparer.Ordinal)
+                {
+                    ["staff-band"] = 1
+                },
+                CadencePreserved = cadencePreserved,
                 NormalizedWorldSize = new[] { 0.25, 0.25, 1.5 },
-                IntegerBounds = new[] { 16, 16, (int)Math.Round(1.5 * vpu) },
-                OccupiedVoxels = 4000 + vpu,
+                IntegerBounds = new[] { 4, 4, (int)Math.Round(1.5 * vpu) },
+                OccupiedVoxels = 400 + vpu,
                 AxisCompliant = true,
-                GreedyMergedQuads = 400 + vpu,
-                Vertices = (400 + vpu) * 4,
-                Triangles = (400 + vpu) * 2,
+                GreedyMergedQuads = 40 + vpu,
+                Vertices = (40 + vpu) * 4,
+                Triangles = (40 + vpu) * 2,
                 SourceSha256 = HeroVoxelProvider.HashFile(sourcePath),
                 PreviewSha256 = HeroVoxelProvider.HashFile(previewPath)
             };
@@ -1785,10 +1963,8 @@ static void RunV3DensityBoundaryTests(string sourceRoot)
                 JsonSerializer.Serialize(audit, new JsonSerializerOptions { WriteIndented = true }));
         }
 
-        WriteCandidate(64, false);
-        WriteCandidate(80, true);
-
-        string referenceRoot = Path.Combine(assetRoot, "Reference");
+        WriteCandidate(8, featurePass: true, cadencePreserved: false);
+        WriteCandidate(10, featurePass: true, cadencePreserved: true);        string referenceRoot = Path.Combine(assetRoot, "Reference");
         string targetPath = Path.Combine(referenceRoot, "target.png");
         string importedSource = Path.Combine(referenceRoot, "Source", "target-source.png");
         Directory.CreateDirectory(Path.GetDirectoryName(importedSource)!);
@@ -1876,8 +2052,9 @@ static void RunV3DensityBoundaryTests(string sourceRoot)
         ReferenceDensityEvidence evidence =
             engine.SelectDensity(densityFixtureId, write: false);
         Require(
-            evidence.SelectedVpu == 80,
-            $"valid v3 reference must feed density selection through reference-only seal; got {evidence.SelectedVpu}");
+            evidence.SelectedVpu == 10 &&
+            evidence.Candidates.Single(x => x.Vpu == 10).FeatureVoxelSpans["staff-band"] == 1,
+            $"valid v3 reference must feed per-unit low-VPU density selection through reference-only seal; got {evidence.SelectedVpu}");
     }
     finally
     {
@@ -2714,6 +2891,11 @@ if (args.Contains("--target-style-only", StringComparer.Ordinal))
 }
 RunReferenceDensitySelectorTests();
 RunReferenceDensityEvidenceTests(repositoryRoot);
+if (args.Contains("--reference-density-only", StringComparer.Ordinal))
+{
+    Console.WriteLine("PASS: per-unit reference-cadence density selector and evidence tests");
+    return;
+}
 if (args.Contains("--reference-authority-only", StringComparer.Ordinal))
 {
     RunReferenceAuthorityContractTests(repositoryRoot);

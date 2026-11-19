@@ -298,7 +298,22 @@ public sealed class StoreEngine
         ReferenceDensityInput input = ReferenceDensitySelector.LoadInput(inputPath);
         ReferenceDensitySelector.ValidateInput(input, reference);
 
-        IReadOnlyList<int> sequence = ReferenceDensitySelector.BuildCandidateSequence(input);
+        VpuRulerPolicy? ruler = null;
+        string? rulerPath = null;
+        string? rulerSha256 = null;
+        if (input.Version == 2)
+        {
+            if (!string.Equals(input.AssetClass, asset.Manifest.Kind, StringComparison.Ordinal))
+                throw new InvalidDataException(
+                    $"Density input assetClass '{input.AssetClass}' must match asset kind '{asset.Manifest.Kind}'.");
+            rulerPath = Path.Combine(_root, "policy", "vpu-ruler.yaml");
+            if (!File.Exists(rulerPath))
+                throw new InvalidDataException("Shared VPU ruler is missing.");
+            ruler = ReferenceDensitySelector.LoadRuler(rulerPath);
+            rulerSha256 = HeroVoxelProvider.HashFile(rulerPath);
+        }
+
+        IReadOnlyList<int> sequence = ReferenceDensitySelector.BuildCandidateSequence(input, ruler);
         var candidates = new List<ReferenceDensityCandidateEvidence>();
         foreach (int vpu in sequence)
         {
@@ -342,16 +357,29 @@ public sealed class StoreEngine
         string referenceAuditPath = Path.Combine(asset.ReferenceDirectory, "audit.generated.json");
         return new ReferenceDensityEvidence
         {
+            Version = input.Version,
             ReferenceAuditSha256 = HeroVoxelProvider.HashFile(referenceAuditPath),
             DensityInputSha256 = HeroVoxelProvider.HashFile(inputPath),
+            RulerVersion = ruler?.Version,
+            RulerSha256 = rulerSha256,
             TargetWorldLongAxis = input.TargetWorldLongAxis,
+            ApparentVoxelCounts = input.Version == 2
+                ? input.Parts.ToDictionary(
+                    x => x.Key,
+                    x => x.Value.ApparentVoxelCount,
+                    StringComparer.Ordinal)
+                : new Dictionary<string, double>(StringComparer.Ordinal),
             EstimatedVpu = ReferenceDensitySelector.EstimateVpu(input),
             CandidateSequence = sequence.ToList(),
             Candidates = candidates.OrderBy(x => x.Vpu).ToList(),
             SelectedVpu = selected,
             SelectionReason = selected.HasValue
-                ? "lowest evaluated candidate preserving all declared features and satisfying hard constraints"
-                : "no evaluated candidate preserves all declared features within hard constraints"
+                ? input.Version == 2
+                    ? "lowest evaluated ruler candidate preserving reference cadence, meaningful construction, world extent, and hard constraints"
+                    : "lowest evaluated candidate preserving all declared features and satisfying hard constraints"
+                : input.Version == 2
+                    ? "no evaluated ruler candidate preserves reference cadence and meaningful construction within hard constraints"
+                    : "no evaluated candidate preserves all declared features within hard constraints"
         };
     }
 
@@ -624,8 +652,8 @@ public sealed class StoreEngine
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
             ?? throw new InvalidDataException("Product Target provenance is invalid.");
 
-        if (provenance.Version != 1)
-            throw new InvalidDataException("Product Target provenance must use version 1.");
+        if (provenance.Version is not (1 or 2))
+            throw new InvalidDataException("Product Target provenance must use version 1 or 2.");
         if (!IsSha256(provenance.TargetSha256))
             throw new InvalidDataException("Product Target provenance targetSha256 is invalid.");
         string targetHash = HeroVoxelProvider.HashFile(targetPath);
@@ -640,6 +668,42 @@ public sealed class StoreEngine
             if (provenance.Source != null)
                 throw new InvalidDataException(
                     "Generated Product Target provenance cannot declare imported source evidence.");
+            if (provenance.Version == 1 && provenance.Generator != null)
+                throw new InvalidDataException(
+                    "Generated Product Target provenance v1 cannot declare generator evidence.");
+            if (provenance.Version == 2)
+            {
+                ReferenceTargetGeneratorProvenance generator = provenance.Generator
+                    ?? throw new InvalidDataException(
+                        "Generated Product Target provenance v2 requires image-model generator evidence.");
+                if (!string.Equals(generator.Kind, "image-model", StringComparison.Ordinal))
+                    throw new InvalidDataException(
+                        "Generated Product Target provenance v2 generator kind must be 'image-model'.");
+                if (string.IsNullOrWhiteSpace(generator.Provider) ||
+                    string.IsNullOrWhiteSpace(generator.Model))
+                    throw new InvalidDataException(
+                        "Generated Product Target provenance v2 requires nonempty provider and model.");
+                if (generator.Request == null ||
+                    string.IsNullOrWhiteSpace(generator.Request.Path) ||
+                    !IsSha256(generator.Request.Sha256))
+                    throw new InvalidDataException(
+                        "Generated Product Target provenance v2 requires request path/hash evidence.");
+
+                string requestPath = ResolveContained(
+                    asset.ReferenceDirectory,
+                    generator.Request.Path,
+                    "Product Target generation request");
+                if (!File.Exists(requestPath))
+                    throw new InvalidDataException(
+                        "Product Target generation request is missing.");
+                string requestHash = HeroVoxelProvider.HashFile(requestPath);
+                if (!string.Equals(
+                        requestHash,
+                        generator.Request.Sha256,
+                        StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException(
+                        "Product Target generation request provenance is stale.");
+            }
             ReferenceStyleAuthority targetStyle =
                 ResolveTargetReferenceStyle(asset.Manifest.Kind);
             string expectedAuthority = BuildStyleAuthoritySha256(targetStyle);
@@ -664,6 +728,12 @@ public sealed class StoreEngine
 
         if (string.Equals(provenance.Origin, "imported", StringComparison.Ordinal))
         {
+            if (provenance.Version != 1)
+                throw new InvalidDataException(
+                    "Imported Product Target provenance must use version 1.");
+            if (provenance.Generator != null)
+                throw new InvalidDataException(
+                    "Imported Product Target provenance cannot declare generator evidence.");
             if (provenance.Source == null ||
                 string.IsNullOrWhiteSpace(provenance.Source.Path) ||
                 !IsSha256(provenance.Source.Sha256) ||

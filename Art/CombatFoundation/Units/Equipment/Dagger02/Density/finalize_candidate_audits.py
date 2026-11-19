@@ -9,14 +9,20 @@ def sha256(path:Path)->str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 review=json.loads(REVIEW.read_text(encoding="utf-8"))
-for vpu_text,features in review["candidates"].items():
+for vpu_text,entry in review["candidates"].items():
     vpu=int(vpu_text)
     root=HERE/"Candidates"/f"vpu-{vpu:03d}"
     metrics=json.loads((root/"metrics.json").read_text(encoding="utf-8"))
+    features=entry["features"]
+    spans=metrics["featureVoxelSpans"]
+    if set(features) != set(spans):
+        raise RuntimeError(f"feature review/metrics mismatch at VPU {vpu}: {set(features)} != {set(spans)}")
     audit={
       "version":1,
       "vpu":vpu,
       "features":{k:bool(v) for k,v in features.items()},
+      "featureVoxelSpans":{k:int(spans[k]) for k in features},
+      "cadencePreserved":bool(entry["cadencePreserved"]),
       "normalizedWorldSize":metrics["normalizedWorldSize"],
       "integerBounds":metrics["integerBounds"],
       "occupiedVoxels":metrics["occupiedVoxels"],

@@ -1,0 +1,72 @@
+{
+  "version": 2,
+  "ruler": {
+    "version": 1,
+    "sha256": "e0183652da99eb49719c7be2ee02bf4c75b1d8029c07a10d2b7e3d60c63f2e76"
+  },
+  "targetWorldLongAxis": 1.4875,
+  "apparentVoxelCount": 22,
+  "estimatedVpu": 14.789915966386554,
+  "candidateSequence": [
+    8,
+    10,
+    12,
+    16,
+    20,
+    24
+  ],
+  "meaningfulFeatures": [
+    "broad asymmetric stepped blade silhouette",
+    "intentional one-voxel bright cutting edge",
+    "separate light steel bevel",
+    "brown guard with centered gold inset",
+    "three diagonal green wrap groups",
+    "brown pommel with gold inset"
+  ],
+  "candidates": [
+    {
+      "vpu": 8,
+      "edgeThicknessVoxels": 1,
+      "occupiedVoxels": 37,
+      "result": "reject",
+      "reason": "Guard/grip/pommel relationships are over-compressed and the wrap groups no longer read distinctly enough."
+    },
+    {
+      "vpu": 10,
+      "edgeThicknessVoxels": 1,
+      "occupiedVoxels": 54,
+      "result": "reject",
+      "reason": "Broad blade survives, but the three diagonal wrap groups and small inset hierarchy remain materially merged."
+    },
+    {
+      "vpu": 12,
+      "edgeThicknessVoxels": 1,
+      "occupiedVoxels": 90,
+      "result": "select",
+      "reason": "Lowest candidate preserving target cadence, stepped blade, one-voxel edge, bevel, guard inset, three wrap groups, and pommel hierarchy."
+    },
+    {
+      "vpu": 16,
+      "edgeThicknessVoxels": 1,
+      "occupiedVoxels": 189,
+      "result": "pass-not-selected",
+      "reason": "Adds density without preserving a meaningful target feature that VPU12 loses."
+    },
+    {
+      "vpu": 20,
+      "edgeThicknessVoxels": 1,
+      "occupiedVoxels": 492,
+      "result": "pass-not-selected",
+      "reason": "Higher density adds no required target construction over VPU12."
+    },
+    {
+      "vpu": 24,
+      "edgeThicknessVoxels": 1,
+      "occupiedVoxels": 704,
+      "result": "pass-not-selected",
+      "reason": "Higher density adds no required target construction over VPU12."
+    }
+  ],
+  "selectedVpu": 12,
+  "selectionReason": "lowest visually and structurally sufficient per-unit ruler candidate"
+}

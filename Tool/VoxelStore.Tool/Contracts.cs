@@ -155,6 +155,30 @@ public sealed class ReferenceTargetSourceProvenance
     public string Relation { get; set; } = string.Empty;
 }
 
+public sealed class ReferenceTargetGeneratorRequestProvenance
+{
+    [JsonPropertyName("path")]
+    public string Path { get; set; } = string.Empty;
+
+    [JsonPropertyName("sha256")]
+    public string Sha256 { get; set; } = string.Empty;
+}
+
+public sealed class ReferenceTargetGeneratorProvenance
+{
+    [JsonPropertyName("kind")]
+    public string Kind { get; set; } = string.Empty;
+
+    [JsonPropertyName("provider")]
+    public string Provider { get; set; } = string.Empty;
+
+    [JsonPropertyName("model")]
+    public string Model { get; set; } = string.Empty;
+
+    [JsonPropertyName("request")]
+    public ReferenceTargetGeneratorRequestProvenance? Request { get; set; }
+}
+
 public sealed class ReferenceTargetProvenance
 {
     [JsonPropertyName("version")]
@@ -169,6 +193,10 @@ public sealed class ReferenceTargetProvenance
     [JsonPropertyName("source")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ReferenceTargetSourceProvenance? Source { get; set; }
+
+    [JsonPropertyName("generator")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ReferenceTargetGeneratorProvenance? Generator { get; set; }
 
     [JsonPropertyName("targetStyleAuthoritySha256")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

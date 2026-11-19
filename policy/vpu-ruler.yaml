@@ -1,0 +1,49 @@
+version: 1
+scope: per-unit
+purpose: reference-cadence candidate guidance
+
+# Canonical search points for stylized voxel assets.
+# These values are candidates, not a global VPU table and not hard clamps.
+candidateVpu:
+  - 2
+  - 4
+  - 6
+  - 8
+  - 10
+  - 12
+  - 16
+  - 20
+  - 24
+  - 32
+  - 40
+  - 48
+
+# Broad empirical search priors. Selection may move outside these ranges.
+priors:
+  large-structure:
+    typical: [2, 8]
+  character:
+    typical: [8, 16]
+  equipment:
+    typical: [8, 24]
+  small-accessory:
+    typical: [12, 32]
+
+cadence:
+  estimate: apparent-voxel-count-over-world-extent
+  useAcceptedOrthographicEvidence: true
+  wholeImagePixelSimilarityIsAuthority: false
+
+featureReadability:
+  allowIntentionalOneVoxelFeature: true
+  universalMinimumFeatureVoxels: null
+  rejectWhen:
+    - meaningful-feature-disappears
+    - meaningful-feature-merges
+    - meaningful-construction-relationship-materially-changes
+
+selection:
+  mode: lowest-sufficient
+  priorsAreHardBounds: false
+  preserveWorldExtent: true
+  preserveReferenceCadence: true

@@ -1,9 +1,10 @@
 # Dagger02 density candidate visual audit
 
-All candidates preserve the same normalized Dagger construction and palette; only VPU quantization changes.
+All candidates use the same normalized Dagger construction and palette; only per-unit VPU quantization changes.
 
-- **VPU 64 — REJECT:** the overall close-combat silhouette remains readable, but the cyan energy channel is only 2 voxels thick and therefore fails its accepted 3-voxel structural requirement. Its quantized long axis also lands at 1.203125 rather than the declared 1.2 units.
-- **VPU 80 — PASS:** every declared meaningful feature is readable, the cyan channel reaches 3 voxels, all hard bounds/budgets pass, and the normalized long axis is exactly 1.2 units.
-- **VPU 96 — visual features PASS but hard normalized-size check fails:** it adds no required feature beyond VPU80 and quantizes to 1.197917 units rather than exactly 1.2.
+- **VPU 8 — REJECT:** recognizable, but the short blade/guard/grip cadence is too compressed and the intended close-combat construction hierarchy becomes blocky.
+- **VPU 10 — PASS / SELECT:** first candidate preserving the broad stepped blade, cyan channel, purple spine, cyan guard accents, broad tip step, grip bands, and exact 1.2-unit long axis. Thin accents intentionally remain one voxel.
+- **VPU 12 — PASS:** remains readable, but its quantized long axis is 1.166667 units and it adds no required target feature over VPU10.
+- **VPU 16/20/24 — NOT NEEDED:** added density does not justify a higher selected VPU.
 
-Expected selection: **VPU 80**.
+Expected selection: **VPU 10**, independently derived for Dagger02 from its own cadence evidence.

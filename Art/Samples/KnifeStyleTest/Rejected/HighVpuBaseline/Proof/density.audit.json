@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "normalizedLongAxisUnits": 1.4875,
+  "meaningfulFeatures": [
+    "broad asymmetric stepped blade silhouette",
+    "separate light bevel and bright cutting-edge band",
+    "brown guard with centered gold inset",
+    "three diagonal green wrap groups",
+    "brown pommel with gold inset"
+  ],
+  "candidates": [
+    {
+      "vpu": 64,
+      "edgeThicknessVoxels": 2,
+      "occupiedVoxels": 12923,
+      "result": "reject",
+      "reason": "Bright cutting-edge material band falls below the three-voxel readability threshold."
+    },
+    {
+      "vpu": 80,
+      "edgeThicknessVoxels": 3,
+      "occupiedVoxels": 24908,
+      "result": "select",
+      "reason": "Lowest candidate preserving the edge hierarchy and target construction relationships."
+    },
+    {
+      "vpu": 96,
+      "edgeThicknessVoxels": 4,
+      "occupiedVoxels": 42234,
+      "result": "pass-not-selected",
+      "reason": "Adds density but no additional meaningful target feature over VPU80."
+    }
+  ]
+}
