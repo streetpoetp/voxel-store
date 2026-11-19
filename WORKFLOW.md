@@ -31,7 +31,7 @@ The project has three distinct visual-authority layers:
         -> density (when reference-driven)
         -> VoxelSpec source
 
-- **Shared style authority** defines reusable visual language. Construction-style `references` keep legacy sheet/style behavior; target-specific `targetReferences` provide the polished common + matching-kind inputs used to create Product Targets.
+- **Shared style authority** defines reusable visual grammar and the family quality bar. Construction-style `references` keep legacy sheet/style behavior; target-specific `targetReferences` provide the polished common + matching-kind inputs used to create Product Targets. Exemplar-specific palette, material hierarchy, accent colors, wrap/decorative motifs, or other identity choices are **not** automatically global style rules; they become family-wide only when active style authority explicitly declares them as such.
 - **Product Target** is per-asset visual-fidelity authority for target-driven work. It answers “what should this asset look like?” and preserves silhouette, proportions, material/color hierarchy, and meaningful construction richness.
 - **Composition/Part Sheets** are Hero.Voxel construction authority. They answer “how is this visual target constructed?” while retaining Hero.Voxel view/orientation/part semantics.
 
@@ -42,6 +42,7 @@ No layer silently substitutes for another. A Product Target cannot replace requi
 For a new target-driven asset with no approved supplied Product Target, creative target generation is an **image-model stage**. Use `.agents/skills/voxel-store-product-target/SKILL.md`.
 
 - The image-generation model consumes the applicable polished `targetReferences` plus asset/form intent.
+- Treat style references as grammar/quality evidence rather than copy templates. Preserve explicitly global style invariants, but let asset intent establish a distinct silhouette, palette, material hierarchy, accent family, and motif where those choices are not globally constrained. Do not mechanically repeat another asset's colors/material recipe merely because it appears in the style exemplars.
 - `System.Drawing`, SVG/canvas/PIL scripts, procedural pixel/voxel rendering, and VoxelSpec previews are not valid substitutes for newly generated Product Target authority. Those tools remain valid downstream for construction layout, diagnostics, or proof where appropriate.
 - The exact visually accepted image-model output must become the repository `target.png`. If the result is visible but cannot be transferred into the project byte-for-byte, stop at Product Target authoring; do not redraw it locally.
 - For the same-desktop ChatGPT/WebCodex path, an accepted image downloaded to the Runner-visible filesystem may be imported with `Tool/import-product-target.ps1`; the importer copies the PNG and verifies source/destination SHA-256 equality. This is a transport bridge only—the downloaded image-model output remains the creative authority.
