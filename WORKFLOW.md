@@ -7,7 +7,26 @@
 3. Use OpenSpec for architecture, ownership, schema, workflow, or other cross-cutting changes.
 4. Start maintenance from deterministic Tool state; do not choose work from generated catalog/status files by hand.
 
-Repository domain roots are explicit: `Assets` is reusable product content; `Styles` is visual authority; `Profiles` is physical compatibility; `Collections` is desired coverage; `Samples` is non-published experimentation; `Store` is global policy/history; `Catalog` is derived state.
+Repository domain roots are explicit: `Assets` is reusable product content; `Styles` is visual authority; `Profiles` is physical compatibility; `Collections` is desired coverage; `Store` is global policy/history; `Catalog` is derived state.
+
+## Create a new model
+
+Use `.agents/skills/voxel-store-create-model/SKILL.md` for production creation requests such as `design and create an axe` or `create voxel model`.
+
+```text
+COLLECTION / USER INTENT
+  -> DISTINCT ASSET IDENTITY
+  -> SHARED STYLE GRAMMAR
+  -> ACQUIRE / ACCEPT PRODUCT TARGET
+  -> COMPOSITION / PARTS
+  -> DENSITY
+  -> VOXELSPEC + PALETTE
+  -> PROOF / ITERATE
+  -> COMPATIBILITY
+  -> PUBLISH
+```
+
+Creation has no template-asset or generator/provider dependency. `Styles/**` supplies shared grammar; the accepted Product Target supplies asset-specific visual authority. If Product Target authority cannot be established, production stops before construction/source; there is no alternate authoring lane.
 
 ## Lifecycle
 
@@ -35,7 +54,8 @@ Run deterministic scan/plan state and claim only the first asset-scoped job plus
 
 Reference work establishes accepted visual/construction authority for the current asset.
 
-- Product Target creation is owned by `.agents/skills/voxel-store-product-target/SKILL.md`.
+- Product Target acquisition, visual acceptance, freezing, and provenance handoff are owned by `.agents/skills/voxel-store-product-target/SKILL.md`; no particular generator/provider is required.
+- End-to-end new production model creation is owned by `.agents/skills/voxel-store-create-model/SKILL.md`.
 - Style and target fidelity are owned by `openspec/specs/reference-style-authority/spec.md` and `openspec/specs/reference-target-fidelity/spec.md`.
 - Composition/Part construction semantics are owned by the pinned Hero.Voxel `voxel-art-workflow.md`.
 - New or intentionally redesigned assets use the target-driven flow selected by current contracts.

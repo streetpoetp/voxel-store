@@ -1306,6 +1306,60 @@ static void RunTargetProvenanceTests(string sourceRoot)
                 provenance,
                 new JsonSerializerOptions { WriteIndented = true }));
         engine.ValidateTargetProvenance(asset);
+        provenance.Version = ReferenceTargetProvenance.AcquisitionNeutralVersion;
+        provenance.Origin = ReferenceTargetProvenance.RepositoryAuthoredOrigin;
+        provenance.Generator = null;
+        provenance.Source = null;
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+
+        ReferenceTargetProvenance roundTripped =
+            JsonSerializer.Deserialize<ReferenceTargetProvenance>(
+                File.ReadAllText(provenancePath))!;
+        Require(
+            roundTripped.Version == ReferenceTargetProvenance.AcquisitionNeutralVersion &&
+            roundTripped.Origin == ReferenceTargetProvenance.RepositoryAuthoredOrigin &&
+            roundTripped.Generator == null &&
+            roundTripped.Source == null,
+            "v3 repository-authored Product Target provenance must round-trip without generator/source metadata");
+        engine.ValidateTargetProvenance(asset);
+
+        string? repositoryAuthoredStyleAuthority = provenance.TargetStyleAuthoritySha256;
+        provenance.TargetStyleAuthoritySha256 = null;
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+        ExpectFailure(
+            () => engine.ValidateTargetProvenance(asset),
+            "repository-authored style authority is stale");
+        provenance.TargetStyleAuthoritySha256 = repositoryAuthoredStyleAuthority;
+
+        provenance.Source = new ReferenceTargetSourceProvenance
+        {
+            Path = "target.png",
+            Sha256 = provenance.TargetSha256,
+            Relation = "exact"
+        };
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+        ExpectFailure(
+            () => engine.ValidateTargetProvenance(asset),
+            "cannot declare imported source evidence");
+        provenance.Source = null;
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+        engine.ValidateTargetProvenance(asset);
     }
     finally
     {
@@ -1348,6 +1402,29 @@ static void RunTargetProvenanceTests(string sourceRoot)
         engine.ValidateTargetProvenance(asset);
 
         byte[] originalSource = File.ReadAllBytes(sourcePath);
+        provenance.Version = ReferenceTargetProvenance.AcquisitionNeutralVersion;
+        provenance.Generator = new ReferenceTargetGeneratorProvenance
+        {
+            Kind = "optional-trace",
+            Provider = string.Empty,
+            Model = string.Empty
+        };
+        File.WriteAllText(
+            provenancePath,
+            JsonSerializer.Serialize(
+                provenance,
+                new JsonSerializerOptions { WriteIndented = true }));
+        ReferenceTargetProvenance importedRoundTripped =
+            JsonSerializer.Deserialize<ReferenceTargetProvenance>(
+                File.ReadAllText(provenancePath))!;
+        Require(
+            importedRoundTripped.Version == ReferenceTargetProvenance.AcquisitionNeutralVersion &&
+            importedRoundTripped.Origin == ReferenceTargetProvenance.ImportedOrigin &&
+            importedRoundTripped.Source != null,
+            "v3 imported Product Target provenance must round-trip without required provider/model evidence");
+        engine.ValidateTargetProvenance(asset);
+
+
         WritePngHeader(sourcePath, 1201, 900);
         ExpectFailure(
             () => engine.ValidateTargetProvenance(asset),
@@ -1717,28 +1794,58 @@ static void RunReferenceV3PublicationTests(string sourceRoot)
         ["implementationNeutral"] = "pass"
     };
 
-    static void WriteV3Package(string referenceRoot)
+    static void UpgradeTargetStyle(string root)
+    {
+        string stylePath = Path.Combine(
+            root, "Styles", "low-resolution-voxel.v1", "style.yaml");
+        string style = File.ReadAllText(stylePath);
+        style = style
+            .Replace("version: 2", "version: 3", StringComparison.Ordinal)
+            .Replace(
+                "traits:",
+                """
+                targetReferences:
+                  common:
+                    - reference-02.png
+                  avatar:
+                    - reference-01.png
+                  equipment:
+                    - equipment-bow-source.png
+                traits:
+                """,
+                StringComparison.Ordinal);
+        File.WriteAllText(stylePath, style);
+    }
+
+    static Dictionary<string, string> StyleHashes(
+        string root,
+        ReferenceStyleAuthority style) =>
+        style.CommonReferencePaths
+            .Concat(style.KindReferencePaths)
+            .ToDictionary(
+                path => Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/'),
+                HeroVoxelProvider.HashFile,
+                StringComparer.Ordinal);
+
+    static void WriteV3Package(string root, string referenceRoot)
     {
         Directory.CreateDirectory(Path.Combine(referenceRoot, "Parts"));
-        Directory.CreateDirectory(Path.Combine(referenceRoot, "Source"));
         WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
         WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
-        string source = Path.Combine(referenceRoot, "Source", "imported.png");
         string target = Path.Combine(referenceRoot, "target.png");
-        WritePngHeader(source, 1200, 900);
-        File.Copy(source, target, true);
+        WritePngHeader(target, 1200, 900);
 
+        StoreEngine provenanceEngine = new(root);
+        ReferenceStyleAuthority targetStyle =
+            provenanceEngine.ResolveTargetReferenceStyle("avatar");
         var provenance = new ReferenceTargetProvenance
         {
-            Version = 1,
-            Origin = "imported",
+            Version = ReferenceTargetProvenance.AcquisitionNeutralVersion,
+            Origin = ReferenceTargetProvenance.RepositoryAuthoredOrigin,
             TargetSha256 = HeroVoxelProvider.HashFile(target),
-            Source = new ReferenceTargetSourceProvenance
-            {
-                Path = "Source/imported.png",
-                Sha256 = HeroVoxelProvider.HashFile(source),
-                Relation = "exact"
-            }
+            TargetStyleAuthoritySha256 =
+                provenanceEngine.ReferenceStyleAuthoritySha256(targetStyle),
+            TargetStyleSha256 = StyleHashes(root, targetStyle)
         };
         File.WriteAllText(
             Path.Combine(referenceRoot, "target.provenance.json"),
@@ -1788,7 +1895,8 @@ static void RunReferenceV3PublicationTests(string sourceRoot)
     try
     {
         string referenceRoot = ReferenceRoot(v3Root);
-        WriteV3Package(referenceRoot);
+        UpgradeTargetStyle(v3Root);
+        WriteV3Package(v3Root, referenceRoot);
         StoreEngine engine = new(v3Root);
         engine.SealReference("fixture.avatar");
         Require(
@@ -1798,21 +1906,27 @@ static void RunReferenceV3PublicationTests(string sourceRoot)
         string provenancePath = Path.Combine(referenceRoot, "target.provenance.json");
         byte[] provenanceBytes = File.ReadAllBytes(provenancePath);
         File.Delete(provenancePath);
-        GateResult missingProvenance = ReferenceGate(engine.Scan(false, false));
+        StoreSnapshot missingProvenanceSnapshot = engine.Scan(false, false);
+        GateResult missingProvenance = ReferenceGate(missingProvenanceSnapshot);
         Require(
             !missingProvenance.Passed &&
-            missingProvenance.Message.Contains("provenance is missing", StringComparison.OrdinalIgnoreCase),
-            "missing v3 target provenance must fail at reference");
+            missingProvenance.Message.Contains("provenance is missing", StringComparison.OrdinalIgnoreCase) &&
+            missingProvenanceSnapshot.Assets.Single().Gates
+                .Single(x => x.Id == "source").Message.Contains("Blocked", StringComparison.OrdinalIgnoreCase),
+            "missing v3 target provenance must fail at reference and block source");
         File.WriteAllBytes(provenancePath, provenanceBytes);
 
         string targetPath = Path.Combine(referenceRoot, "target.png");
         byte[] targetBytes = File.ReadAllBytes(targetPath);
         File.WriteAllBytes(targetPath, targetBytes.Concat(new byte[] { 0 }).ToArray());
-        GateResult staleTarget = ReferenceGate(engine.Scan(false, false));
+        StoreSnapshot staleTargetSnapshot = engine.Scan(false, false);
+        GateResult staleTarget = ReferenceGate(staleTargetSnapshot);
         Require(
             !staleTarget.Passed &&
-            staleTarget.Message.Contains("stale for target.png", StringComparison.OrdinalIgnoreCase),
-            "changed Product Target must fail reference provenance before outer seal validation");
+            staleTarget.Message.Contains("stale for target.png", StringComparison.OrdinalIgnoreCase) &&
+            staleTargetSnapshot.Assets.Single().Gates
+                .Single(x => x.Id == "source").Message.Contains("Blocked", StringComparison.OrdinalIgnoreCase),
+            "changed Product Target must fail reference provenance and block source before outer seal validation");
         File.WriteAllBytes(targetPath, targetBytes);
 
         string fidelityPath = Path.Combine(referenceRoot, "fidelity.audit.json");

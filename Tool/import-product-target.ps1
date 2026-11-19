@@ -1,3 +1,6 @@
+# Optional exact-byte transport helper for external Product Target PNGs.
+# This script is not a required Product Target acquisition path or authority.
+
 param(
     [Parameter(Mandatory=$true)]
     [string]$Source,

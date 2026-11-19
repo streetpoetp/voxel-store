@@ -193,17 +193,17 @@ Equipment that explicitly opts into `density: reference-driven` SHALL pass a den
 - **WHEN** current density evidence selects one VPU but the authoritative equipment source declares another VPU
 - **THEN** publication fails at the source gate instead of silently accepting the unselected density
 
-### Requirement: New generated target-driven publication requires image-model Product Target authority
-For new target-driven authoring that generates rather than imports a Product Target, reference acceptance SHALL require current image-model generation provenance before Composition, Part, density, or source authority may advance.
+### Requirement: New target-driven publication requires accepted Product Target authority
+For new target-driven authoring, reference acceptance SHALL require a current accepted Product Target with valid acquisition provenance before Composition, Part, density, or source authority may advance. Publication SHALL NOT require a specific generator, provider, model, or acquisition technology.
 
-#### Scenario: New generated target has current image-model provenance
-- **WHEN** a new target-driven asset has an accepted image-model Product Target with current generation/style provenance
+#### Scenario: New target has current provider-neutral provenance
+- **WHEN** a new target-driven asset has an accepted Product Target whose bytes, declared upstream authority, style acceptance, and provenance are current
 - **THEN** the workflow may derive and audit Composition/Part construction evidence before later density/source gates
 
-#### Scenario: New generated target exists only as procedural output
-- **WHEN** a new target-driven asset has a generated PNG but no current image-model generation provenance
+#### Scenario: Target exists without valid provenance
+- **WHEN** a new target-driven asset has a target PNG but its acquisition provenance, declared source/style authority, or target hash is missing or stale
 - **THEN** publication remains blocked at Product Target/reference authority and downstream geometry does not qualify
 
-#### Scenario: Imported approved Product Target is used
-- **WHEN** the asset uses a valid imported Product Target with current source provenance
-- **THEN** image-model generator provenance is not required because the imported source is the visual authority
+#### Scenario: Target has no generator metadata
+- **WHEN** a new target-driven asset has an accepted Product Target with valid acquisition provenance but no generator/provider/model metadata
+- **THEN** publication eligibility is unaffected because producer identity is not Product Target authority

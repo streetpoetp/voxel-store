@@ -14,18 +14,59 @@ A target-driven reference package SHALL declare one repository-owned Product Tar
 
 #### Scenario: Product Target is generated from style authority
 - **WHEN** an asset has form intent and active style authority but no direct approved product image
-- **THEN** the workflow generates and visually accepts a Product Target grounded in that style authority before generating construction sheets
+- **THEN** the workflow acquires or authors a Product Target, visually accepts it against the asset intent and style authority, and freezes it before generating construction sheets
 
 ### Requirement: Product Target provenance is current and auditable
-Target-driven acceptance SHALL bind the Product Target to its current bytes and to the source/style authority used to create or approve it. A change to the Product Target or its declared upstream authority SHALL stale downstream fidelity acceptance.
+Target-driven acceptance SHALL bind the Product Target to its current bytes and to any declared source/style authority used to acquire or approve it. A change to the Product Target or its declared upstream authority SHALL stale downstream fidelity acceptance.
 
 #### Scenario: Product Target changes after fidelity acceptance
 - **WHEN** the declared Product Target bytes change after Composition or Part fidelity evidence was accepted
 - **THEN** the previous fidelity evidence becomes stale and the affected construction sheets must be re-audited
 
 #### Scenario: Upstream target authority changes
-- **WHEN** a generated Product Target's active style/source authority changes
+- **WHEN** source or style authority declared by the Product Target provenance changes
 - **THEN** the Product Target must be revalidated before downstream construction fidelity may remain current
+
+### Requirement: Product Target acquisition is producer-neutral
+A newly accepted Product Target SHALL be valid based on repository-owned target bytes, current provenance, applicable style acceptance, and visual fidelity rather than on a required producer technology. Generator, model, application, or provider identity SHALL NOT be mandatory for Product Target validity.
+
+#### Scenario: Repository-authored target reaches the required visual authority
+- **WHEN** a Product Target is authored directly into the repository and passes the applicable style and visual acceptance criteria
+- **THEN** it may become Product Target authority without image-model or external-provider evidence
+
+#### Scenario: External generation metadata is available
+- **WHEN** a Product Target was created using an external generator and provider/model/request metadata is available
+- **THEN** that metadata may be retained as traceability evidence but is not required to make the accepted target valid
+
+#### Scenario: No acceptable Product Target can be acquired
+- **WHEN** no available acquisition path can produce repository-owned target bytes that pass current provenance, style, and visual acceptance
+- **THEN** the production asset remains blocked at Product Target authority and downstream construction/source work does not begin
+
+### Requirement: Product Target acceptance owns exact repository bytes
+The visually accepted Product Target SHALL exist as repository-owned bytes and its provenance SHALL bind the exact accepted target hash. A candidate that cannot become repository-owned without substitution SHALL NOT itself become Product Target authority.
+
+#### Scenario: Accepted candidate is stored exactly
+- **WHEN** the accepted target candidate can be written or imported into the repository without changing its bytes
+- **THEN** those bytes become the declared Product Target and are hash-bound by provenance
+
+#### Scenario: External candidate cannot cross the project boundary
+- **WHEN** a candidate is visible outside the repository but its accepted bytes cannot be written or imported exactly
+- **THEN** that candidate is not accepted as Product Target authority; the workflow must acquire another valid target or remain blocked
+
+### Requirement: New Product Target provenance is acquisition-neutral
+New Product Target provenance SHALL bind the target hash and all declared upstream source/style authority. Producer-specific metadata MAY be recorded but SHALL be optional. Existing accepted provenance versions SHALL remain valid when unchanged and otherwise current under their original contracts.
+
+#### Scenario: New target has no generator metadata
+- **WHEN** a newly accepted Product Target has repository-owned bytes, current declared upstream authority, and no generator/provider/model metadata
+- **THEN** provenance validation may pass without inventing generator evidence
+
+#### Scenario: Optional generator metadata changes
+- **WHEN** optional generator metadata changes without changing the accepted target bytes or declared authoritative source/style inputs
+- **THEN** Product Target validity does not depend on that metadata unless the provenance explicitly declares it as hash-bound upstream authority
+
+#### Scenario: Existing accepted provenance remains unchanged
+- **WHEN** a previously accepted Product Target still uses a valid earlier provenance contract and is not intentionally re-acquired
+- **THEN** backward-compatible validation continues without requiring migration to the new acquisition-neutral contract
 
 ### Requirement: Construction sheets must preserve Product Target fidelity
 Before a target-driven Composition or Part Sheet is accepted, current fidelity evidence SHALL verify silhouette, proportions, construction richness, material/color hierarchy, and meaningful detail density against the Product Target. Every required criterion SHALL pass.
@@ -70,48 +111,3 @@ Target-driven fidelity evidence SHALL identify the Product Target and audited sh
 #### Scenario: All audited inputs remain unchanged
 - **WHEN** Product Target, audited sheets, and their declared upstream authority remain byte-identical
 - **THEN** repeated validation recognizes the existing fidelity evidence as current
-
-### Requirement: Generated Product Targets use image-model authoring
-A newly generated Product Target SHALL be created by an image-generation model from current target style authority plus asset intent. Procedural raster/vector drawing or scripted geometry rendering SHALL NOT become generated Product Target authority.
-
-#### Scenario: Agent has style authority and form intent but no supplied target
-- **WHEN** target-driven authoring must create a Product Target from style references and asset form intent
-- **THEN** the agent uses an image-generation model, visually evaluates the result, and accepts only an image that reaches the approved visual language
-
-#### Scenario: Procedural drawing can create a recognizable asset
-- **WHEN** a local script, SVG renderer, pixel renderer, or deterministic drawing tool can draw the requested form
-- **THEN** that output may support construction or diagnostics but cannot be accepted as a newly generated Product Target
-
-#### Scenario: Image-generation capability is unavailable
-- **WHEN** no usable image-generation capability can create the Product Target at the required visual level
-- **THEN** the current asset remains blocked at Product Target authoring rather than falling back to a lower-fidelity procedural target
-
-### Requirement: Generated Product Target delivery preserves exact accepted bytes
-The exact visually accepted image-model output SHALL become the repository-owned Product Target. If the generated output cannot be transferred into the project without redrawing or substitution, target authoring SHALL remain blocked.
-
-#### Scenario: Generator can write or transfer the accepted image into the project
-- **WHEN** the accepted image-model output is available as exact bytes through a project-native write, public result download, or trusted exact-file import
-- **THEN** those exact bytes are stored as the declared Product Target and bound by provenance
-
-#### Scenario: Generator output is visible but not transferable
-- **WHEN** the agent can inspect a generated image but its exact bytes cannot cross the host/project boundary
-- **THEN** the workflow reports a Product Target delivery block and does not recreate the image with a procedural renderer
-
-### Requirement: Generated Product Target provenance identifies the image-model request
-New generated Product Targets SHALL use current provenance that identifies image-model authoring and binds a repository-owned generation request plus provider/model identity. Existing accepted generated provenance v1 MAY remain valid unchanged.
-
-#### Scenario: New generated Product Target has complete image-model provenance
-- **WHEN** a newly generated target is accepted
-- **THEN** provenance records image-model generator kind, nonempty provider/model identity, the accepted target hash, current target style hashes, and a hash-bound repository request artifact
-
-#### Scenario: Generated provenance claims a procedural generator
-- **WHEN** current generated-target provenance identifies a procedural renderer instead of an image-generation model
-- **THEN** generated Product Target provenance validation fails
-
-#### Scenario: Bound generation request changes
-- **WHEN** the repository-owned generation request bytes change after provenance is recorded
-- **THEN** the generated Product Target provenance becomes stale until the target generation/acceptance evidence is intentionally refreshed
-
-#### Scenario: Existing generated provenance v1 remains unchanged
-- **WHEN** a previously accepted published target still uses valid generated provenance v1 and is not being intentionally regenerated
-- **THEN** backward-compatible validation may continue to accept it without inventing image-model history

@@ -667,8 +667,9 @@ public sealed class StoreEngine
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
             ?? throw new InvalidDataException("Product Target provenance is invalid.");
 
-        if (provenance.Version is not (1 or 2))
-            throw new InvalidDataException("Product Target provenance must use version 1 or 2.");
+        if (provenance.Version is not (1 or 2 or ReferenceTargetProvenance.AcquisitionNeutralVersion))
+            throw new InvalidDataException(
+                "Product Target provenance must use version 1, 2, or 3.");
         if (!IsSha256(provenance.TargetSha256))
             throw new InvalidDataException("Product Target provenance targetSha256 is invalid.");
         string targetHash = HeroVoxelProvider.HashFile(targetPath);
@@ -677,6 +678,42 @@ public sealed class StoreEngine
                 provenance.TargetSha256,
                 StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Product Target provenance is stale for target.png.");
+
+        if (provenance.Version == ReferenceTargetProvenance.AcquisitionNeutralVersion)
+        {
+            if (string.Equals(
+                    provenance.Origin,
+                    ReferenceTargetProvenance.RepositoryAuthoredOrigin,
+                    StringComparison.Ordinal))
+            {
+                if (provenance.Source != null)
+                    throw new InvalidDataException(
+                        "Repository-authored Product Target provenance cannot declare imported source evidence.");
+
+                ValidateTargetStyleProvenance(
+                    asset,
+                    provenance,
+                    "repository-authored");
+                return provenance;
+            }
+
+            if (string.Equals(
+                    provenance.Origin,
+                    ReferenceTargetProvenance.ImportedOrigin,
+                    StringComparison.Ordinal))
+            {
+                if (!string.IsNullOrWhiteSpace(provenance.TargetStyleAuthoritySha256) ||
+                    provenance.TargetStyleSha256 is { Count: > 0 })
+                    throw new InvalidDataException(
+                        "Imported Product Target provenance cannot declare repository-authored style authority.");
+
+                ValidateImportedTargetSourceProvenance(asset, provenance, targetHash);
+                return provenance;
+            }
+
+            throw new InvalidDataException(
+                "Product Target provenance v3 origin must be 'repository-authored' or 'imported'.");
+        }
 
         if (string.Equals(provenance.Origin, "generated", StringComparison.Ordinal))
         {
@@ -719,72 +756,93 @@ public sealed class StoreEngine
                     throw new InvalidDataException(
                         "Product Target generation request provenance is stale.");
             }
-            ReferenceStyleAuthority targetStyle =
-                ResolveReferenceStyle(
-                    asset.Manifest.Style.Family,
-                    asset.Manifest.Kind,
-                    targetAuthority: true);
-            string expectedAuthority = BuildStyleAuthoritySha256(targetStyle);
-            if (!IsSha256(provenance.TargetStyleAuthoritySha256) ||
-                !string.Equals(
-                    provenance.TargetStyleAuthoritySha256,
-                    expectedAuthority,
-                    StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException(
-                    "Product Target generated style authority is stale.");
 
-            Dictionary<string, string> expectedHashes = BuildStyleHashes(targetStyle);
-            if (provenance.TargetStyleSha256 == null ||
-                provenance.TargetStyleSha256.Count != expectedHashes.Count ||
-                expectedHashes.Any(pair =>
-                    !provenance.TargetStyleSha256.TryGetValue(pair.Key, out string? actual) ||
-                    !string.Equals(actual, pair.Value, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidDataException(
-                    "Product Target generated style evidence is stale.");
+            ValidateTargetStyleProvenance(asset, provenance, "generated");
             return provenance;
         }
 
-        if (string.Equals(provenance.Origin, "imported", StringComparison.Ordinal))
+        if (string.Equals(
+                provenance.Origin,
+                ReferenceTargetProvenance.ImportedOrigin,
+                StringComparison.Ordinal))
         {
             if (provenance.Version != 1)
                 throw new InvalidDataException(
-                    "Imported Product Target provenance must use version 1.");
+                    "Imported Product Target provenance must use version 1 unless it uses acquisition-neutral version 3.");
             if (provenance.Generator != null)
                 throw new InvalidDataException(
-                    "Imported Product Target provenance cannot declare generator evidence.");
-            if (provenance.Source == null ||
-                string.IsNullOrWhiteSpace(provenance.Source.Path) ||
-                !IsSha256(provenance.Source.Sha256) ||
-                provenance.Source.Relation is not ("exact" or "canonical-derivative"))
-                throw new InvalidDataException(
-                    "Imported Product Target provenance requires source path/hash and exact or canonical-derivative relation.");
+                    "Imported Product Target provenance v1 cannot declare generator evidence.");
             if (!string.IsNullOrWhiteSpace(provenance.TargetStyleAuthoritySha256) ||
                 provenance.TargetStyleSha256 is { Count: > 0 })
                 throw new InvalidDataException(
                     "Imported Product Target provenance cannot declare generated style authority.");
 
-            string sourcePath = ResolveContained(
-                asset.ReferenceDirectory,
-                provenance.Source.Path,
-                "Product Target imported source");
-            if (!File.Exists(sourcePath))
-                throw new InvalidDataException("Product Target imported source is missing.");
-            string sourceHash = HeroVoxelProvider.HashFile(sourcePath);
-            if (!string.Equals(
-                    sourceHash,
-                    provenance.Source.Sha256,
-                    StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException(
-                    "Product Target imported source provenance is stale.");
-            if (string.Equals(provenance.Source.Relation, "exact", StringComparison.Ordinal) &&
-                !string.Equals(sourceHash, targetHash, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException(
-                    "Exact imported Product Target must match the source bytes.");
+            ValidateImportedTargetSourceProvenance(asset, provenance, targetHash);
             return provenance;
         }
 
         throw new InvalidDataException(
-            "Product Target provenance origin must be 'generated' or 'imported'.");
+            "Product Target provenance origin must be 'generated', 'repository-authored', or 'imported'.");
+    }
+
+    private void ValidateTargetStyleProvenance(
+        AssetRecord asset,
+        ReferenceTargetProvenance provenance,
+        string originLabel)
+    {
+        ReferenceStyleAuthority targetStyle =
+            ResolveReferenceStyle(
+                asset.Manifest.Style.Family,
+                asset.Manifest.Kind,
+                targetAuthority: true);
+        string expectedAuthority = BuildStyleAuthoritySha256(targetStyle);
+        if (!IsSha256(provenance.TargetStyleAuthoritySha256) ||
+            !string.Equals(
+                provenance.TargetStyleAuthoritySha256,
+                expectedAuthority,
+                StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException(
+                $"Product Target {originLabel} style authority is stale.");
+
+        Dictionary<string, string> expectedHashes = BuildStyleHashes(targetStyle);
+        if (provenance.TargetStyleSha256 == null ||
+            provenance.TargetStyleSha256.Count != expectedHashes.Count ||
+            expectedHashes.Any(pair =>
+                !provenance.TargetStyleSha256.TryGetValue(pair.Key, out string? actual) ||
+                !string.Equals(actual, pair.Value, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException(
+                $"Product Target {originLabel} style evidence is stale.");
+    }
+
+    private void ValidateImportedTargetSourceProvenance(
+        AssetRecord asset,
+        ReferenceTargetProvenance provenance,
+        string targetHash)
+    {
+        if (provenance.Source == null ||
+            string.IsNullOrWhiteSpace(provenance.Source.Path) ||
+            !IsSha256(provenance.Source.Sha256) ||
+            provenance.Source.Relation is not ("exact" or "canonical-derivative"))
+            throw new InvalidDataException(
+                "Imported Product Target provenance requires source path/hash and exact or canonical-derivative relation.");
+
+        string sourcePath = ResolveContained(
+            asset.ReferenceDirectory,
+            provenance.Source.Path,
+            "Product Target imported source");
+        if (!File.Exists(sourcePath))
+            throw new InvalidDataException("Product Target imported source is missing.");
+        string sourceHash = HeroVoxelProvider.HashFile(sourcePath);
+        if (!string.Equals(
+                sourceHash,
+                provenance.Source.Sha256,
+                StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException(
+                "Product Target imported source provenance is stale.");
+        if (string.Equals(provenance.Source.Relation, "exact", StringComparison.Ordinal) &&
+            !string.Equals(sourceHash, targetHash, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException(
+                "Exact imported Product Target must match the source bytes.");
     }
 
     internal ReferenceFidelityAudit ValidateFidelityAudit(AssetRecord asset)

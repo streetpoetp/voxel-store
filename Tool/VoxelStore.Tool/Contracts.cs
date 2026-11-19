@@ -181,6 +181,10 @@ public sealed class ReferenceTargetGeneratorProvenance
 
 public sealed class ReferenceTargetProvenance
 {
+    public const int AcquisitionNeutralVersion = 3;
+    public const string RepositoryAuthoredOrigin = "repository-authored";
+    public const string ImportedOrigin = "imported";
+
     [JsonPropertyName("version")]
     public int Version { get; set; }
 

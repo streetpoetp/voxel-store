@@ -8,7 +8,6 @@
 - `*.generated.vox` and `*.animation.generated.yaml` are machine-owned reproducible Hero.Voxel siblings. Never edit them manually and never move them to a separate generated-art tree.
 - `Assets/**/Proof/**` is evidence. Visual PASS must be explicitly sealed against exact input hashes; compilation alone is not visual acceptance.
 - `Catalog/*.generated.json` is derived state. Never use it as the sole authority for identity, compatibility, collection coverage, or publication.
-- `Samples/**` is experimental/non-published content. Store discovery must not treat it as reusable product inventory.
 
 ## Domain ownership
 
@@ -17,6 +16,12 @@
 - `Profiles/**` owns reusable physical compatibility contracts.
 - `Collections/**` owns desired reusable asset coverage; collections select assets but do not contain or own their published identity.
 - `Store/**` owns global store configuration, numeric authoring policy, and retired identity history only.
+
+## Production authoring
+
+- New production models are authored from current `Collections/**`, `Styles/**`, `Profiles/**`, explicit asset intent, and a newly accepted asset-specific Product Target.
+- Do not use another asset or an experimental/template asset as upstream visual/model authority for a new production asset.
+- Product Target precedes construction, density, VoxelSpec, proof, compatibility, and publication. Do not model first and create or simplify the target afterward to justify the model.
 
 ## Hero.Voxel boundary
 
