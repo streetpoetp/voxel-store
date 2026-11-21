@@ -1,11 +1,9 @@
 <Project>
   <PropertyGroup>
-    <HeroStudioRoot Condition="'$(HeroStudioRoot)' == ''">$(HERO_STUDIO_ROOT)</HeroStudioRoot>
+    <HeroStudioSubmoduleRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\Dependencies\hero-studio'))</HeroStudioSubmoduleRoot>
   </PropertyGroup>
-  <Target Name="RequireHeroStudioRoot" BeforeTargets="PrepareForBuild">
-    <Error Condition="'$(HeroStudioRoot)' == ''"
-           Text="Set HERO_STUDIO_ROOT or pass -p:HeroStudioRoot=&lt;path&gt;." />
-    <Error Condition="!Exists('$(HeroStudioRoot)/src/client/unity/Packages/hero.studio/hero.voxel/Tool~/Hero.Voxel.Tool/Hero.Voxel.Tool.csproj')"
-           Text="HeroStudioRoot does not contain the expected Hero.Voxel.Tool project." />
+  <Target Name="RequireHeroStudioSubmodule" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(HeroStudioSubmoduleRoot)/src/client/unity/Packages/hero.studio/hero.voxel/Tool~/Hero.Voxel.Tool/Hero.Voxel.Tool.csproj')"
+           Text="Hero Studio submodule is missing or uninitialized. Run: git submodule update --init --recursive" />
   </Target>
 </Project>

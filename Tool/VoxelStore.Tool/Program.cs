@@ -33,6 +33,12 @@ try
                 Console.WriteLine(JsonSerializer.Serialize(snapshot.NextJob, json));
                 return 0;
             }
+        case "preview-plan":
+            {
+                PreviewPlan plan = engine.BuildPreviewPlan();
+                Console.WriteLine(JsonSerializer.Serialize(plan, json));
+                return 0;
+            }
         case "generate":
             {
                 if (args.Length < 2)

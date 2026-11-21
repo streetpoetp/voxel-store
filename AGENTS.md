@@ -26,9 +26,8 @@
 ## Hero.Voxel boundary
 
 - Hero Studio/Hero.Voxel is the only VoxelSpec parser/compiler, preview authority, generated VOX writer, animation-manifest writer, and downstream Unity bake/runtime technology.
-- Resolve Hero.Voxel through `toolchain/hero-voxel.lock.yaml` plus a portable machine-local provider root such as `HERO_STUDIO_ROOT`. Never check in a developer-local absolute path.
-- Before agent-driven reference or source authoring, resolve and read the pinned canonical `src/client/unity/docs/voxel-art-workflow.md`. Do not copy that document's semantic rules into store skills.
-
+- Resolve Hero Studio/Hero.Voxel from the repository-owned `Dependencies/hero-studio` Git submodule and verify it against `toolchain/hero-voxel.lock.yaml`. Initialize it with `git submodule update --init --recursive`; do not use a developer-local Hero Studio checkout as production dependency authority.
+- Before agent-driven reference or source authoring, read the canonical `Dependencies/hero-studio/src/client/unity/docs/voxel-art-workflow.md` from that pinned submodule. Do not copy that document's semantic rules into store skills.
 ## Content boundary
 
 - Store metadata may own visual identity, style family, palette, bounds, physical compatibility family, mount sockets, and authoring evidence.

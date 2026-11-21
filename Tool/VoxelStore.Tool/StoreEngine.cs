@@ -72,6 +72,18 @@ public sealed class StoreSnapshot
     public MaintenanceJob? NextJob { get; set; }
     public bool Healthy => Assets.All(x => x.Published) && CoverageGaps.All(x => !x.Required);
 }
+public sealed record PreviewPlanUnit(
+    string Id,
+    string Kind,
+    string UnitRef,
+    string SourceBase,
+    string Palette,
+    string GeneratedVox,
+    string? GeneratedAnimation);
+public sealed class PreviewPlan
+{
+    public List<PreviewPlanUnit> Units { get; set; } = new();
+}
 
 public sealed class StoreEngine
 {
@@ -89,12 +101,11 @@ public sealed class StoreEngine
     private readonly string _root;
     private readonly HeroVoxelProvider _provider;
 
-    public StoreEngine(string root)
+    public StoreEngine(string root, string? providerRoot = null)
     {
         _root = Path.GetFullPath(root);
-        _provider = new HeroVoxelProvider(_root);
+        _provider = new HeroVoxelProvider(_root, providerRoot);
     }
-
     public string Root => _root;
 
     public static string FindRoot(string? start = null)
@@ -236,6 +247,59 @@ public sealed class StoreEngine
         if (writeDerived)
             WriteDerived(snapshot);
         return snapshot;
+    }
+    public PreviewPlan BuildPreviewPlan()
+    {
+        IReadOnlyList<AssetRecord> assets = DiscoverAssets();
+        StoreSnapshot snapshot = Scan(writeDerived: false, writeCompatibility: false);
+        return CreatePreviewPlan(_root, assets, snapshot);
+    }
+
+    internal static PreviewPlan CreatePreviewPlan(
+        string root,
+        IReadOnlyList<AssetRecord> assets,
+        StoreSnapshot snapshot)
+    {
+        var byId = assets.ToDictionary(x => x.Manifest.Id, StringComparer.Ordinal);
+        return new PreviewPlan
+        {
+            Units = snapshot.Assets
+                .Where(x => x.Published)
+                .OrderBy(x => x.Kind, StringComparer.Ordinal)
+                .ThenBy(x => x.Id, StringComparer.Ordinal)
+                .Select(x =>
+                {
+                    AssetRecord asset = byId[x.Id];
+                    string generatedVox = asset.SourceBase + ".generated.vox";
+                    string generatedAnimation =
+                        asset.SourceBase + GeneratedAnimationManifestWriter.Suffix;
+                    return new PreviewPlanUnit(
+                        x.Id,
+                        x.Kind,
+                        x.UnitRef,
+                        ToRepositoryRelative(root, asset.SourceBase),
+                        ToRepositoryRelative(root, asset.PalettePath),
+                        ToRepositoryRelative(root, generatedVox),
+                        File.Exists(generatedAnimation)
+                            ? ToRepositoryRelative(root, generatedAnimation)
+                            : null);
+                })
+                .ToList()
+        };
+    }
+
+    private static string ToRepositoryRelative(string root, string absolutePath)
+    {
+        string fullRoot = Path.GetFullPath(root);
+        string full = Path.GetFullPath(absolutePath);
+        string rootPrefix = fullRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
+        if (!full.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException($"Preview source path must remain inside voxel-store: {absolutePath}");
+
+        return Path.GetRelativePath(fullRoot, full)
+            .Replace(Path.DirectorySeparatorChar, '/')
+            .Replace(Path.AltDirectorySeparatorChar, '/');
     }
 
     public void Generate(string assetId)

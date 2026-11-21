@@ -15,10 +15,16 @@ public sealed class HeroVoxelProvider
         string? GeneratedAnimationPath);
 
     private readonly string _repositoryRoot;
+    private readonly string? _providerRootOverride;
     private Resolution? _resolution;
 
-    public HeroVoxelProvider(string repositoryRoot) => _repositoryRoot = repositoryRoot;
-
+    public HeroVoxelProvider(string repositoryRoot, string? providerRoot = null)
+    {
+        _repositoryRoot = Path.GetFullPath(repositoryRoot);
+        _providerRootOverride = string.IsNullOrWhiteSpace(providerRoot)
+            ? null
+            : Path.GetFullPath(providerRoot);
+    }
     public Resolution Resolve()
     {
         if (_resolution != null)
@@ -31,11 +37,13 @@ public sealed class HeroVoxelProvider
         if (Path.IsPathRooted(lockFile.ToolProject) || Path.IsPathRooted(lockFile.Workflow))
             throw new InvalidDataException("Hero.Voxel lock paths must be portable relative paths.");
 
-        string root = Environment.GetEnvironmentVariable("HERO_STUDIO_ROOT") ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(root))
-            throw new InvalidOperationException("HERO_STUDIO_ROOT is required to resolve the pinned Hero.Voxel provider.");
+        string root = _providerRootOverride ??
+            Path.Combine(_repositoryRoot, "Dependencies", "hero-studio");
         root = Path.GetFullPath(root);
-
+        if (!Directory.Exists(root))
+            throw new InvalidOperationException(
+                "Hero Studio submodule is missing or uninitialized at Dependencies/hero-studio. " +
+                "Run: git submodule update --init --recursive");
         string project = Path.Combine(root, Normalize(lockFile.ToolProject));
         string workflow = Path.Combine(root, Normalize(lockFile.Workflow));
         if (!File.Exists(project) || !File.Exists(workflow))

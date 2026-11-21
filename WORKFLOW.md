@@ -3,9 +3,8 @@
 ## Bootstrap
 
 1. Read `AGENTS.md`.
-2. Resolve the pinned Hero.Voxel provider through `toolchain/hero-voxel.lock.yaml` and `HERO_STUDIO_ROOT` when the current command requires the Tool to build or Hero.Voxel to run.
-3. Use OpenSpec for architecture, ownership, schema, workflow, or other cross-cutting changes.
-4. Start maintenance from deterministic Tool state; do not choose work from generated catalog/status files by hand.
+2. Initialize the repository-owned Hero Studio provider with `git submodule update --init --recursive`; `Dependencies/hero-studio` plus `toolchain/hero-voxel.lock.yaml` is the single Hero.Voxel dependency authority.
+3. Use OpenSpec for architecture, ownership, schema, workflow, or other cross-cutting changes.4. Start maintenance from deterministic Tool state; do not choose work from generated catalog/status files by hand.
 
 Repository domain roots are explicit: `Assets` is reusable product content; `Styles` is visual authority; `Profiles` is physical compatibility; `Collections` is desired coverage; `Store` is global policy/history; `Catalog` is derived state.
 
@@ -108,10 +107,26 @@ dotnet run --project Tool/VoxelStore.Tool -- seal-reference <asset-id>
 dotnet run --project Tool/VoxelStore.Tool -- seal <asset-id>
 ```
 
-Current Tool builds require a compatible `HERO_STUDIO_ROOT`. Making repository-local planning independent of that provider is a separate architecture change: `decouple-store-planning-from-hero-voxel-provider`.
+Current Tool builds resolve Hero.Voxel directly from `Dependencies/hero-studio`; no `HERO_STUDIO_ROOT` or developer-local provider checkout is required.
+
+## Unity baked preview
+The Unity workspace under `Preview/Unity/` is an Editor-only inspection surface for real baked Hero.Voxel outputs. It is not voxel-store source authority, publication authority, or a production runtime.
+
+From the repository root:
+
+```powershell
+git submodule update --init --recursive
+./Preview/Bootstrap.ps1
+```
+
+The bootstrap initializes and verifies the exact Hero Studio submodule revision and Hero.Voxel workflow fingerprint, then exposes the **entire** `hero.studio` package through one ignored embedded-package junction at `Preview/Unity/Packages/hero.studio`. The junction points to `Dependencies/hero-studio/src/client/unity/Packages/hero.studio`; it does not select modules, copy provider code, or patch provider-owned shaders.
+Open `Preview/Unity/` with Unity `6000.3.24f1`. In the Editor run:
+
+`Voxel Store/Refresh All & Open Preview Grid`
+
+The command derives the current published set through `VoxelStore.Tool preview-plan`, reads each publication-validated `.generated.vox` and generated animation manifest in place, bakes them through the pinned full Hero Studio package into ignored `Assets/__VoxelStorePreview/Baked/**`, and reconstructs the canonical scene grid. Preview refresh does not rewrite voxel-store source or generated publication artifacts. Deleting the derived Unity bake root is safe; refresh recreates it from store authority.
 
 ## Finalization
-
 - Run the applicable deterministic validation and Tool tests when the pinned provider is available.
 - Run strict OpenSpec validation for spec/workflow changes.
 - Run `git diff --check`.

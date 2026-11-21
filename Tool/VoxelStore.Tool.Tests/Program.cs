@@ -37,6 +37,8 @@ static string TempRoot()
     return path;
 }
 
+static string HeroStudioSubmodule(string repositoryRoot) =>
+    Path.Combine(repositoryRoot, "Dependencies", "hero-studio");
 static void CopyFile(string sourceRoot, string targetRoot, string relative)
 {
     string source = Path.Combine(
@@ -440,7 +442,7 @@ static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string rep
                   - box: { min: [0, 0, 0], size: [4, 4, 96], color: staff }
             """);
 
-        var engine = new StoreEngine(root);
+        var engine = new StoreEngine(root, HeroStudioSubmodule(repositoryRoot));
         engine.Generate("fixture.equipment.staff");
         engine.Seal("fixture.equipment.staff");
         return (root, assetRoot);
@@ -463,7 +465,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
         DeleteTree(densityRoot);
         string manifestPath = Path.Combine(assetRoot, "asset.yaml");
         string legacyManifest = File.ReadAllText(manifestPath);
-        var legacyEngine = new StoreEngine(root);
+        var legacyEngine = new StoreEngine(root, HeroStudioSubmodule(repositoryRoot));
         legacyEngine.Seal(densityFixtureId);
         var legacySnapshot = legacyEngine.Scan(false, false);
         Require(
@@ -551,7 +553,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
         WriteCandidate(8, edge: true, gap: false, cadencePreserved: true, edgeSpan: 1);
         WriteCandidate(12, edge: true, gap: true, cadencePreserved: true, edgeSpan: 1);
 
-        StoreSnapshot missingDensity = new StoreEngine(root).Scan(false, false);
+        StoreSnapshot missingDensity = new StoreEngine(root, HeroStudioSubmodule(repositoryRoot)).Scan(false, false);
         AssetHealth missingDensityStaff = missingDensity.Assets.Single();
         Require(
             !missingDensityStaff.Published &&
@@ -560,7 +562,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
             missingDensity.NextJob.Reason.Contains("density", StringComparison.Ordinal),
             "opted-in equipment missing density evidence must block at density on the same maintenance asset");
 
-        var engine = new StoreEngine(root);
+        var engine = new StoreEngine(root, HeroStudioSubmodule(repositoryRoot));
         ReferenceDensityEvidence first = engine.SelectDensity(
             densityFixtureId,
             write: false);
@@ -583,7 +585,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
 
         engine.SelectDensity(densityFixtureId, write: true);
         AssetRecord staff = engine.DiscoverAssets().Single();
-        StoreSnapshot sourceMismatch = new StoreEngine(root).Scan(false, false);
+        StoreSnapshot sourceMismatch = new StoreEngine(root, HeroStudioSubmodule(repositoryRoot)).Scan(false, false);
         Require(
             sourceMismatch.Assets.Single().FailedGate == "source" &&
             sourceMismatch.Assets.Single().Gates.Single(x => x.Id == "source").Message.Contains(
@@ -599,7 +601,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
                 originalCanonicalSpec,
                 @"(?m)^voxelsPerUnit:\s*\d+\s*$",
                 "voxelsPerUnit: 12"));
-        StoreSnapshot densityAndSourceCurrent = new StoreEngine(root).Scan(false, false);
+        StoreSnapshot densityAndSourceCurrent = new StoreEngine(root, HeroStudioSubmodule(repositoryRoot)).Scan(false, false);
         Require(
             densityAndSourceCurrent.Assets.Single().Gates.Single(x => x.Id == "density").Passed &&
             densityAndSourceCurrent.Assets.Single().Gates.Single(x => x.Id == "source").Passed &&
@@ -652,7 +654,7 @@ static void RunReferenceDensityEvidenceTests(string repositoryRoot)
         ExpectFailure(
             () => engine.ValidateDensityEvidence(staff, storePolicy),
             "stale");
-        StoreSnapshot staleDensity = new StoreEngine(root).Scan(false, false);
+        StoreSnapshot staleDensity = new StoreEngine(root, HeroStudioSubmodule(repositoryRoot)).Scan(false, false);
         Require(
             staleDensity.Assets.Single().FailedGate == "density",
             "changed target extent must stale density at the density gate");
@@ -2931,7 +2933,133 @@ static void RunRetirementContractTests()
     }
 }
 
+static void RunPreviewPlanTests(string repositoryRoot)
+{
+    string catalogPath = Path.Combine(repositoryRoot, "Catalog", "catalog.generated.json");
+    string healthPath = Path.Combine(repositoryRoot, "Catalog", "health.generated.json");
+    byte[]? catalogBefore = File.Exists(catalogPath) ? File.ReadAllBytes(catalogPath) : null;
+    byte[]? healthBefore = File.Exists(healthPath) ? File.ReadAllBytes(healthPath) : null;
+
+    var engine = new StoreEngine(repositoryRoot);
+    IReadOnlyList<AssetRecord> records = engine.DiscoverAssets();
+    StoreSnapshot snapshot = engine.Scan(writeDerived: false, writeCompatibility: false);
+    PreviewPlan first = engine.BuildPreviewPlan();
+    PreviewPlan second = engine.BuildPreviewPlan();
+
+    string[] expectedIds = snapshot.Assets
+        .Where(x => x.Published)
+        .OrderBy(x => x.Kind, StringComparer.Ordinal)
+        .ThenBy(x => x.Id, StringComparer.Ordinal)
+        .Select(x => x.Id)
+        .ToArray();
+    Require(
+        first.Units.Select(x => x.Id).SequenceEqual(expectedIds, StringComparer.Ordinal),
+        "preview plan must contain every and only currently published asset in deterministic kind/id order");
+    Require(
+        first.Units.Select(x => x.Id).SequenceEqual(second.Units.Select(x => x.Id), StringComparer.Ordinal),
+        "preview plan ordering must be deterministic");
+    Require(
+        snapshot.Assets.Where(x => !x.Published).All(x => first.Units.All(u => u.Id != x.Id)),
+        "unpublished assets must not appear in preview plan");
+
+    string syntheticRoot = TempRoot();
+    try
+    {
+        AssetRecord Synthetic(string id, string kind, string unitRef) =>
+            new(
+                new AssetManifest
+                {
+                    Version = 2,
+                    Id = id,
+                    Kind = kind,
+                    UnitRef = unitRef,
+                    Source = new AssetSource
+                    {
+                        Base = "./Source/" + id,
+                        Palette = "./Source/" + id + ".palette.yaml"
+                    },
+                    Style = new AssetStyle { Family = "fixture.style" }
+                },
+                Path.Combine(syntheticRoot, "Assets", id, "asset.yaml"),
+                Path.Combine(syntheticRoot, "Assets", id),
+                Path.Combine(syntheticRoot, "Assets", id, "Source", id),
+                Path.Combine(syntheticRoot, "Assets", id, "Source", id + ".palette.yaml"),
+                Path.Combine(syntheticRoot, "Assets", id, "Reference"),
+                Path.Combine(syntheticRoot, "Assets", id, "Proof"));
+
+        AssetRecord avatar = Synthetic("b.avatar", "avatar", "fixture/avatar/b");
+        AssetRecord equipment = Synthetic("a.equipment", "equipment", "fixture/equipment/a");
+        AssetRecord unpublished = Synthetic("z.unpublished", "equipment", "fixture/equipment/z");
+        var syntheticSnapshot = new StoreSnapshot
+        {
+            Assets = new List<AssetHealth>
+            {
+                new() { Id = avatar.Manifest.Id, Kind = avatar.Manifest.Kind, UnitRef = avatar.Manifest.UnitRef, Published = true },
+                new() { Id = equipment.Manifest.Id, Kind = equipment.Manifest.Kind, UnitRef = equipment.Manifest.UnitRef, Published = true },
+                new() { Id = unpublished.Manifest.Id, Kind = unpublished.Manifest.Kind, UnitRef = unpublished.Manifest.UnitRef, Published = false }
+            }
+        };
+        PreviewPlan synthetic = StoreEngine.CreatePreviewPlan(
+            syntheticRoot,
+            new[] { unpublished, avatar, equipment },
+            syntheticSnapshot);
+        Require(
+            synthetic.Units.Select(x => x.Id).SequenceEqual(new[] { "b.avatar", "a.equipment" }, StringComparer.Ordinal),
+            "synthetic preview plan must include both published kinds, exclude unpublished assets, and sort by kind then id");
+    }
+    finally
+    {
+        DeleteTree(syntheticRoot);
+    }
+
+    Dictionary<string, AssetRecord> byId = records.ToDictionary(x => x.Manifest.Id, StringComparer.Ordinal);
+    foreach (PreviewPlanUnit unit in first.Units)
+    {
+        AssetRecord record = byId[unit.Id];
+        string source = Path.GetRelativePath(repositoryRoot, record.SourceBase).Replace('\\', '/');
+        string palette = Path.GetRelativePath(repositoryRoot, record.PalettePath).Replace('\\', '/');
+        Require(unit.Kind == record.Manifest.Kind, $"preview kind must come from manifest for {unit.Id}");
+        Require(unit.UnitRef == record.Manifest.UnitRef, $"preview UnitRef must come from manifest for {unit.Id}");
+        Require(unit.SourceBase == source, $"preview source path must come from authoritative asset record for {unit.Id}");
+        Require(unit.Palette == palette, $"preview palette path must come from authoritative asset record for {unit.Id}");
+        string generatedVox = Path.GetRelativePath(
+            repositoryRoot,
+            record.SourceBase + ".generated.vox").Replace('\\', '/');
+        string generatedAnimationPath =
+            record.SourceBase + ".animation.generated.yaml";
+        string? generatedAnimation = File.Exists(generatedAnimationPath)
+            ? Path.GetRelativePath(repositoryRoot, generatedAnimationPath).Replace('\\', '/')
+            : null;
+        Require(unit.GeneratedVox == generatedVox,
+            $"preview generated VOX path must come from current publication artifact for {unit.Id}");
+        Require(unit.GeneratedAnimation == generatedAnimation,
+            $"preview generated animation path must match current publication artifact for {unit.Id}");
+        Require(
+            !Path.IsPathRooted(unit.SourceBase) &&
+            !Path.IsPathRooted(unit.Palette) &&
+            !Path.IsPathRooted(unit.GeneratedVox) &&
+            (unit.GeneratedAnimation == null || !Path.IsPathRooted(unit.GeneratedAnimation)),
+            $"preview paths must be repository-relative for {unit.Id}");
+    }
+
+    byte[]? catalogAfter = File.Exists(catalogPath) ? File.ReadAllBytes(catalogPath) : null;
+    byte[]? healthAfter = File.Exists(healthPath) ? File.ReadAllBytes(healthPath) : null;
+    Require(
+        (catalogBefore == null && catalogAfter == null) ||
+        (catalogBefore != null && catalogAfter != null && catalogBefore.SequenceEqual(catalogAfter)),
+        "preview plan must not mutate generated catalog");
+    Require(
+        (healthBefore == null && healthAfter == null) ||
+        (healthBefore != null && healthAfter != null && healthBefore.SequenceEqual(healthAfter)),
+        "preview plan must not mutate generated health");
+}
 string repositoryRoot = StoreEngine.FindRoot(AppContext.BaseDirectory);
+if (args.Contains("--preview-plan-only", StringComparer.Ordinal))
+{
+    RunPreviewPlanTests(repositoryRoot);
+    Console.WriteLine("PASS: non-mutating published preview-plan contract");
+    return;
+}
 if (args.Contains("--axe-negative-fidelity-only", StringComparer.Ordinal))
 {
     RunAxeNegativeFidelityFixture(repositoryRoot);
@@ -3044,17 +3172,24 @@ Require(
         resolution.Lock.Workflow.Replace('/', Path.DirectorySeparatorChar))),
     "provider workflow did not resolve");
 
-string? originalProviderRoot = Environment.GetEnvironmentVariable("HERO_STUDIO_ROOT");
+string missingProviderRoot = TempRoot();
 try
 {
-    Environment.SetEnvironmentVariable("HERO_STUDIO_ROOT", null);
+    string missingLock = Path.Combine(
+        missingProviderRoot,
+        "toolchain",
+        "hero-voxel.lock.yaml");
+    Directory.CreateDirectory(Path.GetDirectoryName(missingLock)!);
+    File.Copy(
+        Path.Combine(repositoryRoot, "toolchain", "hero-voxel.lock.yaml"),
+        missingLock);
     ExpectFailure(
-        () => new HeroVoxelProvider(repositoryRoot).Resolve(),
-        "HERO_STUDIO_ROOT");
+        () => new HeroVoxelProvider(missingProviderRoot).Resolve(),
+        "Dependencies/hero-studio");
 }
 finally
 {
-    Environment.SetEnvironmentVariable("HERO_STUDIO_ROOT", originalProviderRoot);
+    Directory.Delete(missingProviderRoot, true);
 }
 
 string mismatchRoot = TempRoot();
@@ -3076,7 +3211,7 @@ try
             new string('0', 40),
             StringComparison.Ordinal));
     ExpectFailure(
-        () => new HeroVoxelProvider(mismatchRoot).Resolve(),
+        () => new HeroVoxelProvider(mismatchRoot, resolution.Root).Resolve(),
         "revision mismatch");
 }
 finally
@@ -3103,7 +3238,7 @@ try
             Path.Combine(resolution.Root, resolution.Lock.ToolProject),
             StringComparison.Ordinal));
     ExpectFailure(
-        () => new HeroVoxelProvider(absoluteLockRoot).Resolve(),
+        () => new HeroVoxelProvider(absoluteLockRoot, resolution.Root).Resolve(),
         "portable relative paths");
 }
 finally
@@ -3415,7 +3550,40 @@ finally
     DeleteTree(profileHistoryRoot);
 }
 
-IReadOnlyList<AssetRecord> assets = engine.DiscoverAssets();
+int coldStartAssetCount = 0;
+bool coldStartHealthy = false;
+int coldStartCompatibilityCount = 0;
+int coldStartGapCount = 0;
+string coldStartRoot = TempRoot();
+try
+{
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Store"),
+        Path.Combine(coldStartRoot, "Store"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Collections"),
+        Path.Combine(coldStartRoot, "Collections"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Profiles"),
+        Path.Combine(coldStartRoot, "Profiles"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "toolchain"),
+        Path.Combine(coldStartRoot, "toolchain"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Styles"),
+        Path.Combine(coldStartRoot, "Styles"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Assets", "Avatars", "FoundationGuard01"),
+        Path.Combine(coldStartRoot, "Assets", "Avatars", "FoundationGuard01"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Assets", "Equipment", "Sword02"),
+        Path.Combine(coldStartRoot, "Assets", "Equipment", "Sword02"));
+    CopyDirectory(
+        Path.Combine(repositoryRoot, "Assets", "Equipment", "Dagger02"),
+        Path.Combine(coldStartRoot, "Assets", "Equipment", "Dagger02"));
+
+    var coldStartEngine = new StoreEngine(coldStartRoot, resolution.Root);
+IReadOnlyList<AssetRecord> assets = coldStartEngine.DiscoverAssets();
 Require(
     assets.Count == 3 &&
     assets.Count(x => x.Manifest.Kind == "avatar") == 1 &&
@@ -3430,7 +3598,7 @@ Require(
                 "foundation.equipment.sword.02"
             },
             StringComparer.Ordinal),
-    "checked-in cold-start proof baseline must contain one avatar plus exactly Sword02 and Dagger02");
+    "isolated cold-start proof baseline must contain one avatar plus exactly Sword02 and Dagger02");
 Require(
     assets.Select(x => x.Manifest.Id)
         .Distinct(StringComparer.Ordinal).Count() == assets.Count,
@@ -3455,9 +3623,13 @@ foreach (AssetRecord asset in assets)
 
 // Positive deterministic scan and all-pairs animated composition proof.
 StoreSnapshot first =
-    engine.Scan(writeDerived: true, writeCompatibility: true);
+    coldStartEngine.Scan(writeDerived: true, writeCompatibility: true);
 StoreSnapshot second =
-    engine.Scan(writeDerived: true, writeCompatibility: true);
+    coldStartEngine.Scan(writeDerived: true, writeCompatibility: true);
+coldStartAssetCount = assets.Count;
+coldStartHealthy = first.Healthy;
+coldStartCompatibilityCount = first.Compatibility.Count;
+coldStartGapCount = first.CoverageGaps.Count;
 Require(
     !first.Healthy && !second.Healthy,
     "two-weapon cold-start proof baseline must remain intentionally incomplete");
@@ -3490,7 +3662,7 @@ Require(
             x.Select(row => row.Attachment).Distinct(StringComparer.Ordinal).Count() == 2),
     "each equipment asset must contribute exactly four compatibility rows across both neutral hand attachments");
 
-string formCoveragePath = Path.Combine(repositoryRoot, "Collections", "combat-foundation.v1.yaml");
+string formCoveragePath = Path.Combine(coldStartRoot, "Collections", "combat-foundation.v1.yaml");
 string formCoverageOriginal = File.ReadAllText(formCoveragePath);
 try
 {
@@ -3500,7 +3672,7 @@ try
             "    form: sword",
             "    form: sword-missing",
             StringComparison.Ordinal));
-    StoreSnapshot formGap = engine.Scan(writeDerived: false, writeCompatibility: false);
+    StoreSnapshot formGap = coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);
     CoverageGap swordFormGap =
         formGap.CoverageGaps.Single(x => x.Id == "foundation.equipment.sword");
     Require(
@@ -3545,14 +3717,14 @@ using (JsonDocument evidence =
 
 // Derived catalog/health can be deleted and regenerated byte-identically.
 string catalogPath =
-    Path.Combine(repositoryRoot, "Catalog", "catalog.generated.json");
+    Path.Combine(coldStartRoot, "Catalog", "catalog.generated.json");
 string healthPath =
-    Path.Combine(repositoryRoot, "Catalog", "health.generated.json");
+    Path.Combine(coldStartRoot, "Catalog", "health.generated.json");
 string catalogBefore = File.ReadAllText(catalogPath);
 string healthBefore = File.ReadAllText(healthPath);
 File.Delete(catalogPath);
 File.Delete(healthPath);
-engine.Scan(writeDerived: true, writeCompatibility: true);
+coldStartEngine.Scan(writeDerived: true, writeCompatibility: true);
 Require(
     File.ReadAllText(catalogPath) == catalogBefore,
     "catalog regeneration must be byte deterministic");
@@ -3565,7 +3737,7 @@ AssetRecord sword = assets.Single(
     x => x.Manifest.Id == "foundation.equipment.sword.02");
 string swordGenerated = sword.SourceBase + ".generated.vox";
 byte[] originalGenerated = File.ReadAllBytes(swordGenerated);
-string coveragePath = Path.Combine(repositoryRoot, "Collections", "combat-foundation.v1.yaml");
+string coveragePath = Path.Combine(coldStartRoot, "Collections", "combat-foundation.v1.yaml");
 string originalCoverage = File.ReadAllText(coveragePath);
 try
 {
@@ -3583,7 +3755,7 @@ try
             required: true
         """);
     StoreSnapshot stale =
-        engine.Scan(writeDerived: false, writeCompatibility: false);
+        coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);
     AssetHealth staleSword =
         stale.Assets.Single(x => x.Id == sword.Manifest.Id);
     Require(
@@ -3615,7 +3787,7 @@ try
         compositionPath,
         originalComposition.Concat(new byte[] { 0x7f }).ToArray());
     StoreSnapshot staleReference =
-        engine.Scan(writeDerived: false, writeCompatibility: false);
+        coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);
     AssetHealth avatarHealth =
         staleReference.Assets.Single(x => x.Id == avatar.Manifest.Id);
     Require(
@@ -3639,7 +3811,7 @@ void AssertProofAuditInvalidatesOnTextChange(string path, string label)
             path,
             original + Environment.NewLine + "# audit-stale-test");
         StoreSnapshot staleProof =
-            engine.Scan(writeDerived: false, writeCompatibility: false);
+            coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);
         AssetHealth health =
             staleProof.Assets.Single(x => x.Id == avatar.Manifest.Id);
         Require(
@@ -3668,7 +3840,7 @@ try
         heroProof,
         originalHeroProof.Concat(new byte[] { 0 }).ToArray());
     StoreSnapshot staleProof =
-        engine.Scan(writeDerived: false, writeCompatibility: false);
+        coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);
     AssetHealth health =
         staleProof.Assets.Single(x => x.Id == avatar.Manifest.Id);
     Require(
@@ -3678,6 +3850,11 @@ try
 finally
 {
     File.WriteAllBytes(heroProof, originalHeroProof);
+}
+}
+finally
+{
+    DeleteTree(coldStartRoot);
 }
 
 // Initial bootstrap with only the canonical avatar exposes all ten form gaps.
@@ -3719,7 +3896,7 @@ try
             "FoundationGuard01"));
 
     StoreSnapshot bootstrap =
-        new StoreEngine(bootstrapRoot).Scan(false, false);
+        new StoreEngine(bootstrapRoot, resolution.Root).Scan(false, false);
     Require(
         bootstrap.Assets.Count == 1 && bootstrap.Assets[0].Published,
         "bootstrap avatar must publish");
@@ -3741,7 +3918,7 @@ finally
 }
 
 
-// Independent full-catalog convergence fixture: checked-in baseline stays partial,
+// Independent full-catalog convergence fixture: isolated cold-start baseline stays partial,
 // while the unchanged ten-form contract must still converge when all forms publish.
 string fullCatalogRoot = TempRoot();
 try
@@ -3780,7 +3957,7 @@ try
     {
         "axe", "hammer", "mace", "spear", "staff", "bow", "crossbow", "rifle"
     };
-    var fullEngine = new StoreEngine(fullCatalogRoot);
+    var fullEngine = new StoreEngine(fullCatalogRoot, resolution.Root);
     foreach (string form in missingForms)
     {
         string fixtureName = "Fixture" + char.ToUpperInvariant(form[0]) + form[1..];
@@ -3805,7 +3982,7 @@ try
     }
 
     StoreSnapshot fullCatalog =
-        new StoreEngine(fullCatalogRoot).Scan(false, false);
+        new StoreEngine(fullCatalogRoot, resolution.Root).Scan(false, false);
     Require(
         fullCatalog.Healthy &&
         fullCatalog.Assets.Count(x => x.Kind == "equipment") == 10 &&
@@ -3836,8 +4013,8 @@ try
         Path.Combine(repositoryRoot, "toolchain"),
         Path.Combine(incompatibleRoot, "toolchain"));
     CopyDirectory(
-        Path.Combine(repositoryRoot, "Assets"),
-        Path.Combine(incompatibleRoot, "Assets"));
+        Path.Combine(repositoryRoot, "Assets", "Avatars", "FoundationGuard01"),
+        Path.Combine(incompatibleRoot, "Assets", "Avatars", "FoundationGuard01"));
     CopyDirectory(
         Path.Combine(repositoryRoot, "Styles"),
         Path.Combine(incompatibleRoot, "Styles"));
@@ -3854,7 +4031,7 @@ try
             "voxelsPerUnit: 9",
             StringComparison.Ordinal));
     StoreSnapshot incompatible =
-        new StoreEngine(incompatibleRoot).Scan(false, false);
+        new StoreEngine(incompatibleRoot, resolution.Root).Scan(false, false);
     CompatibilityResult failedAvatar = incompatible.Compatibility.First(
         x => !x.Passed && string.IsNullOrEmpty(x.Equipment));
     Require(
@@ -3876,7 +4053,7 @@ try
             "      - Hand.1\n      - Missing",
             StringComparison.Ordinal));
     StoreSnapshot missingSocket =
-        new StoreEngine(incompatibleRoot).Scan(false, false);
+        new StoreEngine(incompatibleRoot, resolution.Root).Scan(false, false);
     Require(
         missingSocket.Compatibility.Any(
             x => !x.Passed &&
@@ -3941,5 +4118,5 @@ finally
 }
 
 Console.WriteLine(
-    $"PASS: {assets.Count} assets, healthy={first.Healthy}, " +
-    $"compatibility={first.Compatibility.Count}, gaps={first.CoverageGaps.Count}");
+    $"PASS: {coldStartAssetCount} cold-start assets, healthy={coldStartHealthy}, " +
+    $"compatibility={coldStartCompatibilityCount}, gaps={coldStartGapCount}");

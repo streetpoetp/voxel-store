@@ -124,16 +124,23 @@ Generated health and catalog outputs SHALL identify each asset's current publica
 - **THEN** generated health data identifies that form together with the relevant compatibility profile and logical mount capability
 
 ### Requirement: Tool dependency resolution is explicit and portable
-Maintenance SHALL resolve the Hero.Voxel authoring/tool contract through repository configuration or a pinned tool revision/reference. The store SHALL NOT require a hard-coded developer-local Hero Studio checkout path to scan, verify, or maintain assets.
+Maintenance SHALL resolve the Hero.Voxel authoring/tool contract from the repository-owned `Dependencies/hero-studio` Git submodule, pinned to the exact revision declared by repository dependency state and aligned with `toolchain/hero-voxel.lock.yaml`. Production maintenance SHALL NOT require a developer-local Hero Studio checkout or `HERO_STUDIO_ROOT`.
 
 #### Scenario: Repository is moved to another machine
-- **WHEN** the store is checked out at a different filesystem location with the declared Hero.Voxel tool dependency available
-- **THEN** maintenance resolves the declared tool contract without requiring the original developer-local checkout path
+- **WHEN** the store is checked out at a different filesystem location and its Git submodules are initialized
+- **THEN** maintenance resolves the declared Hero Studio/Hero.Voxel contract from the repository submodule without requiring the original developer-local checkout path or environment variable
 
 #### Scenario: Declared Hero.Voxel tool cannot be resolved
-- **WHEN** maintenance requires Hero.Voxel verification but the declared tool contract is unavailable or incompatible
+- **WHEN** maintenance requires Hero.Voxel verification but `Dependencies/hero-studio` is missing, uninitialized, or otherwise unavailable
 - **THEN** the run fails closed with a dependency-resolution error and does not mark affected assets as healthy
 
+#### Scenario: Declared Hero Studio submodule is unavailable
+- **WHEN** repository bootstrap finds that `Dependencies/hero-studio` has not been initialized
+- **THEN** the dependency check reports the missing submodule and instructs the user to initialize repository submodules before Hero.Voxel work proceeds
+
+#### Scenario: Submodule revision does not match provider lock
+- **WHEN** the checked-out Hero Studio submodule revision differs from `toolchain/hero-voxel.lock.yaml`
+- **THEN** maintenance fails closed with a revision-mismatch error before Hero.Voxel work proceeds
 ### Requirement: Maintenance resolves style authority before reference generation
 Before reference generation/repair, maintenance SHALL resolve the applicable style inputs and pinned Hero.Voxel workflow. For unchanged legacy v2 assets it may preserve the existing Composition-first flow. For new or intentionally redesigned target-driven assets it SHALL establish/accept Product Target first, then accept the Composition Sheet, then one Part Sheet at a time, and SHALL stop on unresolved style/target authority or visual-fidelity failure.
 
