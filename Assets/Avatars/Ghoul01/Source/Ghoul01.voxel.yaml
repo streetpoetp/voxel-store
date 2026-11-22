@@ -1,0 +1,81 @@
+name: Ghoul01
+voxelsPerUnit: 8
+assemblyOrigin:
+  part: Body
+parts:
+  - part: Body
+    voxels:
+      - box: { min: [0, 1, 7], size: [8, 4, 3], color: flesh }
+      - box: { min: [1, 1, 5], size: [6, 4, 3], color: fleshShadow }
+      - box: { min: [2, 1, 4], size: [4, 3, 2], color: rag }
+      - box: { min: [2, 1, 0], size: [2, 3, 5], color: flesh }
+      - box: { min: [5, 1, 0], size: [2, 3, 5], color: fleshShadow }
+      - box: { min: [1, 0, 0], size: [3, 4, 1], color: fleshLight }
+      - box: { min: [5, 0, 0], size: [3, 4, 1], color: flesh }
+      - voxel: { at: [2, 0, 5], color: wound }
+      - voxel: { at: [6, 0, 6], color: wound }
+      - voxel: { at: [3, 0, 4], color: ragLight }
+  - part: Head
+    parent: Body
+    transform:
+      translate: [1, -2, 9]
+    voxels:
+      - box: { min: [0, 0, 1], size: [7, 5, 4], color: flesh }
+      - box: { min: [1, 0, 0], size: [5, 4, 2], color: fleshShadow }
+      - box: { min: [1, 0, 2], size: [2, 1, 2], color: eyeCavity }
+      - box: { min: [4, 0, 2], size: [2, 1, 2], color: eyeCavity }
+      - voxel: { at: [2, 0, 3], color: eyeGlow }
+      - voxel: { at: [5, 0, 3], color: eyeGlow }
+      - box: { min: [2, 0, 0], size: [3, 1, 1], color: mouth }
+      - voxel: { at: [2, 0, 1], color: fleshLight }
+      - voxel: { at: [5, 0, 1], color: fleshLight }
+  - part: Arm.L
+    parent: Body
+    transform:
+      translate: [-3, 1, 0]
+    voxels:
+      - box: { min: [1, 0, 7], size: [2, 2, 3], color: flesh }
+      - box: { min: [0, 0, 3], size: [3, 2, 5], color: fleshShadow }
+      - box: { min: [0, 0, 1], size: [4, 3, 2], color: fleshLight }
+      - box: { min: [0, 0, 0], size: [1, 1, 2], color: claw }
+      - box: { min: [2, 0, 0], size: [1, 1, 2], color: claw }
+      - box: { min: [4, 0, 0], size: [1, 1, 2], color: claw }
+  - part: Arm.R
+    parent: Body
+    transform:
+      translate: [8, 1, 0]
+    voxels:
+      - box: { min: [1, 0, 7], size: [2, 2, 3], color: fleshShadow }
+      - box: { min: [0, 0, 3], size: [3, 2, 5], color: flesh }
+      - box: { min: [0, 0, 1], size: [4, 3, 2], color: fleshLight }
+      - box: { min: [0, 0, 0], size: [1, 1, 2], color: claw }
+      - box: { min: [2, 0, 0], size: [1, 1, 2], color: claw }
+      - box: { min: [4, 0, 0], size: [1, 1, 2], color: claw }
+sockets:
+  - socket: Hand.0
+    parent: Arm.R
+    transform:
+      translate: [2, 1, 2]
+  - socket: Hand.1
+    parent: Arm.L
+    transform:
+      translate: [2, 1, 2]
+  - socket: Back
+    parent: Body
+    transform:
+      translate: [4, 4, 7]
+animations:
+  - clip: Idle
+    duration: 1
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0, 0, 0.12]
+            - time: 1
+              value: [0, 0, 0]

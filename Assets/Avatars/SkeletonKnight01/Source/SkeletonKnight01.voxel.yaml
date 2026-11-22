@@ -1,0 +1,61 @@
+﻿name: SkeletonKnight01
+voxelsPerUnit: 8
+assemblyOrigin:
+  part: Body
+parts:
+  - part: Body
+    voxels:
+      - box: { min: [1, 1, 8], size: [8, 4, 3], color: armorLight }
+      - box: { min: [2, 1, 5], size: [6, 4, 4], color: armor }
+      - box: { min: [4, 0, 5], size: [2, 1, 4], color: bronze }
+      - box: { min: [2, 1, 2], size: [6, 4, 3], color: bone }
+      - box: { min: [2, 1, 0], size: [2, 3, 3], color: bone }
+      - box: { min: [6, 1, 0], size: [2, 3, 3], color: boneShadow }
+  - part: Head
+    parent: Body
+    transform:
+      translate: [1, 0, 11]
+    voxels:
+      - box: { min: [0, 0, 1], size: [8, 5, 5], color: armor }
+      - box: { min: [1, 0, 2], size: [6, 1, 3], color: bone }
+      - box: { min: [1, 0, 4], size: [2, 1, 1], color: armorDark }
+      - box: { min: [5, 0, 4], size: [2, 1, 1], color: armorDark }
+      - voxel: { at: [2, 0, 4], color: eyeGlow }
+      - voxel: { at: [5, 0, 4], color: eyeGlow }
+      - box: { min: [0, 1, 5], size: [8, 3, 1], color: armorLight }
+  - part: Arm.L
+    parent: Body
+    transform:
+      translate: [-2, 1, 5]
+    voxels:
+      - box: { min: [0, 0, 3], size: [3, 3, 4], color: armor }
+      - box: { min: [0, 0, 0], size: [3, 3, 3], color: bone }
+  - part: Arm.R
+    parent: Body
+    transform:
+      translate: [10, 1, 5]
+    voxels:
+      - box: { min: [0, 0, 3], size: [3, 3, 4], color: armorDark }
+      - box: { min: [0, 0, 0], size: [3, 3, 3], color: bone }
+sockets:
+  - socket: Hand.0
+    parent: Arm.R
+    transform: { translate: [1, 1, 0] }
+  - socket: Hand.1
+    parent: Arm.L
+    transform: { translate: [1, 1, 0] }
+  - socket: Back
+    parent: Body
+    transform: { translate: [5, 4, 8] }
+animations:
+  - clip: Idle
+    duration: 1
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - { time: 0, value: [0, 0, 0] }
+            - { time: 0.5, value: [0, 0, 0.08] }
+            - { time: 1, value: [0, 0, 0] }

@@ -1,0 +1,73 @@
+name: Axe03
+voxelsPerUnit: 12
+assemblyOrigin:
+  part: Axe
+parts:
+  - part: Axe
+    pivot: [10, 1, 6]
+    voxels:
+      # Walnut haft with explicit rear depth.
+      - box: { min: [9, 0, 1], size: [2, 2, 12], color: walnut.mid }
+      - box: { min: [9, 1, 1], size: [2, 1, 12], color: walnut.dark }
+
+      # Teal grip and brass butt reinforcement.
+      - box: { min: [8, 0, 4], size: [4, 2, 3], color: teal.mid }
+      - box: { min: [8, 0, 4], size: [1, 1, 3], color: teal.light }
+      - box: { min: [11, 1, 4], size: [1, 1, 3], color: teal.dark }
+      - box: { min: [8, 0, 0], size: [4, 2, 1], color: brass.mid }
+      - box: { min: [8, 0, 0], size: [1, 1, 1], color: brass.light }
+      - box: { min: [11, 1, 0], size: [1, 1, 1], color: brass.dark }
+
+      # Main crescent head: one-voxel-high stepped rows preserve the curved silhouette.
+      - box: { min: [5, 0, 17], size: [7, 3, 1], color: steel.mid }
+      - box: { min: [3, 0, 16], size: [9, 3, 1], color: steel.mid }
+      - box: { min: [2, 0, 15], size: [10, 3, 1], color: steel.mid }
+      - box: { min: [1, 0, 14], size: [11, 3, 1], color: steel.mid }
+      - box: { min: [1, 0, 13], size: [11, 3, 1], color: steel.mid }
+      - box: { min: [2, 0, 12], size: [10, 3, 1], color: steel.mid }
+      - box: { min: [4, 0, 11], size: [8, 3, 1], color: steel.mid }
+
+      # Dark rear face gives the head readable thickness in three-quarter views.
+      - box: { min: [5, 2, 17], size: [7, 1, 1], color: steel.dark }
+      - box: { min: [3, 2, 16], size: [9, 1, 1], color: steel.dark }
+      - box: { min: [2, 2, 15], size: [10, 1, 1], color: steel.dark }
+      - box: { min: [1, 2, 14], size: [11, 1, 1], color: steel.dark }
+      - box: { min: [1, 2, 13], size: [11, 1, 1], color: steel.dark }
+      - box: { min: [2, 2, 12], size: [10, 1, 1], color: steel.dark }
+      - box: { min: [4, 2, 11], size: [8, 1, 1], color: steel.dark }
+
+      # Bright stepped cutting edge and lighter inner bevel.
+      - box: { min: [4, 0, 17], size: [1, 3, 1], color: edge.ivory }
+      - box: { min: [2, 0, 16], size: [1, 3, 1], color: edge.ivory }
+      - box: { min: [1, 0, 15], size: [1, 3, 1], color: edge.ivory }
+      - box: { min: [0, 0, 14], size: [1, 3, 1], color: edge.ivory }
+      - box: { min: [0, 0, 13], size: [1, 3, 1], color: edge.ivory }
+      - box: { min: [1, 0, 12], size: [1, 3, 1], color: edge.ivory }
+      - box: { min: [3, 0, 11], size: [1, 3, 1], color: edge.ivory }
+      - box: { min: [5, 0, 17], size: [1, 1, 1], color: steel.light }
+      - box: { min: [3, 0, 16], size: [1, 1, 1], color: steel.light }
+      - box: { min: [2, 0, 15], size: [1, 1, 1], color: steel.light }
+      - box: { min: [1, 0, 14], size: [1, 1, 2], color: steel.light }
+      - box: { min: [2, 0, 12], size: [1, 1, 1], color: steel.light }
+      - box: { min: [4, 0, 11], size: [1, 1, 1], color: steel.light }
+
+      # Narrow neck and compact rounded poll remain subordinate to the blade.
+      - box: { min: [12, 0, 14], size: [2, 3, 1], color: steel.mid }
+      - box: { min: [12, 0, 13], size: [1, 3, 1], color: steel.mid }
+      - box: { min: [12, 0, 15], size: [1, 3, 1], color: steel.mid }
+      - box: { min: [14, 0, 15], size: [2, 3, 1], color: steel.mid }
+      - box: { min: [13, 0, 14], size: [4, 3, 1], color: steel.mid }
+      - box: { min: [14, 0, 13], size: [2, 3, 1], color: steel.mid }
+      - box: { min: [14, 2, 15], size: [2, 1, 1], color: steel.dark }
+      - box: { min: [13, 2, 14], size: [4, 1, 1], color: steel.dark }
+      - box: { min: [14, 2, 13], size: [2, 1, 1], color: steel.dark }
+      - box: { min: [14, 0, 14], size: [1, 1, 1], color: steel.light }
+
+      # Brass throat/socket bridges the head into the haft and exposes a steel core.
+      - box: { min: [7, 0, 10], size: [6, 3, 4], color: brass.dark }
+      - box: { min: [7, 0, 10], size: [6, 2, 4], color: brass.mid }
+      - box: { min: [7, 0, 10], size: [1, 1, 4], color: brass.light }
+      - box: { min: [9, 0, 11], size: [2, 3, 2], color: steel.dark }
+
+      # Restrained top-face highlight.
+      - box: { min: [8, 0, 17], size: [2, 1, 1], color: steel.light }

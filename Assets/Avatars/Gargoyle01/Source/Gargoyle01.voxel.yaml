@@ -1,0 +1,77 @@
+﻿name: Gargoyle01
+voxelsPerUnit: 8
+assemblyOrigin:
+  part: Body
+parts:
+  - part: Body
+    voxels:
+      - box: { min: [1, 1, 5], size: [8, 6, 6], color: stone }
+      - box: { min: [2, 1, 2], size: [6, 6, 4], color: stoneShadow }
+      - box: { min: [2, 1, 0], size: [2, 4, 3], color: stone }
+      - box: { min: [6, 1, 0], size: [2, 4, 3], color: stoneLight }
+      - box: { min: [1, 0, 0], size: [3, 5, 1], color: stoneDark }
+      - box: { min: [6, 0, 0], size: [3, 5, 1], color: stoneDark }
+  - part: Head
+    parent: Body
+    transform:
+      translate: [2, 0, 10]
+    voxels:
+      - box: { min: [0, 0, 0], size: [6, 5, 5], color: stone }
+      - box: { min: [0, 1, 5], size: [1, 2, 3], color: stoneLight }
+      - box: { min: [5, 1, 5], size: [1, 2, 3], color: stoneLight }
+      - box: { min: [1, 0, 2], size: [2, 1, 2], color: stoneDark }
+      - box: { min: [4, 0, 2], size: [1, 1, 2], color: stoneDark }
+      - voxel: { at: [2, 0, 3], color: eye }
+      - voxel: { at: [4, 0, 3], color: eye }
+  - part: Arm.L
+    parent: Body
+    transform:
+      translate: [-2, 1, 3]
+    voxels:
+      - box: { min: [0, 0, 3], size: [3, 3, 5], color: stoneShadow }
+      - box: { min: [0, 0, 0], size: [3, 3, 4], color: stone }
+  - part: Arm.R
+    parent: Body
+    transform:
+      translate: [10, 1, 3]
+    voxels:
+      - box: { min: [0, 0, 3], size: [3, 3, 5], color: stone }
+      - box: { min: [0, 0, 0], size: [3, 3, 4], color: stoneLight }
+  - part: Wing.L
+    parent: Body
+    transform:
+      translate: [-4, 5, 5]
+    voxels:
+      - box: { min: [0, 0, 0], size: [5, 1, 6], color: stoneShadow }
+      - box: { min: [1, 0, 6], size: [4, 1, 5], color: stone }
+      - box: { min: [3, 0, 11], size: [2, 1, 4], color: stoneLight }
+  - part: Wing.R
+    parent: Body
+    transform:
+      translate: [9, 5, 5]
+    voxels:
+      - box: { min: [0, 0, 0], size: [5, 1, 6], color: stoneShadow }
+      - box: { min: [0, 0, 6], size: [4, 1, 5], color: stone }
+      - box: { min: [0, 0, 11], size: [2, 1, 4], color: stoneLight }
+sockets:
+  - socket: Hand.0
+    parent: Arm.R
+    transform: { translate: [1, 1, 0] }
+  - socket: Hand.1
+    parent: Arm.L
+    transform: { translate: [1, 1, 0] }
+  - socket: Back
+    parent: Body
+    transform: { translate: [5, 5, 8] }
+animations:
+  - clip: Idle
+    duration: 1
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - { time: 0, value: [0, 0, 0] }
+            - { time: 0.5, value: [0, 0, 0.06] }
+            - { time: 1, value: [0, 0, 0] }

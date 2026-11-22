@@ -1,0 +1,63 @@
+name: ZombieBrute01
+voxelsPerUnit: 8
+assemblyOrigin:
+  part: Body
+parts:
+  - part: Body
+    voxels:
+      - box: { min: [0, 1, 7], size: [12, 4, 5], color: flesh }
+      - box: { min: [1, 1, 4], size: [10, 4, 3], color: fleshShadow }
+      - box: { min: [3, 0, 3], size: [6, 1, 2], color: wound }
+      - box: { min: [2, 1, 2], size: [8, 3, 2], color: rag }
+      - box: { min: [2, 1, 0], size: [3, 3, 3], color: flesh }
+      - box: { min: [7, 1, 0], size: [3, 3, 3], color: fleshShadow }
+      - box: { min: [1, 0, 0], size: [4, 4, 1], color: fleshLight }
+      - box: { min: [7, 0, 0], size: [4, 4, 1], color: flesh }
+  - part: Head
+    parent: Body
+    transform:
+      translate: [3, 1, 12]
+    voxels:
+      - box: { min: [0, 0, 0], size: [6, 4, 4], color: flesh }
+      - box: { min: [1, 0, 2], size: [2, 1, 2], color: dark }
+      - box: { min: [4, 0, 2], size: [1, 1, 2], color: dark }
+      - voxel: { at: [2, 0, 3], color: eye }
+      - voxel: { at: [4, 0, 3], color: eye }
+      - box: { min: [2, 0, 0], size: [3, 1, 1], color: wound }
+  - part: Arm.L
+    parent: Body
+    transform:
+      translate: [-3, 1, 3]
+    voxels:
+      - box: { min: [0, 0, 4], size: [3, 3, 5], color: fleshShadow }
+      - box: { min: [0, 0, 0], size: [3, 3, 4], color: flesh }
+  - part: Arm.R
+    parent: Body
+    transform:
+      translate: [12, 1, 3]
+    voxels:
+      - box: { min: [0, 0, 4], size: [3, 3, 5], color: flesh }
+      - box: { min: [0, 0, 0], size: [3, 3, 4], color: fleshLight }
+sockets:
+  - socket: Hand.0
+    parent: Arm.R
+    transform: { translate: [1, 1, 0] }
+  - socket: Hand.1
+    parent: Arm.L
+    transform: { translate: [1, 1, 0] }
+  - socket: Back
+    parent: Body
+    transform: { translate: [6, 4, 8] }
+animations:
+  - clip: Idle
+    duration: 1
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - { time: 0, value: [0, 0, 0] }
+            - { time: 0.5, value: [0, 0, 0.06] }
+            - { time: 1, value: [0, 0, 0] }
+

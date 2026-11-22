@@ -1,0 +1,79 @@
+name: Necromancer01
+voxelsPerUnit: 8
+assemblyOrigin:
+  part: Body
+parts:
+  - part: Body
+    voxels:
+      - box: { min: [0, 1, 9], size: [10, 4, 3], color: robeLight }
+      - box: { min: [1, 1, 8], size: [8, 4, 2], color: robe }
+      - box: { min: [2, 1, 2], size: [6, 4, 7], color: robeDark }
+      - box: { min: [1, 1, 0], size: [8, 4, 3], color: robe }
+      - box: { min: [0, 2, 0], size: [10, 3, 1], color: robeDark }
+      - box: { min: [4, 0, 2], size: [2, 1, 7], color: gold }
+      - voxel: { at: [4, 0, 3], color: robeAccent }
+      - voxel: { at: [5, 0, 5], color: robeAccent }
+      - voxel: { at: [4, 0, 7], color: robeAccent }
+      - box: { min: [1, 0, 9], size: [2, 1, 2], color: gold }
+      - box: { min: [7, 0, 9], size: [2, 1, 2], color: gold }
+  - part: Head
+    parent: Body
+    transform:
+      translate: [2, 0, 11]
+    voxels:
+      - box: { min: [0, 0, 1], size: [6, 5, 5], color: robeDark }
+      - box: { min: [1, 0, 1], size: [4, 1, 4], color: bone }
+      - box: { min: [1, 0, 3], size: [1, 1, 1], color: eyeCavity }
+      - box: { min: [4, 0, 3], size: [1, 1, 1], color: eyeCavity }
+      - voxel: { at: [1, 0, 3], color: glow }
+      - voxel: { at: [4, 0, 3], color: glow }
+      - box: { min: [0, 1, 5], size: [1, 2, 3], color: gold }
+      - box: { min: [5, 1, 5], size: [1, 2, 3], color: gold }
+      - voxel: { at: [2, 0, 1], color: boneShadow }
+      - voxel: { at: [3, 0, 1], color: boneShadow }
+  - part: Arm.L
+    parent: Body
+    transform:
+      translate: [-1, 1, 5]
+    voxels:
+      - box: { min: [0, 0, 3], size: [2, 3, 4], color: robe }
+      - box: { min: [0, 0, 1], size: [2, 3, 3], color: robeLight }
+      - box: { min: [0, 0, 0], size: [2, 2, 2], color: bone }
+      - voxel: { at: [0, 0, 0], color: glow }
+  - part: Arm.R
+    parent: Body
+    transform:
+      translate: [9, 1, 5]
+    voxels:
+      - box: { min: [0, 0, 3], size: [2, 3, 4], color: robeDark }
+      - box: { min: [0, 0, 1], size: [2, 3, 3], color: robeLight }
+      - box: { min: [0, 0, 0], size: [2, 2, 2], color: bone }
+      - voxel: { at: [1, 0, 0], color: glow }
+sockets:
+  - socket: Hand.0
+    parent: Arm.R
+    transform:
+      translate: [1, 1, 0]
+  - socket: Hand.1
+    parent: Arm.L
+    transform:
+      translate: [1, 1, 0]
+  - socket: Back
+    parent: Body
+    transform:
+      translate: [5, 4, 9]
+animations:
+  - clip: Idle
+    duration: 1
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0, 0, 0.1]
+            - time: 1
+              value: [0, 0, 0]

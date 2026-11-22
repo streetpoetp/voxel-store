@@ -1,0 +1,57 @@
+﻿name: Wraith01
+voxelsPerUnit: 8
+assemblyOrigin:
+  part: Body
+parts:
+  - part: Body
+    voxels:
+      - box: { min: [1, 1, 8], size: [7, 4, 3], color: spectralShadow }
+      - box: { min: [2, 1, 5], size: [5, 4, 4], color: spectral }
+      - box: { min: [2, 1, 3], size: [5, 4, 3], color: spectral }
+      - box: { min: [3, 1, 1], size: [3, 4, 3], color: spectralShadow }
+      - box: { min: [4, 1, 0], size: [1, 3, 2], color: accent }
+  - part: Head
+    parent: Body
+    transform:
+      translate: [2, 0, 10]
+    voxels:
+      - box: { min: [0, 0, 0], size: [5, 5, 5], color: spectral }
+      - box: { min: [1, 0, 1], size: [3, 1, 3], color: void }
+      - voxel: { at: [1, 0, 3], color: glow }
+      - voxel: { at: [3, 0, 3], color: glow }
+  - part: Arm.L
+    parent: Body
+    transform:
+      translate: [-2, 1, 4]
+    voxels:
+      - box: { min: [0, 0, 2], size: [2, 2, 6], color: spectralShadow }
+      - box: { min: [0, 0, 0], size: [2, 2, 3], color: spectralLight }
+  - part: Arm.R
+    parent: Body
+    transform:
+      translate: [9, 1, 4]
+    voxels:
+      - box: { min: [0, 0, 2], size: [2, 2, 6], color: spectral }
+      - box: { min: [0, 0, 0], size: [2, 2, 3], color: spectralLight }
+sockets:
+  - socket: Hand.0
+    parent: Arm.R
+    transform: { translate: [1, 1, 0] }
+  - socket: Hand.1
+    parent: Arm.L
+    transform: { translate: [1, 1, 0] }
+  - socket: Back
+    parent: Body
+    transform: { translate: [4, 4, 8] }
+animations:
+  - clip: Idle
+    duration: 1
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - { time: 0, value: [0, 0, 0] }
+            - { time: 0.5, value: [0, 0, 0.22] }
+            - { time: 1, value: [0, 0, 0] }
