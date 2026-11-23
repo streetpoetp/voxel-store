@@ -14,61 +14,88 @@ namespace VoxelStore.Preview.Runtime
             VoxelStoreModelFrame.Forward;
 
         [SerializeField] private Transform placementRoot;
-        [SerializeField] private Transform motionRoot;
-        [SerializeField] private Vector3 sourceRatio;
+        [SerializeField] private VoxelAnimatedAssembly animatedModel;
+        [SerializeField] private string socketName;
+        [SerializeField] private EquipmentSlotSide side;
+
+        private Matrix4x4 inverseBindMount;
+        private bool bindMountInitialized;
 
         public Transform PlacementRoot =>
-            placementRoot != null ? placementRoot : transform;
-        public Transform MotionRoot => motionRoot;
-        public Vector3 SourceRatio => sourceRatio;
+            placementRoot != null
+                ? placementRoot
+                : transform;
+        public VoxelAnimatedAssembly AnimatedModel =>
+            animatedModel;
+        public string SocketName => socketName;
+        public EquipmentSlotSide Side => side;
         public Vector3 LocalRight => CanonicalLocalRight;
         public Vector3 LocalUp => CanonicalLocalUp;
         public Vector3 LocalForward => CanonicalLocalForward;
 
         public void Configure(
             Transform placement,
-            Transform motion,
-            Vector3 ratio)
+            VoxelAnimatedAssembly model,
+            string avatarSocketName,
+            EquipmentSlotSide slotSide)
         {
             if (placement == null)
                 throw new ArgumentNullException(nameof(placement));
-            if (motion == null)
-                throw new ArgumentNullException(nameof(motion));
-
-            AvatarPresentation.ValidateRatio(ratio);
+            if (model == null)
+                throw new ArgumentNullException(nameof(model));
+            if (string.IsNullOrWhiteSpace(
+                    avatarSocketName))
+            {
+                throw new ArgumentException(
+                    "Avatar socket name is required.",
+                    nameof(avatarSocketName));
+            }
 
             placementRoot = placement;
-            motionRoot = motion;
-            sourceRatio = ratio;
-
-            if (motionRoot.parent != placementRoot)
-                motionRoot.SetParent(placementRoot, false);
-
+            animatedModel = model;
+            socketName = avatarSocketName;
+            side = slotSide;
+            RebuildBindMount();
             ResetMotion();
         }
 
-        public void ApplyPlacement(Bounds bodyBounds)
+        private void Awake()
+        {
+            RebuildBindMountIfSerialized();
+        }
+
+        private void OnEnable()
+        {
+            RebuildBindMountIfSerialized();
+        }
+
+        public void ApplyAttachment(
+            Matrix4x4 bodySocketInPresentation)
         {
             RequireConfigured();
+            ApplyLocalMatrix(
+                placementRoot,
+                bodySocketInPresentation *
+                inverseBindMount);
+        }
 
-            placementRoot.localPosition =
-                AvatarPresentation.ResolveBodyRatioPosition(
-                    bodyBounds,
-                    sourceRatio);
-            placementRoot.localRotation = Quaternion.identity;
-            placementRoot.localScale = Vector3.one;
-
-            ResetMotion();
+        public void Sample(
+            AvatarMotion motion,
+            float normalizedTime)
+        {
+            RequireConfigured();
+            animatedModel.Sample(
+                motion,
+                side,
+                normalizedTime);
         }
 
         public void ResetMotion()
         {
-            if (motionRoot == null)
+            if (animatedModel == null)
                 return;
 
-            motionRoot.localPosition = Vector3.zero;
-            motionRoot.localRotation = Quaternion.identity;
-            motionRoot.localScale = Vector3.one;
+            animatedModel.ResetPose();
         }
 
         private void RequireConfigured()
@@ -79,11 +106,59 @@ namespace VoxelStore.Preview.Runtime
                     "EquipmentPresentation is missing PlacementRoot.");
             }
 
-            if (motionRoot == null)
+            if (animatedModel == null)
             {
                 throw new InvalidOperationException(
-                    "EquipmentPresentation is missing MotionRoot.");
+                    "EquipmentPresentation is missing its animated model.");
             }
+
+            if (string.IsNullOrWhiteSpace(socketName))
+            {
+                throw new InvalidOperationException(
+                    "EquipmentPresentation is missing its avatar socket.");
+            }
+
+            if (!bindMountInitialized)
+                RebuildBindMount();
+        }
+
+        private void RebuildBindMountIfSerialized()
+        {
+            if (placementRoot == null ||
+                animatedModel == null ||
+                string.IsNullOrWhiteSpace(socketName))
+            {
+                return;
+            }
+
+            RebuildBindMount();
+        }
+
+        private void RebuildBindMount()
+        {
+            if (animatedModel == null)
+            {
+                throw new InvalidOperationException(
+                    "EquipmentPresentation is missing its animated model.");
+            }
+
+            inverseBindMount =
+                animatedModel
+                    .GetBindSocketLocalMatrix("Mount")
+                    .inverse;
+            bindMountInitialized = true;
+        }
+
+        private static void ApplyLocalMatrix(
+            Transform target,
+            Matrix4x4 matrix)
+        {
+            target.localPosition =
+                matrix.GetColumn(3);
+            target.localRotation =
+                matrix.rotation;
+            target.localScale =
+                matrix.lossyScale;
         }
     }
 }

@@ -31,8 +31,6 @@ public sealed class CoverageRequirement
 {
     public string Id { get; set; } = string.Empty;
     public string Kind { get; set; } = string.Empty;
-    public string? Profile { get; set; }
-    public string? Capability { get; set; }
     public string? Form { get; set; }
     public bool Required { get; set; } = true;
 }
@@ -49,30 +47,6 @@ public sealed class RetiredAssetIdentity
     public string UnitRef { get; set; } = string.Empty;
 }
 
-public sealed class CompatibilityProfile
-{
-    public int Version { get; set; }
-    public string Id { get; set; } = string.Empty;
-    public int VoxelsPerUnit { get; set; }
-    public List<MountCapabilityContract> RequiredMountCapabilities { get; set; } = new();
-    public List<MountCapabilityContract> OptionalMountCapabilities { get; set; } = new();
-    public List<PoseSampleContract> RepresentativePoseSamples { get; set; } = new();
-}
-
-public sealed class MountCapabilityContract
-{
-    public string Capability { get; set; } = string.Empty;
-    public List<string> Sockets { get; set; } = new();
-    public float[] Forward { get; set; } = Array.Empty<float>();
-    public float[] Up { get; set; } = Array.Empty<float>();
-    public float[] Envelope { get; set; } = Array.Empty<float>();
-}
-
-public sealed class PoseSampleContract
-{
-    public string Clip { get; set; } = string.Empty;
-    public float NormalizedTime { get; set; }
-}
 
 public sealed class AssetManifest
 {
@@ -81,17 +55,17 @@ public sealed class AssetManifest
     public string Kind { get; set; } = string.Empty;
     public string UnitRef { get; set; } = string.Empty;
     public string? Form { get; set; }
-    public string? Family { get; set; }
     public string? Density { get; set; }
-    public AssetMount? Mount { get; set; }
+    public AssetAttachment? Attachment { get; set; }
     public AssetSource Source { get; set; } = new();
     public AssetStyle Style { get; set; } = new();
 }
 
-public sealed class AssetMount
+public sealed class AssetAttachment
 {
-    public string Profile { get; set; } = string.Empty;
-    public string? Capability { get; set; }
+    public string Capability { get; set; } = string.Empty;
+    public string Side { get; set; } = "Any";
+    public string Anchor { get; set; } = string.Empty;
 }
 
 public sealed class AssetSource

@@ -4,69 +4,528 @@ assemblyOrigin:
   part: Body
 parts:
   - part: Body
+    pivot: [3, 2, 0]
     voxels:
-      - box: { min: [0, 1, 7], size: [8, 4, 3], color: flesh }
-      - box: { min: [1, 1, 5], size: [6, 4, 3], color: fleshShadow }
-      - box: { min: [2, 1, 4], size: [4, 3, 2], color: rag }
-      - box: { min: [2, 1, 0], size: [2, 3, 5], color: flesh }
-      - box: { min: [5, 1, 0], size: [2, 3, 5], color: fleshShadow }
-      - box: { min: [1, 0, 0], size: [3, 4, 1], color: fleshLight }
-      - box: { min: [5, 0, 0], size: [3, 4, 1], color: flesh }
-      - voxel: { at: [2, 0, 5], color: wound }
-      - voxel: { at: [6, 0, 6], color: wound }
-      - voxel: { at: [3, 0, 4], color: ragLight }
-  - part: Head
-    parent: Body
-    transform:
-      translate: [1, -2, 9]
-    voxels:
-      - box: { min: [0, 0, 1], size: [7, 5, 4], color: flesh }
-      - box: { min: [1, 0, 0], size: [5, 4, 2], color: fleshShadow }
-      - box: { min: [1, 0, 2], size: [2, 1, 2], color: eyeCavity }
-      - box: { min: [4, 0, 2], size: [2, 1, 2], color: eyeCavity }
-      - voxel: { at: [2, 0, 3], color: eyeGlow }
-      - voxel: { at: [5, 0, 3], color: eyeGlow }
-      - box: { min: [2, 0, 0], size: [3, 1, 1], color: mouth }
-      - voxel: { at: [2, 0, 1], color: fleshLight }
-      - voxel: { at: [5, 0, 1], color: fleshLight }
-  - part: Arm.L
-    parent: Body
-    transform:
-      translate: [-3, 1, 0]
-    voxels:
-      - box: { min: [1, 0, 7], size: [2, 2, 3], color: flesh }
-      - box: { min: [0, 0, 3], size: [3, 2, 5], color: fleshShadow }
-      - box: { min: [0, 0, 1], size: [4, 3, 2], color: fleshLight }
-      - box: { min: [0, 0, 0], size: [1, 1, 2], color: claw }
-      - box: { min: [2, 0, 0], size: [1, 1, 2], color: claw }
-      - box: { min: [4, 0, 0], size: [1, 1, 2], color: claw }
-  - part: Arm.R
-    parent: Body
-    transform:
-      translate: [8, 1, 0]
-    voxels:
-      - box: { min: [1, 0, 7], size: [2, 2, 3], color: fleshShadow }
-      - box: { min: [0, 0, 3], size: [3, 2, 5], color: flesh }
-      - box: { min: [0, 0, 1], size: [4, 3, 2], color: fleshLight }
-      - box: { min: [0, 0, 0], size: [1, 1, 2], color: claw }
-      - box: { min: [2, 0, 0], size: [1, 1, 2], color: claw }
-      - box: { min: [4, 0, 0], size: [1, 1, 2], color: claw }
+      - voxel: { at: [4, 2, 0], color: fleshLight }
+      - voxel: { at: [5, 2, 0], color: fleshLight }
+      - voxel: { at: [6, 2, 0], color: fleshLight }
+      - voxel: { at: [8, 2, 0], color: flesh }
+      - voxel: { at: [9, 2, 0], color: flesh }
+      - voxel: { at: [10, 2, 0], color: flesh }
+      - voxel: { at: [0, 3, 0], color: claw }
+      - voxel: { at: [2, 3, 0], color: claw }
+      - voxel: { at: [4, 3, 0], color: claw }
+      - voxel: { at: [5, 3, 0], color: fleshLight }
+      - voxel: { at: [6, 3, 0], color: fleshLight }
+      - voxel: { at: [8, 3, 0], color: flesh }
+      - voxel: { at: [9, 3, 0], color: flesh }
+      - voxel: { at: [10, 3, 0], color: flesh }
+      - voxel: { at: [11, 3, 0], color: claw }
+      - voxel: { at: [13, 3, 0], color: claw }
+      - voxel: { at: [15, 3, 0], color: claw }
+      - voxel: { at: [4, 4, 0], color: fleshLight }
+      - voxel: { at: [5, 4, 0], color: fleshLight }
+      - voxel: { at: [6, 4, 0], color: fleshLight }
+      - voxel: { at: [8, 4, 0], color: flesh }
+      - voxel: { at: [9, 4, 0], color: flesh }
+      - voxel: { at: [10, 4, 0], color: flesh }
+      - voxel: { at: [4, 5, 0], color: fleshLight }
+      - voxel: { at: [5, 5, 0], color: fleshLight }
+      - voxel: { at: [6, 5, 0], color: fleshLight }
+      - voxel: { at: [8, 5, 0], color: flesh }
+      - voxel: { at: [9, 5, 0], color: flesh }
+      - voxel: { at: [10, 5, 0], color: flesh }
+      - voxel: { at: [0, 3, 1], color: claw }
+      - voxel: { at: [1, 3, 1], color: fleshLight }
+      - voxel: { at: [2, 3, 1], color: claw }
+      - voxel: { at: [3, 3, 1], color: fleshLight }
+      - voxel: { at: [4, 3, 1], color: claw }
+      - voxel: { at: [5, 3, 1], color: flesh }
+      - voxel: { at: [6, 3, 1], color: flesh }
+      - voxel: { at: [8, 3, 1], color: fleshShadow }
+      - voxel: { at: [9, 3, 1], color: fleshShadow }
+      - voxel: { at: [11, 3, 1], color: claw }
+      - voxel: { at: [12, 3, 1], color: fleshLight }
+      - voxel: { at: [13, 3, 1], color: claw }
+      - voxel: { at: [14, 3, 1], color: fleshLight }
+      - voxel: { at: [15, 3, 1], color: claw }
+      - voxel: { at: [0, 4, 1], color: fleshLight }
+      - voxel: { at: [1, 4, 1], color: fleshLight }
+      - voxel: { at: [2, 4, 1], color: fleshLight }
+      - voxel: { at: [3, 4, 1], color: fleshLight }
+      - voxel: { at: [5, 4, 1], color: flesh }
+      - voxel: { at: [6, 4, 1], color: flesh }
+      - voxel: { at: [8, 4, 1], color: fleshShadow }
+      - voxel: { at: [9, 4, 1], color: fleshShadow }
+      - voxel: { at: [11, 4, 1], color: fleshLight }
+      - voxel: { at: [12, 4, 1], color: fleshLight }
+      - voxel: { at: [13, 4, 1], color: fleshLight }
+      - voxel: { at: [14, 4, 1], color: fleshLight }
+      - voxel: { at: [0, 5, 1], color: fleshLight }
+      - voxel: { at: [1, 5, 1], color: fleshLight }
+      - voxel: { at: [2, 5, 1], color: fleshLight }
+      - voxel: { at: [3, 5, 1], color: fleshLight }
+      - voxel: { at: [5, 5, 1], color: flesh }
+      - voxel: { at: [6, 5, 1], color: flesh }
+      - voxel: { at: [8, 5, 1], color: fleshShadow }
+      - voxel: { at: [9, 5, 1], color: fleshShadow }
+      - voxel: { at: [11, 5, 1], color: fleshLight }
+      - voxel: { at: [12, 5, 1], color: fleshLight }
+      - voxel: { at: [13, 5, 1], color: fleshLight }
+      - voxel: { at: [14, 5, 1], color: fleshLight }
+      - voxel: { at: [0, 3, 2], color: fleshLight }
+      - voxel: { at: [1, 3, 2], color: fleshLight }
+      - voxel: { at: [2, 3, 2], color: fleshLight }
+      - voxel: { at: [3, 3, 2], color: fleshLight }
+      - voxel: { at: [5, 3, 2], color: flesh }
+      - voxel: { at: [6, 3, 2], color: flesh }
+      - voxel: { at: [8, 3, 2], color: fleshShadow }
+      - voxel: { at: [9, 3, 2], color: fleshShadow }
+      - voxel: { at: [11, 3, 2], color: fleshLight }
+      - voxel: { at: [12, 3, 2], color: fleshLight }
+      - voxel: { at: [13, 3, 2], color: fleshLight }
+      - voxel: { at: [14, 3, 2], color: fleshLight }
+      - voxel: { at: [0, 4, 2], color: fleshLight }
+      - voxel: { at: [1, 4, 2], color: fleshLight }
+      - voxel: { at: [2, 4, 2], color: fleshLight }
+      - voxel: { at: [3, 4, 2], color: fleshLight }
+      - voxel: { at: [5, 4, 2], color: flesh }
+      - voxel: { at: [6, 4, 2], color: flesh }
+      - voxel: { at: [8, 4, 2], color: fleshShadow }
+      - voxel: { at: [9, 4, 2], color: fleshShadow }
+      - voxel: { at: [11, 4, 2], color: fleshLight }
+      - voxel: { at: [12, 4, 2], color: fleshLight }
+      - voxel: { at: [13, 4, 2], color: fleshLight }
+      - voxel: { at: [14, 4, 2], color: fleshLight }
+      - voxel: { at: [0, 5, 2], color: fleshLight }
+      - voxel: { at: [1, 5, 2], color: fleshLight }
+      - voxel: { at: [2, 5, 2], color: fleshLight }
+      - voxel: { at: [3, 5, 2], color: fleshLight }
+      - voxel: { at: [5, 5, 2], color: flesh }
+      - voxel: { at: [6, 5, 2], color: flesh }
+      - voxel: { at: [8, 5, 2], color: fleshShadow }
+      - voxel: { at: [9, 5, 2], color: fleshShadow }
+      - voxel: { at: [11, 5, 2], color: fleshLight }
+      - voxel: { at: [12, 5, 2], color: fleshLight }
+      - voxel: { at: [13, 5, 2], color: fleshLight }
+      - voxel: { at: [14, 5, 2], color: fleshLight }
+      - voxel: { at: [0, 3, 3], color: fleshShadow }
+      - voxel: { at: [1, 3, 3], color: fleshShadow }
+      - voxel: { at: [2, 3, 3], color: fleshShadow }
+      - voxel: { at: [5, 3, 3], color: flesh }
+      - voxel: { at: [6, 3, 3], color: flesh }
+      - voxel: { at: [8, 3, 3], color: fleshShadow }
+      - voxel: { at: [9, 3, 3], color: fleshShadow }
+      - voxel: { at: [11, 3, 3], color: flesh }
+      - voxel: { at: [12, 3, 3], color: flesh }
+      - voxel: { at: [13, 3, 3], color: flesh }
+      - voxel: { at: [0, 4, 3], color: fleshShadow }
+      - voxel: { at: [1, 4, 3], color: fleshShadow }
+      - voxel: { at: [2, 4, 3], color: fleshShadow }
+      - voxel: { at: [5, 4, 3], color: flesh }
+      - voxel: { at: [6, 4, 3], color: flesh }
+      - voxel: { at: [8, 4, 3], color: fleshShadow }
+      - voxel: { at: [9, 4, 3], color: fleshShadow }
+      - voxel: { at: [11, 4, 3], color: flesh }
+      - voxel: { at: [12, 4, 3], color: flesh }
+      - voxel: { at: [13, 4, 3], color: flesh }
+      - voxel: { at: [5, 5, 3], color: flesh }
+      - voxel: { at: [6, 5, 3], color: flesh }
+      - voxel: { at: [8, 5, 3], color: fleshShadow }
+      - voxel: { at: [9, 5, 3], color: fleshShadow }
+      - voxel: { at: [6, 2, 4], color: ragLight }
+      - voxel: { at: [0, 3, 4], color: fleshShadow }
+      - voxel: { at: [1, 3, 4], color: fleshShadow }
+      - voxel: { at: [2, 3, 4], color: fleshShadow }
+      - voxel: { at: [5, 3, 4], color: flesh }
+      - voxel: { at: [6, 3, 4], color: flesh }
+      - voxel: { at: [7, 3, 4], color: rag }
+      - voxel: { at: [8, 3, 4], color: fleshShadow }
+      - voxel: { at: [9, 3, 4], color: fleshShadow }
+      - voxel: { at: [11, 3, 4], color: flesh }
+      - voxel: { at: [12, 3, 4], color: flesh }
+      - voxel: { at: [13, 3, 4], color: flesh }
+      - voxel: { at: [0, 4, 4], color: fleshShadow }
+      - voxel: { at: [1, 4, 4], color: fleshShadow }
+      - voxel: { at: [2, 4, 4], color: fleshShadow }
+      - voxel: { at: [5, 4, 4], color: flesh }
+      - voxel: { at: [6, 4, 4], color: flesh }
+      - voxel: { at: [7, 4, 4], color: rag }
+      - voxel: { at: [8, 4, 4], color: fleshShadow }
+      - voxel: { at: [9, 4, 4], color: fleshShadow }
+      - voxel: { at: [11, 4, 4], color: flesh }
+      - voxel: { at: [12, 4, 4], color: flesh }
+      - voxel: { at: [13, 4, 4], color: flesh }
+      - voxel: { at: [5, 5, 4], color: flesh }
+      - voxel: { at: [6, 5, 4], color: flesh }
+      - voxel: { at: [7, 5, 4], color: rag }
+      - voxel: { at: [8, 5, 4], color: fleshShadow }
+      - voxel: { at: [9, 5, 4], color: fleshShadow }
+      - voxel: { at: [5, 2, 5], color: wound }
+      - voxel: { at: [0, 3, 5], color: fleshShadow }
+      - voxel: { at: [1, 3, 5], color: fleshShadow }
+      - voxel: { at: [2, 3, 5], color: fleshShadow }
+      - voxel: { at: [4, 3, 5], color: fleshShadow }
+      - voxel: { at: [5, 3, 5], color: rag }
+      - voxel: { at: [6, 3, 5], color: rag }
+      - voxel: { at: [7, 3, 5], color: rag }
+      - voxel: { at: [8, 3, 5], color: rag }
+      - voxel: { at: [9, 3, 5], color: fleshShadow }
+      - voxel: { at: [11, 3, 5], color: flesh }
+      - voxel: { at: [12, 3, 5], color: flesh }
+      - voxel: { at: [13, 3, 5], color: flesh }
+      - voxel: { at: [0, 4, 5], color: fleshShadow }
+      - voxel: { at: [1, 4, 5], color: fleshShadow }
+      - voxel: { at: [2, 4, 5], color: fleshShadow }
+      - voxel: { at: [4, 4, 5], color: fleshShadow }
+      - voxel: { at: [5, 4, 5], color: rag }
+      - voxel: { at: [6, 4, 5], color: rag }
+      - voxel: { at: [7, 4, 5], color: rag }
+      - voxel: { at: [8, 4, 5], color: rag }
+      - voxel: { at: [9, 4, 5], color: fleshShadow }
+      - voxel: { at: [11, 4, 5], color: flesh }
+      - voxel: { at: [12, 4, 5], color: flesh }
+      - voxel: { at: [13, 4, 5], color: flesh }
+      - voxel: { at: [4, 5, 5], color: fleshShadow }
+      - voxel: { at: [5, 5, 5], color: rag }
+      - voxel: { at: [6, 5, 5], color: rag }
+      - voxel: { at: [7, 5, 5], color: rag }
+      - voxel: { at: [8, 5, 5], color: rag }
+      - voxel: { at: [9, 5, 5], color: fleshShadow }
+      - voxel: { at: [4, 6, 5], color: fleshShadow }
+      - voxel: { at: [5, 6, 5], color: fleshShadow }
+      - voxel: { at: [6, 6, 5], color: fleshShadow }
+      - voxel: { at: [7, 6, 5], color: fleshShadow }
+      - voxel: { at: [8, 6, 5], color: fleshShadow }
+      - voxel: { at: [9, 6, 5], color: fleshShadow }
+      - voxel: { at: [9, 2, 6], color: wound }
+      - voxel: { at: [0, 3, 6], color: fleshShadow }
+      - voxel: { at: [1, 3, 6], color: fleshShadow }
+      - voxel: { at: [2, 3, 6], color: fleshShadow }
+      - voxel: { at: [4, 3, 6], color: fleshShadow }
+      - voxel: { at: [5, 3, 6], color: fleshShadow }
+      - voxel: { at: [6, 3, 6], color: fleshShadow }
+      - voxel: { at: [7, 3, 6], color: fleshShadow }
+      - voxel: { at: [8, 3, 6], color: fleshShadow }
+      - voxel: { at: [9, 3, 6], color: fleshShadow }
+      - voxel: { at: [11, 3, 6], color: flesh }
+      - voxel: { at: [12, 3, 6], color: flesh }
+      - voxel: { at: [13, 3, 6], color: flesh }
+      - voxel: { at: [0, 4, 6], color: fleshShadow }
+      - voxel: { at: [1, 4, 6], color: fleshShadow }
+      - voxel: { at: [2, 4, 6], color: fleshShadow }
+      - voxel: { at: [4, 4, 6], color: fleshShadow }
+      - voxel: { at: [5, 4, 6], color: fleshShadow }
+      - voxel: { at: [6, 4, 6], color: fleshShadow }
+      - voxel: { at: [7, 4, 6], color: fleshShadow }
+      - voxel: { at: [8, 4, 6], color: fleshShadow }
+      - voxel: { at: [9, 4, 6], color: fleshShadow }
+      - voxel: { at: [11, 4, 6], color: flesh }
+      - voxel: { at: [12, 4, 6], color: flesh }
+      - voxel: { at: [13, 4, 6], color: flesh }
+      - voxel: { at: [4, 5, 6], color: fleshShadow }
+      - voxel: { at: [5, 5, 6], color: fleshShadow }
+      - voxel: { at: [6, 5, 6], color: fleshShadow }
+      - voxel: { at: [7, 5, 6], color: fleshShadow }
+      - voxel: { at: [8, 5, 6], color: fleshShadow }
+      - voxel: { at: [9, 5, 6], color: fleshShadow }
+      - voxel: { at: [4, 6, 6], color: fleshShadow }
+      - voxel: { at: [5, 6, 6], color: fleshShadow }
+      - voxel: { at: [6, 6, 6], color: fleshShadow }
+      - voxel: { at: [7, 6, 6], color: fleshShadow }
+      - voxel: { at: [8, 6, 6], color: fleshShadow }
+      - voxel: { at: [9, 6, 6], color: fleshShadow }
+      - voxel: { at: [0, 3, 7], color: fleshShadow }
+      - voxel: { at: [1, 3, 7], color: fleshShadow }
+      - voxel: { at: [2, 3, 7], color: fleshShadow }
+      - voxel: { at: [3, 3, 7], color: flesh }
+      - voxel: { at: [4, 3, 7], color: fleshShadow }
+      - voxel: { at: [5, 3, 7], color: fleshShadow }
+      - voxel: { at: [6, 3, 7], color: fleshShadow }
+      - voxel: { at: [7, 3, 7], color: fleshShadow }
+      - voxel: { at: [8, 3, 7], color: fleshShadow }
+      - voxel: { at: [9, 3, 7], color: fleshShadow }
+      - voxel: { at: [10, 3, 7], color: flesh }
+      - voxel: { at: [11, 3, 7], color: flesh }
+      - voxel: { at: [12, 3, 7], color: flesh }
+      - voxel: { at: [13, 3, 7], color: flesh }
+      - voxel: { at: [0, 4, 7], color: fleshShadow }
+      - voxel: { at: [1, 4, 7], color: fleshShadow }
+      - voxel: { at: [2, 4, 7], color: fleshShadow }
+      - voxel: { at: [3, 4, 7], color: flesh }
+      - voxel: { at: [4, 4, 7], color: fleshShadow }
+      - voxel: { at: [5, 4, 7], color: fleshShadow }
+      - voxel: { at: [6, 4, 7], color: fleshShadow }
+      - voxel: { at: [7, 4, 7], color: fleshShadow }
+      - voxel: { at: [8, 4, 7], color: fleshShadow }
+      - voxel: { at: [9, 4, 7], color: fleshShadow }
+      - voxel: { at: [10, 4, 7], color: flesh }
+      - voxel: { at: [11, 4, 7], color: flesh }
+      - voxel: { at: [12, 4, 7], color: flesh }
+      - voxel: { at: [13, 4, 7], color: flesh }
+      - voxel: { at: [3, 5, 7], color: flesh }
+      - voxel: { at: [4, 5, 7], color: fleshShadow }
+      - voxel: { at: [5, 5, 7], color: fleshShadow }
+      - voxel: { at: [6, 5, 7], color: fleshShadow }
+      - voxel: { at: [7, 5, 7], color: fleshShadow }
+      - voxel: { at: [8, 5, 7], color: fleshShadow }
+      - voxel: { at: [9, 5, 7], color: fleshShadow }
+      - voxel: { at: [10, 5, 7], color: flesh }
+      - voxel: { at: [3, 6, 7], color: flesh }
+      - voxel: { at: [4, 6, 7], color: fleshShadow }
+      - voxel: { at: [5, 6, 7], color: fleshShadow }
+      - voxel: { at: [6, 6, 7], color: fleshShadow }
+      - voxel: { at: [7, 6, 7], color: fleshShadow }
+      - voxel: { at: [8, 6, 7], color: fleshShadow }
+      - voxel: { at: [9, 6, 7], color: fleshShadow }
+      - voxel: { at: [10, 6, 7], color: flesh }
+      - voxel: { at: [1, 3, 8], color: flesh }
+      - voxel: { at: [2, 3, 8], color: flesh }
+      - voxel: { at: [3, 3, 8], color: flesh }
+      - voxel: { at: [4, 3, 8], color: flesh }
+      - voxel: { at: [5, 3, 8], color: flesh }
+      - voxel: { at: [6, 3, 8], color: flesh }
+      - voxel: { at: [7, 3, 8], color: flesh }
+      - voxel: { at: [8, 3, 8], color: flesh }
+      - voxel: { at: [9, 3, 8], color: flesh }
+      - voxel: { at: [10, 3, 8], color: flesh }
+      - voxel: { at: [12, 3, 8], color: fleshShadow }
+      - voxel: { at: [13, 3, 8], color: fleshShadow }
+      - voxel: { at: [1, 4, 8], color: flesh }
+      - voxel: { at: [2, 4, 8], color: flesh }
+      - voxel: { at: [3, 4, 8], color: flesh }
+      - voxel: { at: [4, 4, 8], color: flesh }
+      - voxel: { at: [5, 4, 8], color: flesh }
+      - voxel: { at: [6, 4, 8], color: flesh }
+      - voxel: { at: [7, 4, 8], color: flesh }
+      - voxel: { at: [8, 4, 8], color: flesh }
+      - voxel: { at: [9, 4, 8], color: flesh }
+      - voxel: { at: [10, 4, 8], color: flesh }
+      - voxel: { at: [12, 4, 8], color: fleshShadow }
+      - voxel: { at: [13, 4, 8], color: fleshShadow }
+      - voxel: { at: [3, 5, 8], color: flesh }
+      - voxel: { at: [4, 5, 8], color: flesh }
+      - voxel: { at: [5, 5, 8], color: flesh }
+      - voxel: { at: [6, 5, 8], color: flesh }
+      - voxel: { at: [7, 5, 8], color: flesh }
+      - voxel: { at: [8, 5, 8], color: flesh }
+      - voxel: { at: [9, 5, 8], color: flesh }
+      - voxel: { at: [10, 5, 8], color: flesh }
+      - voxel: { at: [3, 6, 8], color: flesh }
+      - voxel: { at: [4, 6, 8], color: flesh }
+      - voxel: { at: [5, 6, 8], color: flesh }
+      - voxel: { at: [6, 6, 8], color: flesh }
+      - voxel: { at: [7, 6, 8], color: flesh }
+      - voxel: { at: [8, 6, 8], color: flesh }
+      - voxel: { at: [9, 6, 8], color: flesh }
+      - voxel: { at: [10, 6, 8], color: flesh }
+      - voxel: { at: [5, 0, 9], color: fleshShadow }
+      - voxel: { at: [6, 0, 9], color: mouth }
+      - voxel: { at: [7, 0, 9], color: mouth }
+      - voxel: { at: [8, 0, 9], color: mouth }
+      - voxel: { at: [9, 0, 9], color: fleshShadow }
+      - voxel: { at: [5, 1, 9], color: fleshShadow }
+      - voxel: { at: [6, 1, 9], color: fleshShadow }
+      - voxel: { at: [7, 1, 9], color: fleshShadow }
+      - voxel: { at: [8, 1, 9], color: fleshShadow }
+      - voxel: { at: [9, 1, 9], color: fleshShadow }
+      - voxel: { at: [5, 2, 9], color: fleshShadow }
+      - voxel: { at: [6, 2, 9], color: fleshShadow }
+      - voxel: { at: [7, 2, 9], color: fleshShadow }
+      - voxel: { at: [8, 2, 9], color: fleshShadow }
+      - voxel: { at: [9, 2, 9], color: fleshShadow }
+      - voxel: { at: [1, 3, 9], color: flesh }
+      - voxel: { at: [2, 3, 9], color: flesh }
+      - voxel: { at: [3, 3, 9], color: flesh }
+      - voxel: { at: [4, 3, 9], color: flesh }
+      - voxel: { at: [5, 3, 9], color: fleshShadow }
+      - voxel: { at: [6, 3, 9], color: fleshShadow }
+      - voxel: { at: [7, 3, 9], color: fleshShadow }
+      - voxel: { at: [8, 3, 9], color: fleshShadow }
+      - voxel: { at: [9, 3, 9], color: fleshShadow }
+      - voxel: { at: [10, 3, 9], color: flesh }
+      - voxel: { at: [12, 3, 9], color: fleshShadow }
+      - voxel: { at: [13, 3, 9], color: fleshShadow }
+      - voxel: { at: [1, 4, 9], color: flesh }
+      - voxel: { at: [2, 4, 9], color: flesh }
+      - voxel: { at: [3, 4, 9], color: flesh }
+      - voxel: { at: [4, 4, 9], color: flesh }
+      - voxel: { at: [5, 4, 9], color: flesh }
+      - voxel: { at: [6, 4, 9], color: flesh }
+      - voxel: { at: [7, 4, 9], color: flesh }
+      - voxel: { at: [8, 4, 9], color: flesh }
+      - voxel: { at: [9, 4, 9], color: flesh }
+      - voxel: { at: [10, 4, 9], color: flesh }
+      - voxel: { at: [12, 4, 9], color: fleshShadow }
+      - voxel: { at: [13, 4, 9], color: fleshShadow }
+      - voxel: { at: [3, 5, 9], color: flesh }
+      - voxel: { at: [4, 5, 9], color: flesh }
+      - voxel: { at: [5, 5, 9], color: flesh }
+      - voxel: { at: [6, 5, 9], color: flesh }
+      - voxel: { at: [7, 5, 9], color: flesh }
+      - voxel: { at: [8, 5, 9], color: flesh }
+      - voxel: { at: [9, 5, 9], color: flesh }
+      - voxel: { at: [10, 5, 9], color: flesh }
+      - voxel: { at: [3, 6, 9], color: flesh }
+      - voxel: { at: [4, 6, 9], color: flesh }
+      - voxel: { at: [5, 6, 9], color: flesh }
+      - voxel: { at: [6, 6, 9], color: flesh }
+      - voxel: { at: [7, 6, 9], color: flesh }
+      - voxel: { at: [8, 6, 9], color: flesh }
+      - voxel: { at: [9, 6, 9], color: flesh }
+      - voxel: { at: [10, 6, 9], color: flesh }
+      - voxel: { at: [4, 0, 10], color: flesh }
+      - voxel: { at: [5, 0, 10], color: fleshShadow }
+      - voxel: { at: [6, 0, 10], color: fleshLight }
+      - voxel: { at: [7, 0, 10], color: fleshShadow }
+      - voxel: { at: [8, 0, 10], color: fleshShadow }
+      - voxel: { at: [9, 0, 10], color: fleshLight }
+      - voxel: { at: [10, 0, 10], color: flesh }
+      - voxel: { at: [4, 1, 10], color: flesh }
+      - voxel: { at: [5, 1, 10], color: fleshShadow }
+      - voxel: { at: [6, 1, 10], color: fleshShadow }
+      - voxel: { at: [7, 1, 10], color: fleshShadow }
+      - voxel: { at: [8, 1, 10], color: fleshShadow }
+      - voxel: { at: [9, 1, 10], color: fleshShadow }
+      - voxel: { at: [10, 1, 10], color: flesh }
+      - voxel: { at: [4, 2, 10], color: flesh }
+      - voxel: { at: [5, 2, 10], color: fleshShadow }
+      - voxel: { at: [6, 2, 10], color: fleshShadow }
+      - voxel: { at: [7, 2, 10], color: fleshShadow }
+      - voxel: { at: [8, 2, 10], color: fleshShadow }
+      - voxel: { at: [9, 2, 10], color: fleshShadow }
+      - voxel: { at: [10, 2, 10], color: flesh }
+      - voxel: { at: [4, 3, 10], color: flesh }
+      - voxel: { at: [5, 3, 10], color: fleshShadow }
+      - voxel: { at: [6, 3, 10], color: fleshShadow }
+      - voxel: { at: [7, 3, 10], color: fleshShadow }
+      - voxel: { at: [8, 3, 10], color: fleshShadow }
+      - voxel: { at: [9, 3, 10], color: fleshShadow }
+      - voxel: { at: [10, 3, 10], color: flesh }
+      - voxel: { at: [4, 4, 10], color: flesh }
+      - voxel: { at: [5, 4, 10], color: flesh }
+      - voxel: { at: [6, 4, 10], color: flesh }
+      - voxel: { at: [7, 4, 10], color: flesh }
+      - voxel: { at: [8, 4, 10], color: flesh }
+      - voxel: { at: [9, 4, 10], color: flesh }
+      - voxel: { at: [10, 4, 10], color: flesh }
+      - voxel: { at: [4, 0, 11], color: flesh }
+      - voxel: { at: [5, 0, 11], color: eyeCavity }
+      - voxel: { at: [6, 0, 11], color: eyeCavity }
+      - voxel: { at: [7, 0, 11], color: flesh }
+      - voxel: { at: [8, 0, 11], color: eyeCavity }
+      - voxel: { at: [9, 0, 11], color: eyeCavity }
+      - voxel: { at: [10, 0, 11], color: flesh }
+      - voxel: { at: [4, 1, 11], color: flesh }
+      - voxel: { at: [5, 1, 11], color: flesh }
+      - voxel: { at: [6, 1, 11], color: flesh }
+      - voxel: { at: [7, 1, 11], color: flesh }
+      - voxel: { at: [8, 1, 11], color: flesh }
+      - voxel: { at: [9, 1, 11], color: flesh }
+      - voxel: { at: [10, 1, 11], color: flesh }
+      - voxel: { at: [4, 2, 11], color: flesh }
+      - voxel: { at: [5, 2, 11], color: flesh }
+      - voxel: { at: [6, 2, 11], color: flesh }
+      - voxel: { at: [7, 2, 11], color: flesh }
+      - voxel: { at: [8, 2, 11], color: flesh }
+      - voxel: { at: [9, 2, 11], color: flesh }
+      - voxel: { at: [10, 2, 11], color: flesh }
+      - voxel: { at: [4, 3, 11], color: flesh }
+      - voxel: { at: [5, 3, 11], color: flesh }
+      - voxel: { at: [6, 3, 11], color: flesh }
+      - voxel: { at: [7, 3, 11], color: flesh }
+      - voxel: { at: [8, 3, 11], color: flesh }
+      - voxel: { at: [9, 3, 11], color: flesh }
+      - voxel: { at: [10, 3, 11], color: flesh }
+      - voxel: { at: [4, 4, 11], color: flesh }
+      - voxel: { at: [5, 4, 11], color: flesh }
+      - voxel: { at: [6, 4, 11], color: flesh }
+      - voxel: { at: [7, 4, 11], color: flesh }
+      - voxel: { at: [8, 4, 11], color: flesh }
+      - voxel: { at: [9, 4, 11], color: flesh }
+      - voxel: { at: [10, 4, 11], color: flesh }
+      - voxel: { at: [4, 0, 12], color: flesh }
+      - voxel: { at: [5, 0, 12], color: eyeCavity }
+      - voxel: { at: [6, 0, 12], color: eyeGlow }
+      - voxel: { at: [7, 0, 12], color: flesh }
+      - voxel: { at: [8, 0, 12], color: eyeCavity }
+      - voxel: { at: [9, 0, 12], color: eyeGlow }
+      - voxel: { at: [10, 0, 12], color: flesh }
+      - voxel: { at: [4, 1, 12], color: flesh }
+      - voxel: { at: [5, 1, 12], color: flesh }
+      - voxel: { at: [6, 1, 12], color: flesh }
+      - voxel: { at: [7, 1, 12], color: flesh }
+      - voxel: { at: [8, 1, 12], color: flesh }
+      - voxel: { at: [9, 1, 12], color: flesh }
+      - voxel: { at: [10, 1, 12], color: flesh }
+      - voxel: { at: [4, 2, 12], color: flesh }
+      - voxel: { at: [5, 2, 12], color: flesh }
+      - voxel: { at: [6, 2, 12], color: flesh }
+      - voxel: { at: [7, 2, 12], color: flesh }
+      - voxel: { at: [8, 2, 12], color: flesh }
+      - voxel: { at: [9, 2, 12], color: flesh }
+      - voxel: { at: [10, 2, 12], color: flesh }
+      - voxel: { at: [4, 3, 12], color: flesh }
+      - voxel: { at: [5, 3, 12], color: flesh }
+      - voxel: { at: [6, 3, 12], color: flesh }
+      - voxel: { at: [7, 3, 12], color: flesh }
+      - voxel: { at: [8, 3, 12], color: flesh }
+      - voxel: { at: [9, 3, 12], color: flesh }
+      - voxel: { at: [10, 3, 12], color: flesh }
+      - voxel: { at: [4, 4, 12], color: flesh }
+      - voxel: { at: [5, 4, 12], color: flesh }
+      - voxel: { at: [6, 4, 12], color: flesh }
+      - voxel: { at: [7, 4, 12], color: flesh }
+      - voxel: { at: [8, 4, 12], color: flesh }
+      - voxel: { at: [9, 4, 12], color: flesh }
+      - voxel: { at: [10, 4, 12], color: flesh }
+      - voxel: { at: [4, 0, 13], color: flesh }
+      - voxel: { at: [5, 0, 13], color: flesh }
+      - voxel: { at: [6, 0, 13], color: flesh }
+      - voxel: { at: [7, 0, 13], color: flesh }
+      - voxel: { at: [8, 0, 13], color: flesh }
+      - voxel: { at: [9, 0, 13], color: flesh }
+      - voxel: { at: [10, 0, 13], color: flesh }
+      - voxel: { at: [4, 1, 13], color: flesh }
+      - voxel: { at: [5, 1, 13], color: flesh }
+      - voxel: { at: [6, 1, 13], color: flesh }
+      - voxel: { at: [7, 1, 13], color: flesh }
+      - voxel: { at: [8, 1, 13], color: flesh }
+      - voxel: { at: [9, 1, 13], color: flesh }
+      - voxel: { at: [10, 1, 13], color: flesh }
+      - voxel: { at: [4, 2, 13], color: flesh }
+      - voxel: { at: [5, 2, 13], color: flesh }
+      - voxel: { at: [6, 2, 13], color: flesh }
+      - voxel: { at: [7, 2, 13], color: flesh }
+      - voxel: { at: [8, 2, 13], color: flesh }
+      - voxel: { at: [9, 2, 13], color: flesh }
+      - voxel: { at: [10, 2, 13], color: flesh }
+      - voxel: { at: [4, 3, 13], color: flesh }
+      - voxel: { at: [5, 3, 13], color: flesh }
+      - voxel: { at: [6, 3, 13], color: flesh }
+      - voxel: { at: [7, 3, 13], color: flesh }
+      - voxel: { at: [8, 3, 13], color: flesh }
+      - voxel: { at: [9, 3, 13], color: flesh }
+      - voxel: { at: [10, 3, 13], color: flesh }
+      - voxel: { at: [4, 4, 13], color: flesh }
+      - voxel: { at: [5, 4, 13], color: flesh }
+      - voxel: { at: [6, 4, 13], color: flesh }
+      - voxel: { at: [7, 4, 13], color: flesh }
+      - voxel: { at: [8, 4, 13], color: flesh }
+      - voxel: { at: [9, 4, 13], color: flesh }
+      - voxel: { at: [10, 4, 13], color: flesh }
 sockets:
-  - socket: Hand.0
-    parent: Arm.R
-    transform:
-      translate: [2, 1, 2]
-  - socket: Hand.1
-    parent: Arm.L
-    transform:
-      translate: [2, 1, 2]
-  - socket: Back
+  - socket: Equip.Hand.Left.0
     parent: Body
     transform:
-      translate: [4, 4, 7]
+      translate: [2, 4, 2]
+  - socket: Equip.Hand.Right.0
+    parent: Body
+    transform:
+      translate: [13, 4, 2]
 animations:
   - clip: Idle
-    duration: 1
+    duration: 1.2
     loop: true
     tracks:
       - part: Body
@@ -76,6 +535,115 @@ animations:
             - time: 0
               value: [0, 0, 0]
             - time: 0.5
-              value: [0, 0, 0.12]
+              value: [0, 0, 0.2]
             - time: 1
               value: [0, 0, 0]
+  - clip: WalkForward
+    duration: 0.6
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.33
+              value: [0, -0.6, 1.2]
+            - time: 0.66
+              value: [0, -1.2, 0]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Attack
+    duration: 0.45
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0.3, 0]
+            - time: 0.55
+              value: [0, -1.2, 0]
+            - time: 1
+              value: [0, -0.3, 0]
+  - clip: Attack.Left
+    duration: 0.45
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0.3, 0]
+            - time: 0.55
+              value: [0, -1.2, 0]
+            - time: 1
+              value: [0, -0.3, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 8]
+            - time: 0.55
+              value: [0, 0, -14]
+            - time: 1
+              value: [0, 0, -4]
+  - clip: Attack.Right
+    duration: 0.45
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0.3, 0]
+            - time: 0.55
+              value: [0, -1.2, 0]
+            - time: 1
+              value: [0, -0.3, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, -8]
+            - time: 0.55
+              value: [0, 0, 14]
+            - time: 1
+              value: [0, 0, 4]
+  - clip: Hit
+    duration: 0.35
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.45
+              value: [0, 1.0, 0.2]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Death
+    duration: 0.75
+    loop: false
+    tracks:
+      - part: Body
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 1
+              value: [0, 0, 82]
+        scale:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [1, 1, 1]
+            - time: 1
+              value: [1, 1, 0.72]

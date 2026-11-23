@@ -11,6 +11,7 @@ namespace VoxelStore.Preview.Editor
         public string Catalog;
         public string Name;
         public string AssetPath;
+        public string AnimationAssetPath;
     }
 
     internal static class RuntimeGalleryCatalogDiscovery
@@ -35,10 +36,34 @@ namespace VoxelStore.Preview.Editor
             foreach (string guid in guids)
             {
                 string assetPath = AssetDatabase.GUIDToAssetPath(guid);
-                if (!TryDescribeAssetPath(
+                string catalog;
+                string modelName;
+                string animationAssetPath;
+
+                bool described =
+                    TryDescribeProviderAssetPath(
+                        discoveryRoot,
                         assetPath,
-                        out string catalog,
-                        out string modelName))
+                        out catalog,
+                        out modelName,
+                        out animationAssetPath);
+                if (!described &&
+                    TryDescribeAssetPath(
+                        assetPath,
+                        out catalog,
+                        out modelName))
+                {
+                    animationAssetPath =
+                        assetPath.Substring(
+                            0,
+                            assetPath.Length - ".asset".Length) +
+                        ".animation.asset";
+                    described = true;
+                }
+
+                if (!described ||
+                    AssetDatabase.LoadAssetAtPath<VoxelAnimationAsset>(
+                        animationAssetPath) == null)
                 {
                     continue;
                 }
@@ -47,7 +72,7 @@ namespace VoxelStore.Preview.Editor
                 if (!identities.Add(identity))
                 {
                     throw new InvalidOperationException(
-                        "Runtime gallery contains duplicate imported model identity: " +
+                        "Runtime gallery contains duplicate paired model identity: " +
                         identity);
                 }
 
@@ -56,7 +81,8 @@ namespace VoxelStore.Preview.Editor
                     {
                         Catalog = catalog,
                         Name = modelName,
-                        AssetPath = assetPath
+                        AssetPath = assetPath,
+                        AnimationAssetPath = animationAssetPath
                     });
             }
 
@@ -64,6 +90,70 @@ namespace VoxelStore.Preview.Editor
                 .OrderBy(x => x.Catalog, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
+        }
+
+        internal static bool TryDescribeProviderAssetPath(
+            string discoveryRoot,
+            string assetPath,
+            out string catalog,
+            out string modelName,
+            out string animationAssetPath)
+        {
+            catalog = null;
+            modelName = null;
+            animationAssetPath = null;
+
+            if (string.IsNullOrWhiteSpace(discoveryRoot) ||
+                string.IsNullOrWhiteSpace(assetPath))
+            {
+                return false;
+            }
+
+            string normalizedRoot = discoveryRoot
+                .Replace('\\', '/')
+                .TrimEnd('/');
+            string normalizedPath = assetPath
+                .Replace('\\', '/');
+            const string assemblySuffix = ".assembly.asset";
+
+            if (!normalizedPath.EndsWith(
+                    assemblySuffix,
+                    StringComparison.OrdinalIgnoreCase) ||
+                !normalizedPath.StartsWith(
+                    normalizedRoot + "/",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            string relative =
+                normalizedPath.Substring(
+                    normalizedRoot.Length + 1);
+            string[] segments = relative.Split(
+                new[] { '/' },
+                StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length != 3)
+                return false;
+
+            catalog = segments[0];
+            modelName = segments[1];
+            if (!string.Equals(
+                    segments[2],
+                    modelName + assemblySuffix,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                catalog = null;
+                modelName = null;
+                return false;
+            }
+
+            animationAssetPath =
+                normalizedPath.Substring(
+                    0,
+                    normalizedPath.Length -
+                    assemblySuffix.Length) +
+                ".animation.asset";
+            return true;
         }
 
         internal static bool TryDescribeAssetPath(
@@ -130,6 +220,41 @@ namespace VoxelStore.Preview.Editor
             }
 
             return assembly;
+        }
+
+        internal static VoxelAnimationAsset LoadAnimation(
+            RuntimeGalleryModel model)
+        {
+            if (model == null)
+                throw new ArgumentNullException(nameof(model));
+            if (string.IsNullOrWhiteSpace(model.AnimationAssetPath))
+            {
+                throw new InvalidOperationException(
+                    "Runtime gallery model has no animation asset path: " +
+                    model.Catalog +
+                    "/" +
+                    model.Name);
+            }
+
+            VoxelAnimationAsset animation =
+                AssetDatabase.LoadAssetAtPath<VoxelAnimationAsset>(
+                    model.AnimationAssetPath);
+            if (animation == null)
+            {
+                throw new InvalidOperationException(
+                    "Runtime gallery requires the baked authored animation asset: " +
+                    model.AnimationAssetPath);
+            }
+
+            VoxelAssemblyAsset assembly = LoadAssembly(model);
+            if (animation.Assembly != assembly)
+            {
+                throw new InvalidOperationException(
+                    "Runtime gallery animation targets a different assembly: " +
+                    model.AnimationAssetPath);
+            }
+
+            return animation;
         }
 
         internal static bool IsCatalog(

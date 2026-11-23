@@ -18,18 +18,18 @@ namespace VoxelStore.Preview.Runtime
         [SerializeField] private Transform unitRoot;
         [SerializeField] private Transform presentationRoot;
         [SerializeField] private MeshFilter bodyMesh;
+        [SerializeField] private VoxelAnimatedAssembly bodyAnimation;
         [SerializeField] private EquipmentPresentation[] equipment =
             Array.Empty<EquipmentPresentation>();
 
         public Transform UnitRoot => unitRoot;
         public Transform PresentationRoot => presentationRoot;
         public MeshFilter BodyMesh => bodyMesh;
+        public VoxelAnimatedAssembly BodyAnimation => bodyAnimation;
         public Vector3 LocalRight => CanonicalLocalRight;
         public Vector3 LocalUp => CanonicalLocalUp;
         public Vector3 LocalForward => CanonicalLocalForward;
         public IReadOnlyList<EquipmentPresentation> Equipment => equipment;
-        public Bounds BodyBounds =>
-            ResolveBodyBounds(presentationRoot, bodyMesh);
 
         public Vector3 WorldForward =>
             unitRoot != null
@@ -53,6 +53,7 @@ namespace VoxelStore.Preview.Runtime
             Transform authoritativeUnitRoot,
             Transform presentation,
             MeshFilter body,
+            VoxelAnimatedAssembly animatedBody,
             IReadOnlyList<EquipmentPresentation> attachedEquipment)
         {
             if (authoritativeUnitRoot == null)
@@ -65,10 +66,13 @@ namespace VoxelStore.Preview.Runtime
                     "AvatarPresentation requires a baked Body MeshFilter.",
                     nameof(body));
             }
+            if (animatedBody == null)
+                throw new ArgumentNullException(nameof(animatedBody));
 
             unitRoot = authoritativeUnitRoot;
             presentationRoot = presentation;
             bodyMesh = body;
+            bodyAnimation = animatedBody;
             equipment = attachedEquipment == null
                 ? Array.Empty<EquipmentPresentation>()
                 : attachedEquipment
@@ -82,7 +86,6 @@ namespace VoxelStore.Preview.Runtime
         {
             RequireConfigured();
 
-            Bounds bounds = BodyBounds;
             foreach (EquipmentPresentation item in equipment)
             {
                 if (item.PlacementRoot.parent != presentationRoot)
@@ -92,8 +95,40 @@ namespace VoxelStore.Preview.Runtime
                         false);
                 }
 
-                item.ApplyPlacement(bounds);
+                item.ResetMotion();
+                item.ApplyAttachment(
+                    ResolveBodySocketInPresentation(
+                        item.SocketName));
             }
+        }
+
+        public void SampleMotion(
+            AvatarMotion motion,
+            EquipmentSlotSide driverSide,
+            float normalizedTime)
+        {
+            RequireConfigured();
+            bodyAnimation.Sample(
+                motion,
+                driverSide,
+                normalizedTime);
+
+            foreach (EquipmentPresentation item in equipment)
+            {
+                item.ApplyAttachment(
+                    ResolveBodySocketInPresentation(
+                        item.SocketName));
+                item.Sample(
+                    motion,
+                    normalizedTime);
+            }
+        }
+
+        public void ResetPose()
+        {
+            RequireConfigured();
+            bodyAnimation.ResetPose();
+            ApplyEquipmentPlacement();
         }
 
         public void ResetEquipmentMotion()
@@ -102,49 +137,19 @@ namespace VoxelStore.Preview.Runtime
                 item?.ResetMotion();
         }
 
-        public static Vector3 ResolveBodyRatioPosition(
-            Bounds bodyBounds,
-            Vector3 sourceRatio)
+        public Matrix4x4 ResolveBodySocketInPresentation(
+            string socketName)
         {
-            ValidateRatio(sourceRatio);
-
-            Vector3 unityRatio =
-                VoxelStoreModelFrame.SourceToUnityVector(sourceRatio);
-            return bodyBounds.center +
-                   Vector3.Scale(bodyBounds.extents, unityRatio);
+            RequireConfigured();
+            Matrix4x4 socketInModel =
+                bodyAnimation.GetSocketLocalMatrix(socketName);
+            Matrix4x4 socketWorld =
+                bodyAnimation.ModelRoot.localToWorldMatrix *
+                socketInModel;
+            return presentationRoot.worldToLocalMatrix *
+                   socketWorld;
         }
 
-        public static Bounds ResolveBodyBounds(
-            Transform presentation,
-            MeshFilter body)
-        {
-            if (presentation == null)
-                throw new ArgumentNullException(nameof(presentation));
-            if (body == null || body.sharedMesh == null)
-            {
-                throw new InvalidOperationException(
-                    "AvatarPresentation requires a baked Body MeshFilter.");
-            }
-
-            Matrix4x4 bodyToPresentation =
-                presentation.worldToLocalMatrix *
-                body.transform.localToWorldMatrix;
-            return TransformBounds(
-                body.sharedMesh.bounds,
-                bodyToPresentation);
-        }
-
-        public static void ValidateRatio(Vector3 value)
-        {
-            if (Invalid(value.x) ||
-                Invalid(value.y) ||
-                Invalid(value.z))
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(value),
-                    "Body-ratio components must be finite values in [-1,+1].");
-            }
-        }
 
         private void RequireConfigured()
         {
@@ -165,43 +170,12 @@ namespace VoxelStore.Preview.Runtime
                 throw new InvalidOperationException(
                     "AvatarPresentation is missing its Body mesh.");
             }
+            if (bodyAnimation == null)
+            {
+                throw new InvalidOperationException(
+                    "AvatarPresentation is missing authored Body animation.");
+            }
         }
 
-        private static Bounds TransformBounds(
-            Bounds bounds,
-            Matrix4x4 matrix)
-        {
-            Vector3 center = matrix.MultiplyPoint3x4(bounds.center);
-            Vector3 extents = bounds.extents;
-
-            Vector3 axisX =
-                matrix.MultiplyVector(
-                    new Vector3(extents.x, 0f, 0f));
-            Vector3 axisY =
-                matrix.MultiplyVector(
-                    new Vector3(0f, extents.y, 0f));
-            Vector3 axisZ =
-                matrix.MultiplyVector(
-                    new Vector3(0f, 0f, extents.z));
-            Vector3 transformedExtents = new Vector3(
-                Mathf.Abs(axisX.x) +
-                Mathf.Abs(axisY.x) +
-                Mathf.Abs(axisZ.x),
-                Mathf.Abs(axisX.y) +
-                Mathf.Abs(axisY.y) +
-                Mathf.Abs(axisZ.y),
-                Mathf.Abs(axisX.z) +
-                Mathf.Abs(axisY.z) +
-                Mathf.Abs(axisZ.z));
-
-            return new Bounds(
-                center,
-                transformedExtents * 2f);
-        }
-
-        private static bool Invalid(float value) =>
-            float.IsNaN(value) ||
-            float.IsInfinity(value) ||
-            Mathf.Abs(value) > 1f;
     }
 }

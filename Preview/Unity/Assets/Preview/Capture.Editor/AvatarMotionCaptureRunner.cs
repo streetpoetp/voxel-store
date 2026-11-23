@@ -26,16 +26,17 @@ namespace VoxelStore.Preview.Capture.Editor
 
         private static readonly CapturePoint[] Points =
         {
-            new CapturePoint(AvatarMotion.WalkForward, "walk-launch", 0.20f),
-            new CapturePoint(AvatarMotion.WalkForward, "walk-apex", 0.45f),
-            new CapturePoint(AvatarMotion.WalkForward, "walk-land", 0.70f),
-            new CapturePoint(AvatarMotion.Attack, "attack-anticipation", 0.22f),
-            new CapturePoint(AvatarMotion.Attack, "attack-contact", 0.50f),
-            new CapturePoint(AvatarMotion.Attack, "attack-follow-through", 0.70f),
-            new CapturePoint(AvatarMotion.Hit, "hit-recoil", 0.28f),
-            new CapturePoint(AvatarMotion.Hit, "hit-recover", 0.78f),
-            new CapturePoint(AvatarMotion.Death, "death-fall", 0.55f),
-            new CapturePoint(AvatarMotion.Death, "death-fallen", 0.88f)
+            new CapturePoint(AvatarMotion.WalkForward, "walk-launch", 0.20f, EquipmentSlotSide.Right),
+            new CapturePoint(AvatarMotion.WalkForward, "walk-apex", 0.45f, EquipmentSlotSide.Right),
+            new CapturePoint(AvatarMotion.WalkForward, "walk-land", 0.70f, EquipmentSlotSide.Right),
+            new CapturePoint(AvatarMotion.Attack, "attack-left-anticipation", 0.22f, EquipmentSlotSide.Left),
+            new CapturePoint(AvatarMotion.Attack, "attack-left-contact", 0.50f, EquipmentSlotSide.Left),
+            new CapturePoint(AvatarMotion.Attack, "attack-right-contact", 0.50f, EquipmentSlotSide.Right),
+            new CapturePoint(AvatarMotion.Attack, "attack-right-follow-through", 0.70f, EquipmentSlotSide.Right),
+            new CapturePoint(AvatarMotion.Hit, "hit-recoil", 0.28f, EquipmentSlotSide.Right),
+            new CapturePoint(AvatarMotion.Hit, "hit-recover", 0.78f, EquipmentSlotSide.Right),
+            new CapturePoint(AvatarMotion.Death, "death-fall", 0.55f, EquipmentSlotSide.Right),
+            new CapturePoint(AvatarMotion.Death, "death-fallen", 0.88f, EquipmentSlotSide.Right)
         };
 
         static AvatarMotionCaptureRunner()
@@ -69,6 +70,9 @@ namespace VoxelStore.Preview.Capture.Editor
                     Directory.Delete(outputRoot, recursive: true);
                 Directory.CreateDirectory(outputRoot);
 
+                VoxelStorePreviewCommand
+                    .BakeAllForBatch();
+
                 VoxelStoreRuntimeGalleryBuilder
                     .RefreshRuntimeGallerySceneForBatch();
 
@@ -101,6 +105,7 @@ namespace VoxelStore.Preview.Capture.Editor
 
                     SessionState.SetBool(StartedKey, true);
                     ConfigureCaptureView();
+                    ValidateCaptureRenderers();
                     _ = CaptureAllAsync(players);
                 }
 
@@ -139,7 +144,8 @@ namespace VoxelStore.Preview.Capture.Editor
                     {
                         player.SampleMotion(
                             point.Motion,
-                            point.NormalizedTime);
+                            point.NormalizedTime,
+                            point.Side);
                     }
 
                     await GameViewCapture.CaptureAsync(
@@ -215,6 +221,97 @@ namespace VoxelStore.Preview.Capture.Editor
                     bounds.extents.magnitude * 0.72f);
         }
 
+        private static void ValidateCaptureRenderers()
+        {
+            Renderer[] renderers =
+                UnityEngine.Object.FindObjectsByType<Renderer>(
+                    FindObjectsInactive.Include,
+                    FindObjectsSortMode.None);
+            const string expectedShader =
+                "Hidden/Hero/VoxelAssetPreview";
+
+            foreach (Renderer renderer in renderers)
+            {
+                string path =
+                    HierarchyPath(renderer.transform);
+                if (!path.StartsWith(
+                        VoxelStoreRuntimeGalleryBuilder.RootName + "/",
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        "Unexpected renderer outside runtime gallery: " +
+                        path);
+                }
+
+                if (renderer is not MeshRenderer)
+                {
+                    throw new InvalidOperationException(
+                        "Unexpected renderer type in runtime gallery: " +
+                        renderer.GetType().Name +
+                        " at " +
+                        HierarchyPath(renderer.transform));
+                }
+
+                MeshFilter filter =
+                    renderer.GetComponent<MeshFilter>();
+                if (filter == null ||
+                    filter.sharedMesh == null)
+                {
+                    throw new InvalidOperationException(
+                        "Runtime gallery renderer is missing its MeshFilter/mesh: " +
+                        HierarchyPath(renderer.transform));
+                }
+
+                Material[] materials =
+                    renderer.sharedMaterials;
+                if (materials.Length !=
+                    filter.sharedMesh.subMeshCount)
+                {
+                    throw new InvalidOperationException(
+                        "Runtime gallery material/submesh mismatch at " +
+                        HierarchyPath(renderer.transform) +
+                        ": materials=" +
+                        materials.Length +
+                        ", submeshes=" +
+                        filter.sharedMesh.subMeshCount);
+                }
+
+                foreach (Material material in materials)
+                {
+                    if (material == null ||
+                        material.shader == null ||
+                        !material.shader.isSupported ||
+                        !string.Equals(
+                            material.shader.name,
+                            expectedShader,
+                            StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            "Runtime gallery renderer has invalid live material/shader at " +
+                            HierarchyPath(renderer.transform));
+                    }
+                }
+            }
+
+            Debug.Log(
+                "Voxel Store capture renderer integrity passed: " +
+                renderers.Length +
+                " live MeshRenderers.");
+        }
+
+        private static string HierarchyPath(
+            Transform transform)
+        {
+            string path = transform.name;
+            Transform current = transform.parent;
+            while (current != null)
+            {
+                path = current.name + "/" + path;
+                current = current.parent;
+            }
+            return path;
+        }
+
         private static AvatarMotionPlayer[] FindPlayers() =>
             UnityEngine.Object
                 .FindObjectsByType<AvatarMotionPlayer>(
@@ -238,16 +335,19 @@ namespace VoxelStore.Preview.Capture.Editor
             public CapturePoint(
                 AvatarMotion motion,
                 string checkpoint,
-                float normalizedTime)
+                float normalizedTime,
+                EquipmentSlotSide side)
             {
                 Motion = motion;
                 Checkpoint = checkpoint;
                 NormalizedTime = normalizedTime;
+                Side = side;
             }
 
             public AvatarMotion Motion { get; }
             public string Checkpoint { get; }
             public float NormalizedTime { get; }
+            public EquipmentSlotSide Side { get; }
         }
     }
 }

@@ -95,17 +95,6 @@ The preview workspace SHALL exist for Unity Editor inspection and SHALL NOT intr
 - **WHEN** the all-units grid is built in the canonical preview scene
 - **THEN** its generated scene objects remain preview-only and are not treated as production runtime content
 
-### Requirement: Preview composes equipment from canonical Body bounds ratios
-The Unity preview SHALL be able to build a derived composition containing a published rigid `Body` avatar and one or more published equipment assets whose local positions are resolved from canonical Body local bounds and normalized offset ratios.
-
-#### Scenario: Single equipment composition is requested
-- **WHEN** preview proof selects one published rigid-body avatar, one published equipment asset, and a valid normalized offset ratio
-- **THEN** the preview derives the equipment local position from canonical Body bounds without requiring an avatar socket or mount transform
-
-#### Scenario: Multiple equipment composition is requested
-- **WHEN** preview proof selects multiple published equipment assets with distinct ratio placements
-- **THEN** all equipment instances are composed independently under the same derived presentation root
-
 ### Requirement: Preview proves canonical equipment frame behavior
 The Unity preview SHALL preserve the shared canonical Unity model frame (`+X` Right, `+Y` Up, `-Z` Forward) when applying Body-ratio placement. Equipment placement rotation SHALL remain identity; preview composition SHALL expose incorrectly authored model orientation rather than storing corrective transforms.
 
@@ -127,17 +116,6 @@ The preview proof workflow SHALL support deterministic temporal sampling of a un
 #### Scenario: Key poses hide a trajectory defect
 - **WHEN** sparse key-pose samples appear acceptable but intermediate temporal samples reveal a discontinuity or reversal
 - **THEN** the dense capture evidence remains available to classify the presentation as visually failing
-
-### Requirement: Presentation proof remains derived and non-authoritative
-Body-ratio composition settings used only to exercise preview scenarios, DOTween sequences used only to demonstrate presentation motion, and generated captures SHALL remain disposable Editor evidence and SHALL NOT become voxel-store gameplay or simulation authority.
-
-#### Scenario: Preview uses a DOTween demonstration sequence
-- **WHEN** the Editor preview drives the derived presentation root through a demonstration motion
-- **THEN** the sequence affects only preview presentation evidence and does not define attack results, damage timing, simulation position, or published asset identity
-
-#### Scenario: Capture outputs are removed
-- **WHEN** generated Body/equipment captures and reports are deleted
-- **THEN** they can be recreated from current published assets and preview scenario inputs without changing store source authority
 
 ### Requirement: Runtime gallery discovers human-imported baked catalogs
 The runtime gallery SHALL discover human-imported `VoxelAssemblyAsset` models under the preview baked root from folder identity `.../<Catalog>/<Model>/Source/<Model>.asset` and SHALL NOT require provider plan/Kind registration to display them. Imported catalog trees are human-owned inputs and SHALL be preserved by stale generated-output cleanup.
@@ -176,47 +154,6 @@ The Play Mode preview SHALL represent each composed avatar through an `AvatarPre
 #### Scenario: Canonical orientation is queried
 - **WHEN** preview motion needs a directional basis for a current canonical avatar
 - **THEN** `AvatarPresentation` resolves visual Forward from the canonical baked orientation rather than requiring each motion to hard-code an unexplained XYZ direction
-
-### Requirement: Equipment presentation separates placement from animation
-Each carried equipment instance SHALL be represented by an `EquipmentPresentation` whose stable `PlacementRoot` is positioned from the existing normalized Body-bounds ratio contract and whose child `MotionRoot` is reserved for temporary presentation animation.
-
-#### Scenario: Equipment is attached to an avatar
-- **WHEN** `AvatarPresentation` attaches published equipment at a valid Body ratio
-- **THEN** the equipment `PlacementRoot` resolves the canonical Body-ratio position and remains stable while its `MotionRoot` starts at local identity
-
-#### Scenario: Equipment already shares avatar canonical orientation
-- **WHEN** published equipment is attached to a conforming avatar
-- **THEN** its `PlacementRoot` keeps identity rotation because both assets already use canonical Unity Right `+X`, Up `+Y`, Forward `-Z`
-
-#### Scenario: Weapon motion is played
-- **WHEN** a semantic avatar motion includes equipment animation
-- **THEN** the motion modifies the equipment `MotionRoot` without changing the authoritative Body-ratio placement stored by the `PlacementRoot`
-
-#### Scenario: Motion ends or is cancelled
-- **WHEN** equipment motion completes, stops, switches, or the preview object is disabled
-- **THEN** every equipment `MotionRoot` returns to its neutral local transform while the `PlacementRoot` remains unchanged
-
-### Requirement: One motion player owns body and equipment presentation animation
-A composed avatar SHALL use one `AvatarMotionPlayer` as the semantic DOTween presentation owner for both avatar-body motion and all attached equipment motion. It SHALL NOT own combat results, damage timing, AI decisions, or production simulation state.
-
-#### Scenario: Semantic motion starts
-- **WHEN** `AvatarMotionPlayer.Play` receives a supported `AvatarMotion`
-- **THEN** it builds the corresponding body and equipment presentation tracks from the avatar's semantic orientation and current attached equipment presentations
-
-#### Scenario: Another motion is selected
-- **WHEN** a different semantic motion is requested while one is active
-- **THEN** the current sequence is killed, body and equipment presentation transforms reset to neutral, and the new motion starts without accumulated transform drift
-
-### Requirement: Preview motion grammar is semantic and deterministic
-The runtime preview SHALL expose the semantic motion set `Idle`, `WalkForward`, `Attack`, `Hit`, and `Death` and SHALL NOT select motions or timing randomly for normal comparative evaluation.
-
-#### Scenario: Runtime gallery enters Play Mode
-- **WHEN** no developer changes the current preview selection
-- **THEN** all avatar motion players use the explicitly configured `Motion` rather than independently choosing random motion types or delays
-
-#### Scenario: Same motion is applied to all avatars
-- **WHEN** the preview target scope is all avatars
-- **THEN** every avatar executes the same semantic motion so differences in model proportions and equipment behavior can be compared directly
 
 ### Requirement: WalkForward follows a Crossy Road-style hop grammar
 `WalkForward` SHALL present locomotion as a discrete launch, airborne apex, landing, and recovery cycle rather than a continuous walk cycle or an in-place arbitrary bounce.
@@ -319,3 +256,69 @@ Runtime MonoBehaviours used by the generated gallery MAY execute during Unity Ed
 #### Scenario: Preview runtime files are consumed by a production build
 - **WHEN** a production consumer or build graph is evaluated
 - **THEN** voxel-store preview presentation/motion components are not required as production gameplay architecture
+
+### Requirement: Preview composes equipment from baked socket frames
+The Unity preview SHALL resolve carried equipment from the selected avatar equipment socket and the equipment's baked Mount socket.
+
+#### Scenario: Equipment is attached in the runtime gallery
+- **WHEN** the gallery composes an avatar and equipment pair
+- **THEN** it resolves a compatible `Equip.<Capability>.<Side>.<Instance>` socket and aligns the equipment's `Mount` frame without a Body-ratio placement offset
+
+#### Scenario: Attachment cannot be solved
+- **WHEN** required socket/Mount data is missing, singular, or requires pair-specific correction
+- **THEN** preview composition fails visibly instead of falling back to the prior Body-ratio path
+
+### Requirement: Preview loads authored animation for every composed model
+The runtime gallery SHALL load the Hero.Voxel baked animation asset associated with each discovered avatar and equipment assembly.
+
+#### Scenario: Avatar and weapon are composed
+- **WHEN** both models have required baked semantic clips
+- **THEN** the preview binds their baked animation assets to the composed presentations
+
+#### Scenario: Required animation asset is unavailable
+- **WHEN** a model assembly exists but its current semantic animation asset cannot be resolved
+- **THEN** synchronized motion proof fails instead of synthesizing canonical motion procedurally
+
+### Requirement: Preview motion context preserves selected slot side
+The runtime preview SHALL keep the selected physical driver binding, including Left/Right/Center side, as part of semantic motion state so body animation can react differently to the active attachment side.
+
+#### Scenario: Left-hand Attack is selected
+- **WHEN** the preview drives `Attack` from equipment bound to a Left Hand slot
+- **THEN** it resolves the body's left-side Attack variant and shows the corresponding left-handed body response
+
+#### Scenario: Right-hand Attack is selected
+- **WHEN** the same equipment asset is instead bound to a Right Hand slot and drives `Attack`
+- **THEN** it resolves the body's right-side Attack variant without requiring a different equipment asset identity
+
+### Requirement: One semantic phase drives body and equipment authored clips
+The runtime preview SHALL use one body-owned normalized semantic phase to sample both the body clip and every attached equipment clip.
+
+#### Scenario: Attack plays in real time
+- **WHEN** `Attack` playback advances
+- **THEN** body wall-clock cadence advances one normalized phase and every equipment `Attack` clip is sampled at that exact phase
+
+#### Scenario: Motion is sampled for capture
+- **WHEN** command-driven capture requests a deterministic normalized phase
+- **THEN** body/equipment authored clips, selected driver side variant, and attachment sockets are evaluated at that same phase before Game View capture
+
+### Requirement: Preview re-solves attachment after pose evaluation
+For every semantic phase, preview SHALL evaluate body pose, evaluate equipment pose, and then solve the equipment root so its Mount remains locked to the animated body socket.
+
+#### Scenario: Weapon swings around the grip
+- **WHEN** the equipment `Attack` clip rotates the part containing its Mount
+- **THEN** the visible weapon swings around the attachment while Mount remains coincident with the body socket
+
+#### Scenario: Body motion moves the attachment
+- **WHEN** the body clip moves its socket frame
+- **THEN** attached equipment follows the evaluated socket without accumulating drift
+
+### Requirement: Graphical capture proves authored synchronized animation
+The canonical `avatar-motion-gallery` capture scenario SHALL prove current model-owned socket attachment and authored body/equipment semantic animation through provider-attested Game View pixels.
+
+#### Scenario: Capture runs
+- **WHEN** `tools/capture-game-view.ps1 -Scenario avatar-motion-gallery` completes
+- **THEN** attested checkpoints show body and equipment sampled at declared semantic phases, visibly locked to the correct side-aware socket, with separate left/right body reactions proven for a side-reactive hand motion
+
+#### Scenario: Legacy procedural motion still appears authoritative
+- **WHEN** visual proof depends on the old Body-ratio/DOTween motion path instead of baked sockets and authored clips
+- **THEN** the change is not complete

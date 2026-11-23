@@ -50,17 +50,13 @@ namespace VoxelStore.Preview.Editor
     {
         internal const string ScenePath =
             "Assets/Preview/VoxelStoreRuntimeGallery.generated.unity";
-        internal const string RootName =
+        public const string RootName =
             "[Voxel Store Runtime Gallery]";
         internal const string RuntimeGeneratedRoot =
             "Assets/__VoxelStorePreview/Baked/RuntimeGallery";
         internal const string RuntimeMaterialPath =
             RuntimeGeneratedRoot + "/VoxelAssetPreview.mat";
 
-        private static readonly Vector3 PrimaryRatio =
-            new Vector3(0.75f, 0f, 0.20f);
-        private static readonly Vector3 SecondaryRatio =
-            new Vector3(-0.75f, 0f, 0.20f);
 
         [MenuItem("Voxel Store/Refresh Runtime Gallery Scene")]
         public static void RefreshRuntimeGalleryScene()
@@ -138,9 +134,15 @@ namespace VoxelStore.Preview.Editor
                 var presentation = new GameObject("PresentationRoot");
                 presentation.transform.SetParent(unitRoot.transform, false);
 
-                AssemblyVisual body = CreateAssemblyVisual(
+                VoxelAssemblyAsset avatarAssembly =
                     RuntimeGalleryCatalogDiscovery.LoadAssembly(
-                        avatarModel),
+                        avatarModel);
+                VoxelAnimationAsset avatarAnimation =
+                    RuntimeGalleryCatalogDiscovery.LoadAnimation(
+                        avatarModel);
+                AssemblyVisual body = CreateAssemblyVisual(
+                    avatarAssembly,
+                    avatarAnimation,
                     presentation.transform,
                     voxelMaterial,
                     "Body");
@@ -174,10 +176,13 @@ namespace VoxelStore.Preview.Editor
                         CreateCarriedEquipment(
                             RuntimeGalleryCatalogDiscovery.LoadAssembly(
                                 primary),
+                            RuntimeGalleryCatalogDiscovery.LoadAnimation(
+                                primary),
                             presentation.transform,
                             voxelMaterial,
                             primary.Name,
-                            PrimaryRatio));
+                            "Equip.Hand.Right.0",
+                            EquipmentSlotSide.Right));
                     carriedEquipmentCount++;
 
                     if (equipmentModels.Length > 1)
@@ -188,10 +193,13 @@ namespace VoxelStore.Preview.Editor
                             CreateCarriedEquipment(
                                 RuntimeGalleryCatalogDiscovery.LoadAssembly(
                                     secondary),
+                                RuntimeGalleryCatalogDiscovery.LoadAnimation(
+                                    secondary),
                                 presentation.transform,
                                 voxelMaterial,
                                 secondary.Name,
-                                SecondaryRatio));
+                                "Equip.Hand.Left.0",
+                                EquipmentSlotSide.Left));
                         carriedEquipmentCount++;
                     }
                 }
@@ -202,6 +210,7 @@ namespace VoxelStore.Preview.Editor
                     unitRoot.transform,
                     presentation.transform,
                     body.BodyMeshFilter,
+                    body.Animated,
                     equipmentPresentations);
 
                 AvatarMotionPlayer motionPlayer =
@@ -233,6 +242,8 @@ namespace VoxelStore.Preview.Editor
                 presentation.transform.SetParent(unitRoot.transform, false);
                 CreateAssemblyVisual(
                     RuntimeGalleryCatalogDiscovery.LoadAssembly(
+                        model),
+                    RuntimeGalleryCatalogDiscovery.LoadAnimation(
                         model),
                     presentation.transform,
                     voxelMaterial,
@@ -330,12 +341,21 @@ namespace VoxelStore.Preview.Editor
 
         private static AssemblyVisual CreateAssemblyVisual(
             VoxelAssemblyAsset assembly,
+            VoxelAnimationAsset animation,
             Transform parent,
             Material material,
             string objectName)
         {
             if (assembly == null)
                 throw new ArgumentNullException(nameof(assembly));
+            if (animation == null)
+                throw new ArgumentNullException(nameof(animation));
+            if (animation.Assembly != assembly)
+            {
+                throw new InvalidOperationException(
+                    "Runtime gallery animation targets a different assembly: " +
+                    AssemblyLabel(assembly));
+            }
             if (assembly.PartCount == 0)
             {
                 throw new InvalidOperationException(
@@ -373,6 +393,13 @@ namespace VoxelStore.Preview.Editor
                 MeshRenderer renderer =
                     partObject.AddComponent<MeshRenderer>();
                 renderer.sharedMaterial = material;
+                renderer.shadowCastingMode =
+                    UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                renderer.lightProbeUsage =
+                    UnityEngine.Rendering.LightProbeUsage.Off;
+                renderer.reflectionProbeUsage =
+                    UnityEngine.Rendering.ReflectionProbeUsage.Off;
 
                 if (string.Equals(
                         part.Name,
@@ -408,20 +435,31 @@ namespace VoxelStore.Preview.Editor
                 partTransform.localScale = part.BindLocalScale;
             }
 
+            VoxelAnimatedAssembly animated =
+                modelRoot.AddComponent<VoxelAnimatedAssembly>();
+            animated.Configure(
+                modelRoot.transform,
+                assembly,
+                animation,
+                partObjects.Select(x => x.transform).ToArray());
+
             return new AssemblyVisual
             {
                 Root = modelRoot,
                 MeshFilter = filters[0],
-                BodyMeshFilter = bodyFilter
+                BodyMeshFilter = bodyFilter,
+                Animated = animated
             };
         }
 
         private static EquipmentPresentation CreateCarriedEquipment(
             VoxelAssemblyAsset assembly,
+            VoxelAnimationAsset animation,
             Transform presentationRoot,
             Material material,
             string equipmentId,
-            Vector3 sourceRatio)
+            string socketName,
+            EquipmentSlotSide side)
         {
             var placementObject = new GameObject(
                 "Equipment | " + ShortName(equipmentId));
@@ -429,15 +467,10 @@ namespace VoxelStore.Preview.Editor
                 presentationRoot,
                 false);
 
-            var motionObject = new GameObject(
-                "MotionRoot");
-            motionObject.transform.SetParent(
-                placementObject.transform,
-                false);
-
-            CreateAssemblyVisual(
+            AssemblyVisual visual = CreateAssemblyVisual(
                 assembly,
-                motionObject.transform,
+                animation,
+                placementObject.transform,
                 material,
                 "Model");
 
@@ -445,8 +478,9 @@ namespace VoxelStore.Preview.Editor
                 placementObject.AddComponent<EquipmentPresentation>();
             presentation.Configure(
                 placementObject.transform,
-                motionObject.transform,
-                sourceRatio);
+                visual.Animated,
+                socketName,
+                side);
             return presentation;
         }
 
@@ -638,6 +672,7 @@ namespace VoxelStore.Preview.Editor
             public GameObject Root;
             public MeshFilter MeshFilter;
             public MeshFilter BodyMeshFilter;
+            public VoxelAnimatedAssembly Animated;
         }
     }
 }

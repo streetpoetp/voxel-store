@@ -1,57 +1,521 @@
-﻿name: Wraith01
+name: Wraith01
 voxelsPerUnit: 8
 assemblyOrigin:
   part: Body
 parts:
   - part: Body
+    pivot: [2, 0, 0]
     voxels:
-      - box: { min: [1, 1, 8], size: [7, 4, 3], color: spectralShadow }
-      - box: { min: [2, 1, 5], size: [5, 4, 4], color: spectral }
-      - box: { min: [2, 1, 3], size: [5, 4, 3], color: spectral }
-      - box: { min: [3, 1, 1], size: [3, 4, 3], color: spectralShadow }
-      - box: { min: [4, 1, 0], size: [1, 3, 2], color: accent }
-  - part: Head
-    parent: Body
-    transform:
-      translate: [2, 0, 10]
-    voxels:
-      - box: { min: [0, 0, 0], size: [5, 5, 5], color: spectral }
-      - box: { min: [1, 0, 1], size: [3, 1, 3], color: void }
-      - voxel: { at: [1, 0, 3], color: glow }
-      - voxel: { at: [3, 0, 3], color: glow }
-  - part: Arm.L
-    parent: Body
-    transform:
-      translate: [-2, 1, 4]
-    voxels:
-      - box: { min: [0, 0, 2], size: [2, 2, 6], color: spectralShadow }
-      - box: { min: [0, 0, 0], size: [2, 2, 3], color: spectralLight }
-  - part: Arm.R
-    parent: Body
-    transform:
-      translate: [9, 1, 4]
-    voxels:
-      - box: { min: [0, 0, 2], size: [2, 2, 6], color: spectral }
-      - box: { min: [0, 0, 0], size: [2, 2, 3], color: spectralLight }
+      - voxel: { at: [6, 1, 0], color: accent }
+      - voxel: { at: [6, 2, 0], color: accent }
+      - voxel: { at: [6, 3, 0], color: accent }
+      - voxel: { at: [5, 1, 1], color: spectralShadow }
+      - voxel: { at: [6, 1, 1], color: accent }
+      - voxel: { at: [7, 1, 1], color: spectralShadow }
+      - voxel: { at: [5, 2, 1], color: spectralShadow }
+      - voxel: { at: [6, 2, 1], color: accent }
+      - voxel: { at: [7, 2, 1], color: spectralShadow }
+      - voxel: { at: [5, 3, 1], color: spectralShadow }
+      - voxel: { at: [6, 3, 1], color: accent }
+      - voxel: { at: [7, 3, 1], color: spectralShadow }
+      - voxel: { at: [5, 4, 1], color: spectralShadow }
+      - voxel: { at: [6, 4, 1], color: spectralShadow }
+      - voxel: { at: [7, 4, 1], color: spectralShadow }
+      - voxel: { at: [5, 1, 2], color: spectralShadow }
+      - voxel: { at: [6, 1, 2], color: spectralShadow }
+      - voxel: { at: [7, 1, 2], color: spectralShadow }
+      - voxel: { at: [5, 2, 2], color: spectralShadow }
+      - voxel: { at: [6, 2, 2], color: spectralShadow }
+      - voxel: { at: [7, 2, 2], color: spectralShadow }
+      - voxel: { at: [5, 3, 2], color: spectralShadow }
+      - voxel: { at: [6, 3, 2], color: spectralShadow }
+      - voxel: { at: [7, 3, 2], color: spectralShadow }
+      - voxel: { at: [5, 4, 2], color: spectralShadow }
+      - voxel: { at: [6, 4, 2], color: spectralShadow }
+      - voxel: { at: [7, 4, 2], color: spectralShadow }
+      - voxel: { at: [4, 1, 3], color: spectral }
+      - voxel: { at: [5, 1, 3], color: spectralShadow }
+      - voxel: { at: [6, 1, 3], color: spectralShadow }
+      - voxel: { at: [7, 1, 3], color: spectralShadow }
+      - voxel: { at: [8, 1, 3], color: spectral }
+      - voxel: { at: [4, 2, 3], color: spectral }
+      - voxel: { at: [5, 2, 3], color: spectralShadow }
+      - voxel: { at: [6, 2, 3], color: spectralShadow }
+      - voxel: { at: [7, 2, 3], color: spectralShadow }
+      - voxel: { at: [8, 2, 3], color: spectral }
+      - voxel: { at: [4, 3, 3], color: spectral }
+      - voxel: { at: [5, 3, 3], color: spectralShadow }
+      - voxel: { at: [6, 3, 3], color: spectralShadow }
+      - voxel: { at: [7, 3, 3], color: spectralShadow }
+      - voxel: { at: [8, 3, 3], color: spectral }
+      - voxel: { at: [4, 4, 3], color: spectral }
+      - voxel: { at: [5, 4, 3], color: spectralShadow }
+      - voxel: { at: [6, 4, 3], color: spectralShadow }
+      - voxel: { at: [7, 4, 3], color: spectralShadow }
+      - voxel: { at: [8, 4, 3], color: spectral }
+      - voxel: { at: [0, 1, 4], color: spectralLight }
+      - voxel: { at: [1, 1, 4], color: spectralLight }
+      - voxel: { at: [4, 1, 4], color: spectral }
+      - voxel: { at: [5, 1, 4], color: spectral }
+      - voxel: { at: [6, 1, 4], color: spectral }
+      - voxel: { at: [7, 1, 4], color: spectral }
+      - voxel: { at: [8, 1, 4], color: spectral }
+      - voxel: { at: [11, 1, 4], color: spectralLight }
+      - voxel: { at: [12, 1, 4], color: spectralLight }
+      - voxel: { at: [0, 2, 4], color: spectralLight }
+      - voxel: { at: [1, 2, 4], color: spectralLight }
+      - voxel: { at: [4, 2, 4], color: spectral }
+      - voxel: { at: [5, 2, 4], color: spectral }
+      - voxel: { at: [6, 2, 4], color: spectral }
+      - voxel: { at: [7, 2, 4], color: spectral }
+      - voxel: { at: [8, 2, 4], color: spectral }
+      - voxel: { at: [11, 2, 4], color: spectralLight }
+      - voxel: { at: [12, 2, 4], color: spectralLight }
+      - voxel: { at: [4, 3, 4], color: spectral }
+      - voxel: { at: [5, 3, 4], color: spectral }
+      - voxel: { at: [6, 3, 4], color: spectral }
+      - voxel: { at: [7, 3, 4], color: spectral }
+      - voxel: { at: [8, 3, 4], color: spectral }
+      - voxel: { at: [4, 4, 4], color: spectral }
+      - voxel: { at: [5, 4, 4], color: spectral }
+      - voxel: { at: [6, 4, 4], color: spectral }
+      - voxel: { at: [7, 4, 4], color: spectral }
+      - voxel: { at: [8, 4, 4], color: spectral }
+      - voxel: { at: [0, 1, 5], color: spectralLight }
+      - voxel: { at: [1, 1, 5], color: spectralLight }
+      - voxel: { at: [4, 1, 5], color: spectral }
+      - voxel: { at: [5, 1, 5], color: spectral }
+      - voxel: { at: [6, 1, 5], color: spectral }
+      - voxel: { at: [7, 1, 5], color: spectral }
+      - voxel: { at: [8, 1, 5], color: spectral }
+      - voxel: { at: [11, 1, 5], color: spectralLight }
+      - voxel: { at: [12, 1, 5], color: spectralLight }
+      - voxel: { at: [0, 2, 5], color: spectralLight }
+      - voxel: { at: [1, 2, 5], color: spectralLight }
+      - voxel: { at: [4, 2, 5], color: spectral }
+      - voxel: { at: [5, 2, 5], color: spectral }
+      - voxel: { at: [6, 2, 5], color: spectral }
+      - voxel: { at: [7, 2, 5], color: spectral }
+      - voxel: { at: [8, 2, 5], color: spectral }
+      - voxel: { at: [11, 2, 5], color: spectralLight }
+      - voxel: { at: [12, 2, 5], color: spectralLight }
+      - voxel: { at: [4, 3, 5], color: spectral }
+      - voxel: { at: [5, 3, 5], color: spectral }
+      - voxel: { at: [6, 3, 5], color: spectral }
+      - voxel: { at: [7, 3, 5], color: spectral }
+      - voxel: { at: [8, 3, 5], color: spectral }
+      - voxel: { at: [4, 4, 5], color: spectral }
+      - voxel: { at: [5, 4, 5], color: spectral }
+      - voxel: { at: [6, 4, 5], color: spectral }
+      - voxel: { at: [7, 4, 5], color: spectral }
+      - voxel: { at: [8, 4, 5], color: spectral }
+      - voxel: { at: [0, 1, 6], color: spectralLight }
+      - voxel: { at: [1, 1, 6], color: spectralLight }
+      - voxel: { at: [4, 1, 6], color: spectral }
+      - voxel: { at: [5, 1, 6], color: spectral }
+      - voxel: { at: [6, 1, 6], color: spectral }
+      - voxel: { at: [7, 1, 6], color: spectral }
+      - voxel: { at: [8, 1, 6], color: spectral }
+      - voxel: { at: [11, 1, 6], color: spectralLight }
+      - voxel: { at: [12, 1, 6], color: spectralLight }
+      - voxel: { at: [0, 2, 6], color: spectralLight }
+      - voxel: { at: [1, 2, 6], color: spectralLight }
+      - voxel: { at: [4, 2, 6], color: spectral }
+      - voxel: { at: [5, 2, 6], color: spectral }
+      - voxel: { at: [6, 2, 6], color: spectral }
+      - voxel: { at: [7, 2, 6], color: spectral }
+      - voxel: { at: [8, 2, 6], color: spectral }
+      - voxel: { at: [11, 2, 6], color: spectralLight }
+      - voxel: { at: [12, 2, 6], color: spectralLight }
+      - voxel: { at: [4, 3, 6], color: spectral }
+      - voxel: { at: [5, 3, 6], color: spectral }
+      - voxel: { at: [6, 3, 6], color: spectral }
+      - voxel: { at: [7, 3, 6], color: spectral }
+      - voxel: { at: [8, 3, 6], color: spectral }
+      - voxel: { at: [4, 4, 6], color: spectral }
+      - voxel: { at: [5, 4, 6], color: spectral }
+      - voxel: { at: [6, 4, 6], color: spectral }
+      - voxel: { at: [7, 4, 6], color: spectral }
+      - voxel: { at: [8, 4, 6], color: spectral }
+      - voxel: { at: [0, 1, 7], color: spectralShadow }
+      - voxel: { at: [1, 1, 7], color: spectralShadow }
+      - voxel: { at: [4, 1, 7], color: spectral }
+      - voxel: { at: [5, 1, 7], color: spectral }
+      - voxel: { at: [6, 1, 7], color: spectral }
+      - voxel: { at: [7, 1, 7], color: spectral }
+      - voxel: { at: [8, 1, 7], color: spectral }
+      - voxel: { at: [11, 1, 7], color: spectral }
+      - voxel: { at: [12, 1, 7], color: spectral }
+      - voxel: { at: [0, 2, 7], color: spectralShadow }
+      - voxel: { at: [1, 2, 7], color: spectralShadow }
+      - voxel: { at: [4, 2, 7], color: spectral }
+      - voxel: { at: [5, 2, 7], color: spectral }
+      - voxel: { at: [6, 2, 7], color: spectral }
+      - voxel: { at: [7, 2, 7], color: spectral }
+      - voxel: { at: [8, 2, 7], color: spectral }
+      - voxel: { at: [11, 2, 7], color: spectral }
+      - voxel: { at: [12, 2, 7], color: spectral }
+      - voxel: { at: [4, 3, 7], color: spectral }
+      - voxel: { at: [5, 3, 7], color: spectral }
+      - voxel: { at: [6, 3, 7], color: spectral }
+      - voxel: { at: [7, 3, 7], color: spectral }
+      - voxel: { at: [8, 3, 7], color: spectral }
+      - voxel: { at: [4, 4, 7], color: spectral }
+      - voxel: { at: [5, 4, 7], color: spectral }
+      - voxel: { at: [6, 4, 7], color: spectral }
+      - voxel: { at: [7, 4, 7], color: spectral }
+      - voxel: { at: [8, 4, 7], color: spectral }
+      - voxel: { at: [0, 1, 8], color: spectralShadow }
+      - voxel: { at: [1, 1, 8], color: spectralShadow }
+      - voxel: { at: [3, 1, 8], color: spectralShadow }
+      - voxel: { at: [4, 1, 8], color: spectral }
+      - voxel: { at: [5, 1, 8], color: spectral }
+      - voxel: { at: [6, 1, 8], color: spectral }
+      - voxel: { at: [7, 1, 8], color: spectral }
+      - voxel: { at: [8, 1, 8], color: spectral }
+      - voxel: { at: [9, 1, 8], color: spectralShadow }
+      - voxel: { at: [11, 1, 8], color: spectral }
+      - voxel: { at: [12, 1, 8], color: spectral }
+      - voxel: { at: [0, 2, 8], color: spectralShadow }
+      - voxel: { at: [1, 2, 8], color: spectralShadow }
+      - voxel: { at: [3, 2, 8], color: spectralShadow }
+      - voxel: { at: [4, 2, 8], color: spectral }
+      - voxel: { at: [5, 2, 8], color: spectral }
+      - voxel: { at: [6, 2, 8], color: spectral }
+      - voxel: { at: [7, 2, 8], color: spectral }
+      - voxel: { at: [8, 2, 8], color: spectral }
+      - voxel: { at: [9, 2, 8], color: spectralShadow }
+      - voxel: { at: [11, 2, 8], color: spectral }
+      - voxel: { at: [12, 2, 8], color: spectral }
+      - voxel: { at: [3, 3, 8], color: spectralShadow }
+      - voxel: { at: [4, 3, 8], color: spectral }
+      - voxel: { at: [5, 3, 8], color: spectral }
+      - voxel: { at: [6, 3, 8], color: spectral }
+      - voxel: { at: [7, 3, 8], color: spectral }
+      - voxel: { at: [8, 3, 8], color: spectral }
+      - voxel: { at: [9, 3, 8], color: spectralShadow }
+      - voxel: { at: [3, 4, 8], color: spectralShadow }
+      - voxel: { at: [4, 4, 8], color: spectral }
+      - voxel: { at: [5, 4, 8], color: spectral }
+      - voxel: { at: [6, 4, 8], color: spectral }
+      - voxel: { at: [7, 4, 8], color: spectral }
+      - voxel: { at: [8, 4, 8], color: spectral }
+      - voxel: { at: [9, 4, 8], color: spectralShadow }
+      - voxel: { at: [0, 1, 9], color: spectralShadow }
+      - voxel: { at: [1, 1, 9], color: spectralShadow }
+      - voxel: { at: [3, 1, 9], color: spectralShadow }
+      - voxel: { at: [4, 1, 9], color: spectralShadow }
+      - voxel: { at: [5, 1, 9], color: spectralShadow }
+      - voxel: { at: [6, 1, 9], color: spectralShadow }
+      - voxel: { at: [7, 1, 9], color: spectralShadow }
+      - voxel: { at: [8, 1, 9], color: spectralShadow }
+      - voxel: { at: [9, 1, 9], color: spectralShadow }
+      - voxel: { at: [11, 1, 9], color: spectral }
+      - voxel: { at: [12, 1, 9], color: spectral }
+      - voxel: { at: [0, 2, 9], color: spectralShadow }
+      - voxel: { at: [1, 2, 9], color: spectralShadow }
+      - voxel: { at: [3, 2, 9], color: spectralShadow }
+      - voxel: { at: [4, 2, 9], color: spectralShadow }
+      - voxel: { at: [5, 2, 9], color: spectralShadow }
+      - voxel: { at: [6, 2, 9], color: spectralShadow }
+      - voxel: { at: [7, 2, 9], color: spectralShadow }
+      - voxel: { at: [8, 2, 9], color: spectralShadow }
+      - voxel: { at: [9, 2, 9], color: spectralShadow }
+      - voxel: { at: [11, 2, 9], color: spectral }
+      - voxel: { at: [12, 2, 9], color: spectral }
+      - voxel: { at: [3, 3, 9], color: spectralShadow }
+      - voxel: { at: [4, 3, 9], color: spectralShadow }
+      - voxel: { at: [5, 3, 9], color: spectralShadow }
+      - voxel: { at: [6, 3, 9], color: spectralShadow }
+      - voxel: { at: [7, 3, 9], color: spectralShadow }
+      - voxel: { at: [8, 3, 9], color: spectralShadow }
+      - voxel: { at: [9, 3, 9], color: spectralShadow }
+      - voxel: { at: [3, 4, 9], color: spectralShadow }
+      - voxel: { at: [4, 4, 9], color: spectralShadow }
+      - voxel: { at: [5, 4, 9], color: spectralShadow }
+      - voxel: { at: [6, 4, 9], color: spectralShadow }
+      - voxel: { at: [7, 4, 9], color: spectralShadow }
+      - voxel: { at: [8, 4, 9], color: spectralShadow }
+      - voxel: { at: [9, 4, 9], color: spectralShadow }
+      - voxel: { at: [4, 0, 10], color: spectral }
+      - voxel: { at: [5, 0, 10], color: spectral }
+      - voxel: { at: [6, 0, 10], color: spectral }
+      - voxel: { at: [7, 0, 10], color: spectral }
+      - voxel: { at: [8, 0, 10], color: spectral }
+      - voxel: { at: [0, 1, 10], color: spectralShadow }
+      - voxel: { at: [1, 1, 10], color: spectralShadow }
+      - voxel: { at: [3, 1, 10], color: spectralShadow }
+      - voxel: { at: [4, 1, 10], color: spectral }
+      - voxel: { at: [5, 1, 10], color: spectral }
+      - voxel: { at: [6, 1, 10], color: spectral }
+      - voxel: { at: [7, 1, 10], color: spectral }
+      - voxel: { at: [8, 1, 10], color: spectral }
+      - voxel: { at: [9, 1, 10], color: spectralShadow }
+      - voxel: { at: [11, 1, 10], color: spectral }
+      - voxel: { at: [12, 1, 10], color: spectral }
+      - voxel: { at: [0, 2, 10], color: spectralShadow }
+      - voxel: { at: [1, 2, 10], color: spectralShadow }
+      - voxel: { at: [3, 2, 10], color: spectralShadow }
+      - voxel: { at: [4, 2, 10], color: spectral }
+      - voxel: { at: [5, 2, 10], color: spectral }
+      - voxel: { at: [6, 2, 10], color: spectral }
+      - voxel: { at: [7, 2, 10], color: spectral }
+      - voxel: { at: [8, 2, 10], color: spectral }
+      - voxel: { at: [9, 2, 10], color: spectralShadow }
+      - voxel: { at: [11, 2, 10], color: spectral }
+      - voxel: { at: [12, 2, 10], color: spectral }
+      - voxel: { at: [3, 3, 10], color: spectralShadow }
+      - voxel: { at: [4, 3, 10], color: spectral }
+      - voxel: { at: [5, 3, 10], color: spectral }
+      - voxel: { at: [6, 3, 10], color: spectral }
+      - voxel: { at: [7, 3, 10], color: spectral }
+      - voxel: { at: [8, 3, 10], color: spectral }
+      - voxel: { at: [9, 3, 10], color: spectralShadow }
+      - voxel: { at: [3, 4, 10], color: spectralShadow }
+      - voxel: { at: [4, 4, 10], color: spectral }
+      - voxel: { at: [5, 4, 10], color: spectral }
+      - voxel: { at: [6, 4, 10], color: spectral }
+      - voxel: { at: [7, 4, 10], color: spectral }
+      - voxel: { at: [8, 4, 10], color: spectral }
+      - voxel: { at: [9, 4, 10], color: spectralShadow }
+      - voxel: { at: [4, 0, 11], color: spectral }
+      - voxel: { at: [5, 0, 11], color: void }
+      - voxel: { at: [6, 0, 11], color: void }
+      - voxel: { at: [7, 0, 11], color: void }
+      - voxel: { at: [8, 0, 11], color: spectral }
+      - voxel: { at: [0, 1, 11], color: spectralShadow }
+      - voxel: { at: [1, 1, 11], color: spectralShadow }
+      - voxel: { at: [4, 1, 11], color: spectral }
+      - voxel: { at: [5, 1, 11], color: spectral }
+      - voxel: { at: [6, 1, 11], color: spectral }
+      - voxel: { at: [7, 1, 11], color: spectral }
+      - voxel: { at: [8, 1, 11], color: spectral }
+      - voxel: { at: [11, 1, 11], color: spectral }
+      - voxel: { at: [12, 1, 11], color: spectral }
+      - voxel: { at: [0, 2, 11], color: spectralShadow }
+      - voxel: { at: [1, 2, 11], color: spectralShadow }
+      - voxel: { at: [4, 2, 11], color: spectral }
+      - voxel: { at: [5, 2, 11], color: spectral }
+      - voxel: { at: [6, 2, 11], color: spectral }
+      - voxel: { at: [7, 2, 11], color: spectral }
+      - voxel: { at: [8, 2, 11], color: spectral }
+      - voxel: { at: [11, 2, 11], color: spectral }
+      - voxel: { at: [12, 2, 11], color: spectral }
+      - voxel: { at: [4, 3, 11], color: spectral }
+      - voxel: { at: [5, 3, 11], color: spectral }
+      - voxel: { at: [6, 3, 11], color: spectral }
+      - voxel: { at: [7, 3, 11], color: spectral }
+      - voxel: { at: [8, 3, 11], color: spectral }
+      - voxel: { at: [4, 4, 11], color: spectral }
+      - voxel: { at: [5, 4, 11], color: spectral }
+      - voxel: { at: [6, 4, 11], color: spectral }
+      - voxel: { at: [7, 4, 11], color: spectral }
+      - voxel: { at: [8, 4, 11], color: spectral }
+      - voxel: { at: [4, 0, 12], color: spectral }
+      - voxel: { at: [5, 0, 12], color: void }
+      - voxel: { at: [6, 0, 12], color: void }
+      - voxel: { at: [7, 0, 12], color: void }
+      - voxel: { at: [8, 0, 12], color: spectral }
+      - voxel: { at: [4, 1, 12], color: spectral }
+      - voxel: { at: [5, 1, 12], color: spectral }
+      - voxel: { at: [6, 1, 12], color: spectral }
+      - voxel: { at: [7, 1, 12], color: spectral }
+      - voxel: { at: [8, 1, 12], color: spectral }
+      - voxel: { at: [4, 2, 12], color: spectral }
+      - voxel: { at: [5, 2, 12], color: spectral }
+      - voxel: { at: [6, 2, 12], color: spectral }
+      - voxel: { at: [7, 2, 12], color: spectral }
+      - voxel: { at: [8, 2, 12], color: spectral }
+      - voxel: { at: [4, 3, 12], color: spectral }
+      - voxel: { at: [5, 3, 12], color: spectral }
+      - voxel: { at: [6, 3, 12], color: spectral }
+      - voxel: { at: [7, 3, 12], color: spectral }
+      - voxel: { at: [8, 3, 12], color: spectral }
+      - voxel: { at: [4, 4, 12], color: spectral }
+      - voxel: { at: [5, 4, 12], color: spectral }
+      - voxel: { at: [6, 4, 12], color: spectral }
+      - voxel: { at: [7, 4, 12], color: spectral }
+      - voxel: { at: [8, 4, 12], color: spectral }
+      - voxel: { at: [4, 0, 13], color: spectral }
+      - voxel: { at: [5, 0, 13], color: glow }
+      - voxel: { at: [6, 0, 13], color: void }
+      - voxel: { at: [7, 0, 13], color: glow }
+      - voxel: { at: [8, 0, 13], color: spectral }
+      - voxel: { at: [4, 1, 13], color: spectral }
+      - voxel: { at: [5, 1, 13], color: spectral }
+      - voxel: { at: [6, 1, 13], color: spectral }
+      - voxel: { at: [7, 1, 13], color: spectral }
+      - voxel: { at: [8, 1, 13], color: spectral }
+      - voxel: { at: [4, 2, 13], color: spectral }
+      - voxel: { at: [5, 2, 13], color: spectral }
+      - voxel: { at: [6, 2, 13], color: spectral }
+      - voxel: { at: [7, 2, 13], color: spectral }
+      - voxel: { at: [8, 2, 13], color: spectral }
+      - voxel: { at: [4, 3, 13], color: spectral }
+      - voxel: { at: [5, 3, 13], color: spectral }
+      - voxel: { at: [6, 3, 13], color: spectral }
+      - voxel: { at: [7, 3, 13], color: spectral }
+      - voxel: { at: [8, 3, 13], color: spectral }
+      - voxel: { at: [4, 4, 13], color: spectral }
+      - voxel: { at: [5, 4, 13], color: spectral }
+      - voxel: { at: [6, 4, 13], color: spectral }
+      - voxel: { at: [7, 4, 13], color: spectral }
+      - voxel: { at: [8, 4, 13], color: spectral }
+      - voxel: { at: [4, 0, 14], color: spectral }
+      - voxel: { at: [5, 0, 14], color: spectral }
+      - voxel: { at: [6, 0, 14], color: spectral }
+      - voxel: { at: [7, 0, 14], color: spectral }
+      - voxel: { at: [8, 0, 14], color: spectral }
+      - voxel: { at: [4, 1, 14], color: spectral }
+      - voxel: { at: [5, 1, 14], color: spectral }
+      - voxel: { at: [6, 1, 14], color: spectral }
+      - voxel: { at: [7, 1, 14], color: spectral }
+      - voxel: { at: [8, 1, 14], color: spectral }
+      - voxel: { at: [4, 2, 14], color: spectral }
+      - voxel: { at: [5, 2, 14], color: spectral }
+      - voxel: { at: [6, 2, 14], color: spectral }
+      - voxel: { at: [7, 2, 14], color: spectral }
+      - voxel: { at: [8, 2, 14], color: spectral }
+      - voxel: { at: [4, 3, 14], color: spectral }
+      - voxel: { at: [5, 3, 14], color: spectral }
+      - voxel: { at: [6, 3, 14], color: spectral }
+      - voxel: { at: [7, 3, 14], color: spectral }
+      - voxel: { at: [8, 3, 14], color: spectral }
+      - voxel: { at: [4, 4, 14], color: spectral }
+      - voxel: { at: [5, 4, 14], color: spectral }
+      - voxel: { at: [6, 4, 14], color: spectral }
+      - voxel: { at: [7, 4, 14], color: spectral }
+      - voxel: { at: [8, 4, 14], color: spectral }
 sockets:
-  - socket: Hand.0
-    parent: Arm.R
-    transform: { translate: [1, 1, 0] }
-  - socket: Hand.1
-    parent: Arm.L
-    transform: { translate: [1, 1, 0] }
-  - socket: Back
+  - socket: Equip.Hand.Left.0
     parent: Body
-    transform: { translate: [4, 4, 8] }
+    transform:
+      translate: [1, 2, 4]
+  - socket: Equip.Hand.Right.0
+    parent: Body
+    transform:
+      translate: [12, 2, 4]
 animations:
   - clip: Idle
-    duration: 1
+    duration: 1.2
     loop: true
     tracks:
       - part: Body
         position:
           interpolation: smoothstep
           keys:
-            - { time: 0, value: [0, 0, 0] }
-            - { time: 0.5, value: [0, 0, 0.22] }
-            - { time: 1, value: [0, 0, 0] }
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0, 0, 0.2]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: WalkForward
+    duration: 0.6
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.33
+              value: [0, -0.6, 1.2]
+            - time: 0.66
+              value: [0, -1.2, 0]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Attack
+    duration: 0.45
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0.3, 0]
+            - time: 0.55
+              value: [0, -1.2, 0]
+            - time: 1
+              value: [0, -0.3, 0]
+  - clip: Attack.Left
+    duration: 0.45
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0.3, 0]
+            - time: 0.55
+              value: [0, -1.2, 0]
+            - time: 1
+              value: [0, -0.3, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 8]
+            - time: 0.55
+              value: [0, 0, -14]
+            - time: 1
+              value: [0, 0, -4]
+  - clip: Attack.Right
+    duration: 0.45
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0.3, 0]
+            - time: 0.55
+              value: [0, -1.2, 0]
+            - time: 1
+              value: [0, -0.3, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, -8]
+            - time: 0.55
+              value: [0, 0, 14]
+            - time: 1
+              value: [0, 0, 4]
+  - clip: Hit
+    duration: 0.35
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.45
+              value: [0, 1.0, 0.2]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Death
+    duration: 0.75
+    loop: false
+    tracks:
+      - part: Body
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 1
+              value: [0, 0, 82]
+        scale:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [1, 1, 1]
+            - time: 1
+              value: [1, 1, 0.72]

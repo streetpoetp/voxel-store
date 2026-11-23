@@ -8,4 +8,11 @@ namespace VoxelStore.Preview.Runtime
         Hit = 3,
         Death = 4
     }
+
+    public enum EquipmentSlotSide
+    {
+        Left = 0,
+        Right = 1,
+        Center = 2
+    }
 }

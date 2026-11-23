@@ -148,11 +148,11 @@ The primary manual evaluation surface is the generated Play Mode gallery:
 
 `Voxel Store/Refresh Runtime Gallery Scene`
 
-The command does **not** bake or regenerate model sources. It discovers human-imported baked `VoxelAssemblyAsset` models under `Preview/Unity/Assets/__VoxelStorePreview/Baked`, rebuilds the ignored local scene `Assets/Preview/VoxelStoreRuntimeGallery.generated.unity`, opens it, and frames all discovered models in the Game camera.
+The command does **not** regenerate voxel source. It discovers baked `VoxelAssemblyAsset` + matching `VoxelAnimationAsset` pairs under `Preview/Unity/Assets/__VoxelStorePreview/Baked`, rebuilds the ignored local scene `Assets/Preview/VoxelStoreRuntimeGallery.generated.unity`, opens it, and frames all discovered models in the Game camera. The repository capture command performs a **bake-only** provider refresh first: it creates current assembly/animation assets but does not build the legacy `[Voxel Store Preview Grid]`, so canonical automation never depends on a manual Unity reimport and never overlays two preview hierarchies.
 
-Runtime catalog identity comes from folder structure rather than provider `Kind` metadata. Any imported model matching `.../<Catalog>/<Model>/Source/<Model>.asset` is discovered; the folder immediately above `<Model>` is the catalog name. Prefix folders before `<Catalog>` are irrelevant, so a human may import a complete model package/tree without editing runtime-gallery code. `Avatars` receives avatar presentation/motion behavior, `Equipment` is attachable and also shown standalone, and any other catalog is shown as a general standalone model.
+Runtime catalog identity comes from folder structure rather than provider `Kind` metadata. Any imported assembly matching `.../<Catalog>/<Model>/Source/<Model>.asset` is discovered; its sibling `<Model>.animation.asset` is required. The folder immediately above `<Model>` is the catalog name. Prefix folders before `<Catalog>` are irrelevant. `Avatars` receives avatar socket/motion composition, `Equipment` is attachable and also shown standalone, and any other catalog is shown as a general standalone animated model.
 
-The runtime gallery realizes the complete baked part hierarchy and does not require a one-part/socketless asset. Sockets are not needed for gallery visualization. Human-imported catalog folders are not stale preview-bake output and cleanup must preserve them.
+The runtime gallery realizes the complete baked part hierarchy and uses Hero.Voxel authored sockets and animation assets directly. Human-imported catalog folders are not stale preview-bake output and cleanup must preserve them.
 
 Avatar entries use the preview-only presentation hierarchy:
 
@@ -162,27 +162,30 @@ Avatar | ...
 ├─ AvatarMotionPlayer
 └─ PresentationRoot
    ├─ Body
+   │  └─ Body
    ├─ Equipment | ...
-   │  └─ MotionRoot
-   │     └─ Model
+   │  └─ Model
+   │     └─ <equipment part>
    └─ Equipment | ...
-      └─ MotionRoot
-         └─ Model
+      └─ Model
+         └─ <equipment part>
 ```
 
-`AvatarPresentation` owns Body bounds, semantic canonical orientation, and Body-ratio equipment composition. Canonical directions are local Right `+X`, Up `+Y`, and Forward `-Z`; the Forward value describes semantic facing, not Hero.Voxel coordinate conversion. `VoxelStoreModelFrame` is the preview-owned single implementation point for that semantic basis and for the pinned Hero.Voxel source-vector mapping `(x,y,z) -> (x,z,y)`, so the preview does not depend on unpublished or dirty provider code.
+Current published avatars have one authored part named `Body`. They do **not** have authored Torso, Shoulder, Arm, or Hand parts. Physical equipment attachment is represented by side-aware Body sockets such as `Equip.Hand.Left.0` and `Equip.Hand.Right.0`. `AvatarPresentation` owns preview composition and resolves those current animated socket frames. Canonical directions remain local Right `+X`, Up `+Y`, and Forward `-Z`; `VoxelStoreModelFrame` remains the preview-owned implementation point for that semantic basis and for the pinned Hero.Voxel source-vector mapping `(x,y,z) -> (x,z,y)`.
 
-Each carried `EquipmentPresentation` separates stable placement from temporary animation. Equipment already shares the avatar canonical model frame (`+X` Right, `+Y` Up, `-Z` Forward), so its stable placement object keeps identity rotation at the normalized Body-bounds ratio. Only the child `MotionRoot` is animated.
+Each equipment manifest declares a reusable attachment capability and side policy, while each equipment VoxelSpec owns an exact `Mount` socket. Current published equipment is one-part, so `Mount` is authored at that part's pivot. `EquipmentPresentation` solves its placement from the current animated body socket and the equipment **bind Mount** frame. It does not use Body bounds, normalized ratios, a pair-specific correction, or a temporary MotionRoot.
 
-`AvatarMotionPlayer` owns semantic DOTween presentation for both the avatar `PresentationRoot` and every equipment `MotionRoot`. The supported general motions are:
+`VoxelAnimatedAssembly` owns the provider runtime objects for one baked model: `VoxelAssemblyAsset`, `VoxelAnimationAsset`, `VoxelAssemblyPose`, and `VoxelAssemblyPoseEvaluator`. Authored clips are sampled through `VoxelAnimationSampler`. Current body clips animate only the real `Body` part; left/right variants therefore mean distinct whole-Body motion, not invented limb articulation. Current one-part equipment animation uses rotation/scale on the Mount-bearing part and does not translate that part while equipped, so the grip remains at the body socket.
+
+`AvatarMotionPlayer` owns one semantic phase clock, not procedural tween tracks. The supported semantic motions are:
 
 - `Idle`
-- `WalkForward` — discrete Crossy Road-style launch/apex/landing hop presentation
-- `Attack` — backward anticipation, fast semantic-Forward drive, weapon motion, follow-through, recovery
-- `Hit` — opposite-Forward recoil plus equipment inertia
-- `Death` — terminal Body fall plus coordinated equipment follow-through
+- `WalkForward`
+- `Attack`, with body-side resolution `Attack.Left` / `Attack.Right` when authored
+- `Hit`
+- `Death`
 
-The motion player does not own combat results, damage timing, AI, or production locomotion. `UnitRoot` remains authoritative; ordinary motion changes only presentation-owned transforms.
+The body clip owns wall-clock cadence. The body clip and every equipment clip are sampled at the same normalized phase, even when their authored durations differ. The selected driver binding determines the body side variant. The motion player does not own combat results, damage timing, AI, inventory occupancy, or production locomotion.
 
 Canonical animation proof is command-driven from the repository root:
 
@@ -190,15 +193,14 @@ Canonical animation proof is command-driven from the repository root:
 powershell -ExecutionPolicy Bypass -File tools\capture-game-view.ps1 -Scenario avatar-motion-gallery
 ```
 
-The command bootstraps/verifies the pinned Hero Studio package, resolves `Preview/Unity/Assets/Preview/Capture/CaptureRegistry.json`, launches one owned **graphical** Unity Editor, invokes the registered `Capture.Editor` runner internally, survives Play Mode/domain reload through `SessionState`, samples deterministic `WalkForward`, `Attack`, `Hit`, and `Death` checkpoints through `AvatarMotionPlayer`, and captures composed runtime pixels through `Hero.Consumer.Editor.GameViewCapture`. Accepted output lives under `Preview/Unity/Library/Capture/AvatarMotionGallery/` and must include current `game-view-capture.json` provider attestation. The command reports scenario, output directory, attestation path, PNG count, Unity log, and `VOXEL_STORE_GAME_VIEW_RESULT=CAPTURE_ATTESTED`.
+The command bootstraps/verifies the pinned Hero Studio package, resolves `Preview/Unity`, performs the bake-only provider refresh so current assembly/animation assets exist, builds only `[Voxel Store Runtime Gallery]`, resolves the schema-v2 capture registry, launches one owned **graphical** Unity Editor, invokes the registered `Capture.Editor` runner internally, survives Play Mode/domain reload through `SessionState`, samples deterministic authored `WalkForward`, Left/Right `Attack`, `Hit`, and `Death` checkpoints, and captures composed runtime pixels through `Hero.Consumer.Editor.GameViewCapture`. Before capture, the runner rejects any live renderer outside `[Voxel Store Runtime Gallery]` and validates renderer/mesh/material/shader integrity, preventing the legacy debug grid from contaminating proof pixels. Accepted output lives under `Preview/Unity/Library/Capture/AvatarMotionGallery/` and must include current `game-view-capture.json` provider attestation.
 
-`CAPTURE_ATTESTED` proves only that current graphical Game View pixels were acquired correctly. Inspect the reported PNGs to judge animation semantics: Walk must read as a hop, Attack must drive toward semantic Forward while equipment Forward stays aligned, Hit must recoil opposite Forward, and Death must read as terminal follow-through.
+`CAPTURE_ATTESTED` proves acquisition integrity only. Inspect the attested PNGs to verify the actual authored presentation: Left- and Right-driven Attack must produce visibly different whole-Body reactions, equipment must show its own authored motion, and its Mount must remain visually attached to the selected side-aware socket. Walk, Hit, and Death must also remain semantically readable.
 
-`Voxel Store/Avatar Motion Preview` remains optional interactive exploration. It can select Motion, Loop, Speed, and target scope (`All Avatars` or `Selected Avatar`) and uses the same `AvatarMotionPlayer` API, but opening the window, pressing Play/Stop/Reset, selecting hierarchy objects, or editing the Inspector is not a completion gate.
+`Voxel Store/Avatar Motion Preview` remains optional interactive exploration. It uses the same `AvatarMotionPlayer` authored-playback API; opening the window, pressing buttons, selecting hierarchy objects, or editing the Inspector is not a completion gate.
 
-The runtime gallery's direct camera/RenderTexture screenshot remains a diagnostic-only convenience for static framing. It does not count as canonical animation proof because it does not establish provider-attested composed Game View pixels. The former `AvatarMotionGalleryCapture` RenderTexture automation path has been removed.
+The runtime gallery's direct camera/RenderTexture screenshot remains diagnostic-only for static framing. It is not canonical animation proof. Generated scenes, materials, captures, and reports remain ignored preview state; refreshing the gallery recreates derived scene/evidence without changing authoritative voxel source.
 
-Generated scenes, materials, captures, and reports remain ignored preview state. Imported baked model catalogs are human-owned gallery inputs and are preserved; refreshing the runtime gallery only recreates the scene/evidence around those imported assets.
 
 ## Finalization
 - Run the applicable deterministic validation and Tool tests when the pinned provider is available.

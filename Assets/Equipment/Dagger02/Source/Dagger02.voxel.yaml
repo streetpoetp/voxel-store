@@ -28,3 +28,77 @@ parts:
       - box: { min: [2, 2, 0], size: [1, 4, 1], color: cyan.mid }
       - box: { min: [1, 5, 0], size: [1, 1, 1], color: accent.blue }
       - box: { min: [3, 3, 0], size: [1, 1, 1], color: accent.blue }
+sockets:
+  - socket: Mount
+    parent: Dagger
+    transform:
+      translate: [2, 10, 1]
+animations:
+  - clip: Idle
+    duration: 1.2
+    loop: true
+    tracks:
+      - part: Dagger
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0, 0, 1.5]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: WalkForward
+    duration: 0.6
+    loop: true
+    tracks:
+      - part: Dagger
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0, 0, 5]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Attack
+    duration: 0.45
+    loop: false
+    tracks:
+      - part: Dagger
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.55
+              value: [0, 0, -38]
+            - time: 1
+              value: [0, 0, -6.84]
+  - clip: Hit
+    duration: 0.35
+    loop: false
+    tracks:
+      - part: Dagger
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.45
+              value: [0, 0, 10]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Death
+    duration: 0.75
+    loop: false
+    tracks:
+      - part: Dagger
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 1
+              value: [0, 0, 82]

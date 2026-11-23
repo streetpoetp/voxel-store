@@ -9,6 +9,7 @@ static void Require(bool condition, string message)
         throw new InvalidOperationException(message);
 }
 
+
 static void ExpectFailure(Action action, string contains)
 {
     try
@@ -381,7 +382,6 @@ static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string rep
     {
         CopyDirectory(Path.Combine(repositoryRoot, "Store"), Path.Combine(root, "Store"));
         CopyDirectory(Path.Combine(repositoryRoot, "Collections"), Path.Combine(root, "Collections"));
-        CopyDirectory(Path.Combine(repositoryRoot, "Profiles"), Path.Combine(root, "Profiles"));
         CopyFile(repositoryRoot, root, "toolchain/hero-voxel.lock.yaml");
         CopyDirectory(
             Path.Combine(repositoryRoot, "Styles", "low-resolution-voxel.v1"),
@@ -395,14 +395,15 @@ static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string rep
         File.WriteAllText(
             Path.Combine(assetRoot, "asset.yaml"),
             """
-            version: 2
+            version: 3
             id: fixture.equipment.staff
             kind: equipment
             unitRef: fixture/equipment/staff
             form: staff
-            mount:
-              profile: humanoid.medium.v2
+            attachment:
               capability: Hand
+              side: Any
+              anchor: Mount
             source:
               base: ./Source/FixtureStaff
               palette: ./Source/FixtureStaff.palette.yaml
@@ -440,6 +441,57 @@ static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string rep
                 pivot: [2, 2, 48]
                 voxels:
                   - box: { min: [0, 0, 0], size: [4, 4, 96], color: staff }
+            sockets:
+              - socket: Mount
+                parent: Staff
+                transform:
+                  translate: [2, 2, 48]
+            animations:
+              - clip: Idle
+                duration: 1
+                loop: true
+                tracks:
+                  - part: Staff
+                    rotation:
+                      keys:
+                        - time: 0
+                          value: [0, 0, 0]
+              - clip: WalkForward
+                duration: 1
+                loop: true
+                tracks:
+                  - part: Staff
+                    rotation:
+                      keys:
+                        - time: 0
+                          value: [0, 0, 0]
+              - clip: Attack
+                duration: 1
+                loop: false
+                tracks:
+                  - part: Staff
+                    rotation:
+                      keys:
+                        - time: 0
+                          value: [0, 0, 0]
+              - clip: Hit
+                duration: 1
+                loop: false
+                tracks:
+                  - part: Staff
+                    rotation:
+                      keys:
+                        - time: 0
+                          value: [0, 0, 0]
+              - clip: Death
+                duration: 1
+                loop: false
+                tracks:
+                  - part: Staff
+                    rotation:
+                      keys:
+                        - time: 0
+                          value: [0, 0, 0]
             """);
 
         var engine = new StoreEngine(root, HeroStudioSubmodule(repositoryRoot));
@@ -712,7 +764,6 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
     string root = TempRoot();
     Directory.CreateDirectory(Path.Combine(root, "Store"));
     Directory.CreateDirectory(Path.Combine(root, "Collections"));
-    Directory.CreateDirectory(Path.Combine(root, "Profiles"));
     File.WriteAllText(
         Path.Combine(root, "Store", "policy.yaml"),
         """
@@ -732,10 +783,6 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
         id: combat-foundation.v1
         requirements: []
         """);
-    CopyFile(
-        sourceRoot,
-        root,
-        "Profiles/humanoid.medium.v2.yaml");
     CopyFile(
         sourceRoot,
         root,
@@ -777,7 +824,6 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
         id: fixture.avatar
         kind: avatar
         unitRef: fixture/avatar
-        family: humanoid.medium.v2
         source:
           base: ./Source/FixtureAvatar
           palette: ./Source/FixtureAvatar.palette.yaml
@@ -2841,14 +2887,15 @@ static void RunRetirementContractTests()
             File.WriteAllText(
                 manifestPath,
                 $"""
-                version: 2
+                version: 3
                 id: {id}
                 kind: equipment
                 unitRef: {unitRef}
                 form: fixture
-                mount:
-                  profile: humanoid.medium.v2
+                attachment:
                   capability: Hand
+                  side: Any
+                  anchor: Mount
                 source:
                   base: ./Source/Fixture
                   palette: ./Source/Palette.yaml
@@ -2875,19 +2922,19 @@ static void RunRetirementContractTests()
         File.WriteAllText(
             manifestPath,
             validV2Manifest.Replace(
-                "  capability: Hand",
-                "  capability: Hand\n  socket: Legacy.Hand",
+                "form: fixture\n",
+                "form: fixture\nmount: legacy\n",
                 StringComparison.Ordinal));
         ExpectFailure(
             () => new StoreEngine(root).DiscoverAssets(),
-            "socket");
+            "mount");
 
         File.WriteAllText(
             manifestPath,
             validV2Manifest.Replace("form: fixture\n", "", StringComparison.Ordinal));
         ExpectFailure(
             () => new StoreEngine(root).DiscoverAssets(),
-            "Equipment must declare form plus logical capability");
+            "reusable physical form");
         File.WriteAllText(manifestPath, validV2Manifest);
 
         File.WriteAllText(
@@ -3133,25 +3180,405 @@ if (args.Contains("--reference-authority-only", StringComparer.Ordinal))
 
 var engine = new StoreEngine(repositoryRoot);
 
+static IReadOnlyList<Hero.Voxel.Tool.CompiledAnimationClip> RequiredSemanticClips(
+    string partName,
+    bool includeSideAttack = false)
+{
+    Hero.Voxel.Tool.CompiledAnimationVectorChannel rotation = new(
+        Hero.Voxel.Tool.CompiledAnimationInterpolation.Linear,
+        new[]
+        {
+            new Hero.Voxel.Tool.CompiledAnimationVectorKey(
+                0f,
+                new Hero.Voxel.Tool.Float3(0f, 0f, 0f))
+        });
+    Hero.Voxel.Tool.CompiledAnimationClip Clip(string name, bool loop) =>
+        new(
+            name,
+            1f,
+            loop,
+            new[]
+            {
+                new Hero.Voxel.Tool.CompiledAnimationTrack(
+                    partName,
+                    null,
+                    rotation,
+                    null)
+            });
+    var clips = new List<Hero.Voxel.Tool.CompiledAnimationClip>
+    {
+        Clip("Idle", true),
+        Clip("WalkForward", true),
+        Clip("Attack", false),
+        Clip("Hit", false),
+        Clip("Death", false)
+    };
+    if (includeSideAttack)
+    {
+        clips.Add(Clip("Attack.Left", false));
+        clips.Add(Clip("Attack.Right", false));
+    }
+    return clips;
+}
+
+static AssetManifest EquipmentManifest(
+    string capability = "Hand",
+    string side = "Any",
+    string anchor = "Mount") =>
+    new()
+    {
+        Version = 3,
+        Id = "fixture.equipment.contract",
+        Kind = "equipment",
+        UnitRef = "fixture/equipment/contract",
+        Form = "sword",
+        Attachment = new AssetAttachment
+        {
+            Capability = capability,
+            Side = side,
+            Anchor = anchor
+        },
+        Source = new AssetSource
+        {
+            Base = "./Source/Fixture",
+            Palette = "./Source/Fixture.palette.yaml"
+        },
+        Style = new AssetStyle
+        {
+            Family = "low-resolution-voxel.v1"
+        }
+    };
+
+StoreEngine.ValidateManifestShape(
+    EquipmentManifest(),
+    "fixture/asset.yaml");
+ExpectFailure(
+    () => StoreEngine.ValidateManifestShape(
+        EquipmentManifest(capability: "SwordSlot"),
+        "fixture/asset.yaml"),
+    "unsupported");
+ExpectFailure(
+    () => StoreEngine.ValidateManifestShape(
+        EquipmentManifest(side: "Center"),
+        "fixture/asset.yaml"),
+    "unsupported");
+ExpectFailure(
+    () => StoreEngine.ValidateManifestShape(
+        EquipmentManifest(anchor: "Grip"),
+        "fixture/asset.yaml"),
+    "must be 'Mount'");
+
+
+var highDensityPart = new Hero.Voxel.Tool.CompiledPart(
+    "Staff",
+    null,
+    "opaque",
+    new Hero.Voxel.Tool.CompiledTransform(new Hero.Voxel.Tool.Int3(0, 0, 0)),
+    default,
+    new Hero.Voxel.Tool.Int3(1, 1, 1),
+    new[] { new Hero.Voxel.Tool.VoxelCell(0, 0, 0, 0) });
 var highDensityEquipment = new Hero.Voxel.Tool.VoxelCompilation(
     "HighDensityEquipment",
     64,
     Array.Empty<Hero.Voxel.Tool.PaletteEntry>(),
-    Array.Empty<Hero.Voxel.Tool.CompiledPart>(),
-    Array.Empty<Hero.Voxel.Tool.CompiledSocket>(),
-    Array.Empty<Hero.Voxel.Tool.CompiledAnimationClip>())
+    new[] { highDensityPart },
+    new[]
+    {
+        new Hero.Voxel.Tool.CompiledSocket(
+            "Mount",
+            "Staff",
+            new Hero.Voxel.Tool.CompiledTransform(new Hero.Voxel.Tool.Int3(0, 0, 0)))
+    },
+    RequiredSemanticClips("Staff"))
 {
     AssemblyOrigin = new Hero.Voxel.Tool.CompiledAssemblyOrigin("Staff")
 };
 Require(
-    StoreEngine.IsEquipmentMountFrameValid(highDensityEquipment),
-    "VPU64 equipment with a canonical assembly origin must remain compatibility-eligible");
+    StoreEngine.IsEquipmentCompositionFrameValid(highDensityEquipment),
+    "VPU64 one-part equipment with a canonical assembly origin must remain compatibility-eligible");
 Require(
-    !StoreEngine.IsEquipmentMountFrameValid(highDensityEquipment with { AssemblyOrigin = null }),
+    !StoreEngine.IsEquipmentCompositionFrameValid(highDensityEquipment with { AssemblyOrigin = null }),
     "equipment without a canonical assembly origin must remain compatibility-ineligible");
 Require(
-    !StoreEngine.IsEquipmentMountFrameValid(highDensityEquipment with { VoxelsPerUnit = 0 }),
+    !StoreEngine.IsEquipmentCompositionFrameValid(highDensityEquipment with { VoxelsPerUnit = 0 }),
     "equipment with non-positive VPU must remain compatibility-ineligible");
+
+ExpectFailure(
+    () => StoreEngine.ValidateEquipmentCompositionFrame(
+        highDensityEquipment with
+        {
+            Sockets = new[]
+            {
+                new Hero.Voxel.Tool.CompiledSocket(
+                    "Mount",
+                    "Staff",
+                    new Hero.Voxel.Tool.CompiledTransform(
+                        new Hero.Voxel.Tool.Int3(1, 0, 0)))
+            }
+        },
+        EquipmentManifest().Attachment!),
+    "must coincide");
+
+ExpectFailure(
+    () => StoreEngine.ValidateEquipmentCompositionFrame(
+        highDensityEquipment with
+        {
+            Animations = RequiredSemanticClips("Staff")
+                .Where(x => x.Name != "Death")
+                .ToArray()
+        },
+        EquipmentManifest().Attachment!),
+    "Death");
+
+ExpectFailure(
+    () => StoreEngine.ValidateEquipmentCompositionFrame(
+        highDensityEquipment with
+        {
+            Animations = RequiredSemanticClips("Staff")
+                .Select(x => x.Name == "Idle"
+                    ? x with { Loop = false }
+                    : x)
+                .ToArray()
+        },
+        EquipmentManifest().Attachment!),
+    "loop setting");
+
+var translatedEquipmentClips =
+    RequiredSemanticClips("Staff").ToArray();
+var translatedAttack =
+    translatedEquipmentClips.Single(x => x.Name == "Attack");
+var positionChannel =
+    new Hero.Voxel.Tool.CompiledAnimationVectorChannel(
+        Hero.Voxel.Tool.CompiledAnimationInterpolation.Linear,
+        new[]
+        {
+            new Hero.Voxel.Tool.CompiledAnimationVectorKey(
+                0f,
+                new Hero.Voxel.Tool.Float3(0f, 0f, 0f)),
+            new Hero.Voxel.Tool.CompiledAnimationVectorKey(
+                1f,
+                new Hero.Voxel.Tool.Float3(1f, 0f, 0f))
+        });
+translatedEquipmentClips[
+    Array.FindIndex(
+        translatedEquipmentClips,
+        x => x.Name == "Attack")] =
+    translatedAttack with
+    {
+        Tracks = new[]
+        {
+            new Hero.Voxel.Tool.CompiledAnimationTrack(
+                "Staff",
+                positionChannel,
+                null,
+                null)
+        }
+    };
+ExpectFailure(
+    () => StoreEngine.ValidateEquipmentCompositionFrame(
+        highDensityEquipment with
+        {
+            Animations = translatedEquipmentClips
+        },
+        EquipmentManifest().Attachment!),
+    "must not translate");
+
+
+var bodyPart = new Hero.Voxel.Tool.CompiledPart(
+    "Body",
+    null,
+    "opaque",
+    new Hero.Voxel.Tool.CompiledTransform(new Hero.Voxel.Tool.Int3(0, 0, 0)),
+    new Hero.Voxel.Tool.Float3(1, 2, 3),
+    new Hero.Voxel.Tool.Int3(4, 5, 6),
+    new[]
+    {
+        new Hero.Voxel.Tool.VoxelCell(1, 2, 3, 0),
+        new Hero.Voxel.Tool.VoxelCell(3, 4, 5, 0)
+    });
+var rigidBody = new Hero.Voxel.Tool.VoxelCompilation(
+    "RigidBody",
+    2,
+    Array.Empty<Hero.Voxel.Tool.PaletteEntry>(),
+    new[] { bodyPart },
+    new[]
+    {
+        new Hero.Voxel.Tool.CompiledSocket(
+            "Equip.Hand.Left.0",
+            "Body",
+            new Hero.Voxel.Tool.CompiledTransform(new Hero.Voxel.Tool.Int3(0, 2, 3))),
+        new Hero.Voxel.Tool.CompiledSocket(
+            "Equip.Hand.Right.0",
+            "Body",
+            new Hero.Voxel.Tool.CompiledTransform(new Hero.Voxel.Tool.Int3(2, 2, 3)))
+    },
+    RequiredSemanticClips("Body", includeSideAttack: true))
+{
+    AssemblyOrigin = new Hero.Voxel.Tool.CompiledAssemblyOrigin("Body")
+};
+StoreEngine.ValidateRigidBodyAvatar(rigidBody);
+
+ExpectFailure(
+    () => StoreEngine.ValidateRigidBodyAvatar(
+        rigidBody with
+        {
+            Sockets = new[]
+            {
+                new Hero.Voxel.Tool.CompiledSocket(
+                    "Equip.Hand.Up.0",
+                    "Body",
+                    new Hero.Voxel.Tool.CompiledTransform(
+                        new Hero.Voxel.Tool.Int3(0, 2, 3))),
+                rigidBody.Sockets[1]
+            }
+        }),
+    "Equip.<Capability>.<Side>.<Instance>");
+
+ExpectFailure(
+    () => StoreEngine.ValidateRigidBodyAvatar(
+        rigidBody with
+        {
+            Sockets = new[]
+            {
+                rigidBody.Sockets[0],
+                rigidBody.Sockets[0],
+                rigidBody.Sockets[1]
+            }
+        }),
+    "must be unique");
+
+ExpectFailure(
+    () => StoreEngine.ValidateRigidBodyAvatar(
+        rigidBody with
+        {
+            Sockets = new[]
+            {
+                rigidBody.Sockets[1]
+            }
+        }),
+    "both Left and Right");
+
+ExpectFailure(
+    () => StoreEngine.ValidateRigidBodyAvatar(
+        rigidBody with
+        {
+            Animations = RequiredSemanticClips(
+                    "Body",
+                    includeSideAttack: true)
+                .Where(x => x.Name != "Attack.Left")
+                .ToArray()
+        }),
+    "Attack.Left");
+
+ExpectFailure(
+    () => StoreEngine.ValidateRigidBodyAvatar(
+        rigidBody with
+        {
+            Animations = RequiredSemanticClips(
+                    "Body",
+                    includeSideAttack: true)
+                .Select(x => x.Name == "Idle"
+                    ? x with { Loop = false }
+                    : x)
+                .ToArray()
+        }),
+    "loop setting");
+
+var multiSlotBody = rigidBody with
+{
+    Sockets = new[]
+    {
+        new Hero.Voxel.Tool.CompiledSocket(
+            "Equip.Hand.Left.0",
+            "Body",
+            new Hero.Voxel.Tool.CompiledTransform(
+                new Hero.Voxel.Tool.Int3(0, 2, 3))),
+        new Hero.Voxel.Tool.CompiledSocket(
+            "Equip.Hand.Left.1",
+            "Body",
+            new Hero.Voxel.Tool.CompiledTransform(
+                new Hero.Voxel.Tool.Int3(0, 3, 3))),
+        new Hero.Voxel.Tool.CompiledSocket(
+            "Equip.Hand.Right.0",
+            "Body",
+            new Hero.Voxel.Tool.CompiledTransform(
+                new Hero.Voxel.Tool.Int3(2, 2, 3)))
+    }
+};
+StoreEngine.ValidateRigidBodyAvatar(multiSlotBody);
+
+Require(
+    StoreEngine.ResolveCompatibleSlotNames(
+            multiSlotBody,
+            EquipmentManifest().Attachment!,
+            3)
+        .SequenceEqual(
+            new[]
+            {
+                "Equip.Hand.Left.0",
+                "Equip.Hand.Left.1",
+                "Equip.Hand.Right.0"
+            },
+            StringComparer.Ordinal),
+    "Any-side slot resolution must be deterministic across repeated equipment instances");
+
+Require(
+    StoreEngine.ResolveCompatibleSlotNames(
+            multiSlotBody,
+            EquipmentManifest(side: "Left").Attachment!,
+            2)
+        .SequenceEqual(
+            new[]
+            {
+                "Equip.Hand.Left.0",
+                "Equip.Hand.Left.1"
+            },
+            StringComparer.Ordinal),
+    "Left-only slot resolution must preserve same-side multiplicity");
+
+ExpectFailure(
+    () => StoreEngine.ResolveCompatibleSlotNames(
+        multiSlotBody,
+        EquipmentManifest(side: "Left").Attachment!,
+        3),
+    "Insufficient body slot capacity");
+
+ExpectFailure(
+    () => StoreEngine.ResolveCompatibleSlotNames(
+        multiSlotBody,
+        new AssetAttachment
+        {
+            Capability = "Back",
+            Side = "Any",
+            Anchor = "Mount"
+        },
+        1),
+    "available=0");
+
+ExpectFailure(
+    () => StoreEngine.ResolveCompatibleSlotNames(
+        multiSlotBody,
+        EquipmentManifest(side: "Right").Attachment!,
+        2),
+    "available=1");
+
+var articulatedBody = new Hero.Voxel.Tool.VoxelCompilation(
+    "Articulated",
+    2,
+    Array.Empty<Hero.Voxel.Tool.PaletteEntry>(),
+    new[]
+    {
+        bodyPart,
+        bodyPart with { Name = "Head", ParentName = "Body" }
+    },
+    Array.Empty<Hero.Voxel.Tool.CompiledSocket>(),
+    Array.Empty<Hero.Voxel.Tool.CompiledAnimationClip>())
+{
+    AssemblyOrigin = new Hero.Voxel.Tool.CompiledAssemblyOrigin("Body")
+};
+ExpectFailure(
+    () => StoreEngine.ValidateRigidBodyAvatar(articulatedBody),
+    "exactly one authored part named 'Body'");
 
 StorePolicy activePolicy = ContractYaml.Load<StorePolicy>(
     Path.Combine(repositoryRoot, "Store", "policy.yaml"));
@@ -3246,7 +3673,7 @@ finally
     Directory.Delete(absoluteLockRoot, true);
 }
 
-// Store YAML is strict: gameplay and pair-correction fields are not accepted.
+// Store YAML is strict: gameplay, mount, and pair-correction fields are not accepted.
 ExpectFailure(
     () => ContractYaml.Parse<AssetManifest>(
         """
@@ -3256,9 +3683,6 @@ ExpectFailure(
         unitRef: invalid/gameplay
         form: fixture
         damage: 10
-        mount:
-          profile: humanoid.medium.v2
-          capability: Hand
         source:
           base: ./Source/Item
           palette: ./Palette.yaml
@@ -3271,14 +3695,28 @@ ExpectFailure(
     () => ContractYaml.Parse<AssetManifest>(
         """
         version: 2
+        id: invalid.mount
+        kind: equipment
+        unitRef: invalid/mount
+        form: fixture
+        mount: legacy
+        source:
+          base: ./Source/Item
+          palette: ./Palette.yaml
+        style:
+          family: low-resolution-voxel.v1
+        """),
+    "mount");
+
+ExpectFailure(
+    () => ContractYaml.Parse<AssetManifest>(
+        """
+        version: 2
         id: invalid.correction
         kind: equipment
         unitRef: invalid/correction
         form: fixture
-        mount:
-          profile: humanoid.medium.v2
-          capability: Hand
-          correction: [1, 2, 3]
+        correction: [1, 2, 3]
         source:
           base: ./Source/Item
           palette: ./Palette.yaml
@@ -3296,11 +3734,10 @@ try
     File.WriteAllText(
         Path.Combine(assetDir, "asset.yaml"),
         """
-        version: 2
+        version: 3
         id: bad.path
         kind: avatar
         unitRef: bad/path
-        family: humanoid.medium.v2
         source:
           base: ../../../../outside
           palette: ./Palette.yaml
@@ -3324,7 +3761,7 @@ try
     File.WriteAllText(
         Path.Combine(assetDir, "asset.yaml"),
         """
-        version: 2
+        version: 3
         id: bad.kind
         kind: weapon
         unitRef: bad/kind
@@ -3353,11 +3790,10 @@ try
         File.WriteAllText(
             Path.Combine(assetDir, "asset.yaml"),
             $"""
-             version: 2
+             version: 3
              id: duplicate.asset
              kind: avatar
              unitRef: duplicate/unit-{i}
-             family: humanoid.medium.v2
              source:
                base: ./Source/Item
                palette: ./Palette.yaml
@@ -3385,11 +3821,10 @@ try
         File.WriteAllText(
             Path.Combine(assetDir, "asset.yaml"),
             $"""
-             version: 2
+             version: 3
              id: duplicate.unitref-{i}
              kind: avatar
              unitRef: duplicate/shared-unit
-             family: humanoid.medium.v2
              source:
                base: ./Source/Item
                palette: ./Palette.yaml
@@ -3417,11 +3852,10 @@ try
     string originalManifest = Path.Combine(originalDir, "asset.yaml");
     const string originalIdentity =
         """
-        version: 2
+        version: 3
         id: history.original
         kind: avatar
         unitRef: history/original
-        family: humanoid.medium.v2
         source:
           base: ./Source/Item
           palette: ./Palette.yaml
@@ -3465,90 +3899,6 @@ finally
     DeleteTree(identityHistoryRoot);
 }
 
-string profileHistoryRoot = TempRoot();
-try
-{
-    CopyFile(repositoryRoot, profileHistoryRoot, "Store/policy.yaml");
-    Directory.CreateDirectory(Path.Combine(profileHistoryRoot, "Collections"));
-    File.WriteAllText(
-        Path.Combine(profileHistoryRoot, "Collections", "combat-foundation.v1.yaml"),
-        """
-        version: 1
-        id: combat-foundation.v1
-        requirements: []
-        """);
-    CopyFile(
-        repositoryRoot,
-        profileHistoryRoot,
-        "Profiles/humanoid.medium.v2.yaml");
-    RunGit(profileHistoryRoot, "init");
-    RunGit(profileHistoryRoot, "config", "user.email", "test@example.invalid");
-    RunGit(profileHistoryRoot, "config", "user.name", "Voxel Store Test");
-    RunGit(profileHistoryRoot, "add", ".");
-    RunGit(profileHistoryRoot, "commit", "-m", "baseline profile");
-
-    string profilePath = Path.Combine(
-        profileHistoryRoot,
-        "Profiles",
-        "humanoid.medium.v2.yaml");
-    string originalProfile = File.ReadAllText(profilePath);
-    File.WriteAllText(
-        profilePath,
-        originalProfile.Replace(
-            "      - Hand.1",
-            "      - Hand.0",
-            StringComparison.Ordinal));
-    ExpectFailure(
-        () => new StoreEngine(profileHistoryRoot).Scan(false, false),
-        "duplicate socket");
-
-    File.WriteAllText(
-        profilePath,
-        originalProfile.Replace(
-            "    forward: [0, 0, 1]",
-            "    forward: [0, 0, 2]",
-            StringComparison.Ordinal));
-    ExpectFailure(
-        () => new StoreEngine(profileHistoryRoot).Scan(false, false),
-        "normalized and orthogonal");
-
-    File.WriteAllText(
-        profilePath,
-        originalProfile.Replace(
-            "    envelope: [6, 8, 12]",
-            "    envelope: [0, 8, 12]",
-            StringComparison.Ordinal));
-    ExpectFailure(
-        () => new StoreEngine(profileHistoryRoot).Scan(false, false),
-        "envelope components must be positive");
-
-
-    File.WriteAllText(
-        profilePath,
-        originalProfile.Replace(
-            "envelope: [6, 8, 12]",
-            "envelope: [7, 8, 12]",
-            StringComparison.Ordinal));
-    ExpectFailure(
-        () => new StoreEngine(profileHistoryRoot).Scan(false, false),
-        "changed in-place");
-
-    File.WriteAllText(profilePath, originalProfile);
-    File.WriteAllText(
-        Path.Combine(
-            profileHistoryRoot,
-            "Profiles",
-        "humanoid.medium.v3.yaml"),
-        originalProfile.Replace(
-            "id: humanoid.medium.v2",
-            "id: humanoid.medium.v3",
-            StringComparison.Ordinal));
-    new StoreEngine(profileHistoryRoot).Scan(false, false);
-}
-finally
-{
-    DeleteTree(profileHistoryRoot);
-}
 
 int coldStartAssetCount = 0;
 bool coldStartHealthy = false;
@@ -3563,9 +3913,6 @@ try
     CopyDirectory(
         Path.Combine(repositoryRoot, "Collections"),
         Path.Combine(coldStartRoot, "Collections"));
-    CopyDirectory(
-        Path.Combine(repositoryRoot, "Profiles"),
-        Path.Combine(coldStartRoot, "Profiles"));
     CopyDirectory(
         Path.Combine(repositoryRoot, "toolchain"),
         Path.Combine(coldStartRoot, "toolchain"));
@@ -3647,20 +3994,22 @@ Require(
     first.Assets.Count == second.Assets.Count,
     "scan must be deterministic");
 Require(
-    first.Compatibility.Count == 8 &&
+    first.Compatibility.Count == 32 &&
     first.Compatibility.All(x =>
         x.Passed &&
         x.Capability == "Hand" &&
-        (x.Attachment == "Hand.0" || x.Attachment == "Hand.1")),
-    "Sword02 and Dagger02 must each pass both neutral attachments across both required pose samples");
+        x.Socket is "Equip.Hand.Left.0" or "Equip.Hand.Right.0" &&
+        x.Side is "Left" or "Right" &&
+        x.Phase >= 0f && x.Phase <= 1f),
+    "Sword02 and Dagger02 must each pass both side-aware Hand slots across semantic samples");
 Require(
     first.Compatibility
-        .Where(x => !string.IsNullOrWhiteSpace(x.Equipment))
         .GroupBy(x => x.Equipment, StringComparer.Ordinal)
         .All(x =>
-            x.Count() == 4 &&
-            x.Select(row => row.Attachment).Distinct(StringComparer.Ordinal).Count() == 2),
-    "each equipment asset must contribute exactly four compatibility rows across both neutral hand attachments");
+            x.Count() == 16 &&
+            x.Select(row => row.Socket).Distinct(StringComparer.Ordinal).Count() == 2 &&
+            x.Select(row => row.Motion).Distinct(StringComparer.Ordinal).Count() == 5),
+    "each equipment asset must contribute two Hand slots across all required semantic motions");
 
 string formCoveragePath = Path.Combine(coldStartRoot, "Collections", "combat-foundation.v1.yaml");
 string formCoverageOriginal = File.ReadAllText(formCoveragePath);
@@ -3677,10 +4026,9 @@ try
         formGap.CoverageGaps.Single(x => x.Id == "foundation.equipment.sword");
     Require(
         formGap.CoverageGaps.Count == 9 &&
-        swordFormGap.Capability == "Hand" &&
         swordFormGap.Form == "sword-missing" &&
         formGap.NextJob?.Target == "foundation.equipment.sword",
-        "coverage must match physical form exactly in addition to profile and Hand capability");
+        "coverage must match reusable physical form exactly");
 }
 finally
 {
@@ -3696,23 +4044,18 @@ using (JsonDocument evidence =
 {
     JsonElement samples = evidence.RootElement.GetProperty("samples");
     Require(
-        evidence.RootElement.GetProperty("capability").GetString() == "Hand" &&
-        samples.GetArrayLength() == 4,
-        "compatibility evidence must bind Hand capability and contain both neutral attachments across required poses");
+        evidence.RootElement.GetProperty("convention").GetString() == "model-socket-semantic-phase.v1" &&
+        samples.GetArrayLength() == 16,
+        "compatibility evidence must use the model-socket semantic-phase convention for both Hand slots");
     Require(
-        samples.EnumerateArray()
-            .Select(x => x.GetProperty("attachment").GetString())
-            .Where(x => x != null)
-            .Distinct(StringComparer.Ordinal)
-            .Count() == 2,
-        "compatibility evidence must identify both physical Hand attachment instances");
-    JsonElement frame = samples[0].GetProperty("frame");
-    Require(
-        frame.GetProperty("origin").GetArrayLength() == 3 &&
-        frame.GetProperty("worldX").GetArrayLength() == 3 &&
-        frame.GetProperty("worldY").GetArrayLength() == 3 &&
-        frame.GetProperty("worldZ").GetArrayLength() == 3,
-        "compatibility evidence must persist the animated socket world frame");
+        samples.EnumerateArray().All(x =>
+            x.GetProperty("capability").GetString() == "Hand" &&
+            x.GetProperty("socket").GetString()!.StartsWith("Equip.Hand.", StringComparison.Ordinal) &&
+            x.GetProperty("phase").GetSingle() is >= 0f and <= 1f &&
+            x.GetProperty("bodySocketOrigin").GetArrayLength() == 3 &&
+            x.GetProperty("evaluatedMountOrigin").GetArrayLength() == 3 &&
+            x.GetProperty("passed").GetBoolean()),
+        "compatibility evidence must persist slot, phase, evaluated frames, and pass result");
 }
 
 // Derived catalog/health can be deleted and regenerated byte-identically.
@@ -3750,8 +4093,8 @@ try
         """
 
           - id: simultaneous.coverage-gap
-            kind: avatar
-            profile: another.physical.family.v1
+            kind: equipment
+            form: fixture-missing
             required: true
         """);
     StoreSnapshot stale =
@@ -3865,7 +4208,6 @@ try
              {
                  "Store/policy.yaml",
                  "Collections/combat-foundation.v1.yaml",
-                 "Profiles/humanoid.medium.v2.yaml",
                  "toolchain/hero-voxel.lock.yaml",
                  "Assets/Avatars/FoundationGuard01/Source/FoundationGuard01.palette.yaml"
              })
@@ -3904,9 +4246,8 @@ try
         bootstrap.CoverageGaps.Count == 10 &&
         bootstrap.CoverageGaps.All(x =>
             x.Kind == "equipment" &&
-            x.Capability == "Hand" &&
             !string.IsNullOrWhiteSpace(x.Form)),
-        "avatar-only bootstrap must expose exactly ten hand-neutral form gaps");
+        "avatar-only bootstrap must expose exactly ten equipment form gaps");
     Require(
         bootstrap.NextJob?.Priority == "required-coverage" &&
         bootstrap.NextJob.Target == "foundation.equipment.sword",
@@ -3929,9 +4270,6 @@ try
     CopyDirectory(
         Path.Combine(repositoryRoot, "Collections"),
         Path.Combine(fullCatalogRoot, "Collections"));
-    CopyDirectory(
-        Path.Combine(repositoryRoot, "Profiles"),
-        Path.Combine(fullCatalogRoot, "Profiles"));
     CopyDirectory(
         Path.Combine(repositoryRoot, "toolchain"),
         Path.Combine(fullCatalogRoot, "toolchain"));
@@ -3988,88 +4326,15 @@ try
         fullCatalog.Assets.Count(x => x.Kind == "equipment") == 10 &&
         fullCatalog.CoverageGaps.Count == 0 &&
         fullCatalog.NextJob == null &&
-        fullCatalog.Compatibility.Count == 40 &&
+        fullCatalog.Compatibility.Count == 160 &&
         fullCatalog.Compatibility.All(x => x.Passed),
-        "isolated ten-form catalog must converge to healthy/no-gap state with 40 passing compatibility rows");
+        "isolated ten-form catalog must converge to healthy/no-gap state with 160 passing side-aware semantic-phase compatibility rows");
 }
 finally
 {
     DeleteTree(fullCatalogRoot);
 }
 
-string incompatibleRoot = TempRoot();
-try
-{
-    CopyDirectory(
-        Path.Combine(repositoryRoot, "Store"),
-        Path.Combine(incompatibleRoot, "Store"));
-    CopyDirectory(
-        Path.Combine(repositoryRoot, "Collections"),
-        Path.Combine(incompatibleRoot, "Collections"));
-    CopyDirectory(
-        Path.Combine(repositoryRoot, "Profiles"),
-        Path.Combine(incompatibleRoot, "Profiles"));
-    CopyDirectory(
-        Path.Combine(repositoryRoot, "toolchain"),
-        Path.Combine(incompatibleRoot, "toolchain"));
-    CopyDirectory(
-        Path.Combine(repositoryRoot, "Assets", "Avatars", "FoundationGuard01"),
-        Path.Combine(incompatibleRoot, "Assets", "Avatars", "FoundationGuard01"));
-    CopyDirectory(
-        Path.Combine(repositoryRoot, "Styles"),
-        Path.Combine(incompatibleRoot, "Styles"));
-
-    string profilePath = Path.Combine(
-        incompatibleRoot,
-        "Profiles",
-        "humanoid.medium.v2.yaml");
-    string compatibleProfile = File.ReadAllText(profilePath);
-    File.WriteAllText(
-        profilePath,
-        compatibleProfile.Replace(
-            "voxelsPerUnit: 8",
-            "voxelsPerUnit: 9",
-            StringComparison.Ordinal));
-    StoreSnapshot incompatible =
-        new StoreEngine(incompatibleRoot, resolution.Root).Scan(false, false);
-    CompatibilityResult failedAvatar = incompatible.Compatibility.First(
-        x => !x.Passed && string.IsNullOrEmpty(x.Equipment));
-    Require(
-        failedAvatar.Avatar == "foundation.avatar.humanoid.guard-01" &&
-        failedAvatar.Equipment == "" &&
-        failedAvatar.Profile == "humanoid.medium.v2" &&
-        failedAvatar.Capability == "Hand" &&
-        (failedAvatar.Attachment == "Hand.0" || failedAvatar.Attachment == "Hand.1") &&
-        failedAvatar.Pose == "bind" &&
-        failedAvatar.Evidence.Contains("voxelsPerUnit mismatch", StringComparison.Ordinal),
-        "profile VPU mismatch must remain an avatar conformance failure, not an equipment-density failure");
-    Require(
-        incompatible.Assets.Any(x => !x.Published),
-        "avatar/profile VPU incompatibility must prevent affected assets from publishing healthy");
-    File.WriteAllText(
-        profilePath,
-        compatibleProfile.Replace(
-            "      - Hand.1",
-            "      - Hand.1\n      - Missing",
-            StringComparison.Ordinal));
-    StoreSnapshot missingSocket =
-        new StoreEngine(incompatibleRoot, resolution.Root).Scan(false, false);
-    Require(
-        missingSocket.Compatibility.Any(
-            x => !x.Passed &&
-                 x.Equipment == "" &&
-                 x.Capability == "Hand" &&
-                 x.Attachment == "Missing"),
-        "missing required neutral hand attachment must produce profile conformance failure");
-    Require(
-        !missingSocket.Assets.Single(
-            x => x.Id == "foundation.avatar.humanoid.guard-01").Published,
-        "avatar missing a required profile socket must not publish healthy");
-}
-finally
-{
-    DeleteTree(incompatibleRoot);
-}
 
 // Checked-in toolchain data is portable, and maintenance owns one job only.
 HeroVoxelLock lockFile = ContractYaml.Load<HeroVoxelLock>(

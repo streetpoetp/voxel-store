@@ -550,6 +550,27 @@ namespace VoxelStore.Preview.Editor
             }
         }
 
+        public static void BakeAllForBatch()
+        {
+            PreviewPlanContract plan =
+                PreviewPlanClient.Load();
+            List<BakedPreviewUnit> baked =
+                PreviewBake.BakeAll(plan);
+            if (baked.Count != plan.Units.Length)
+            {
+                throw new InvalidOperationException(
+                    "Preview bake count mismatch. plan=" +
+                    plan.Units.Length +
+                    " baked=" +
+                    baked.Count);
+            }
+
+            Debug.Log(
+                "Voxel Store preview bake ready: " +
+                baked.Count +
+                " published units.");
+        }
+
         public static void RefreshAllAndOpenGridForBatch()
         {
             PreviewPlanContract plan = PreviewPlanClient.Load();

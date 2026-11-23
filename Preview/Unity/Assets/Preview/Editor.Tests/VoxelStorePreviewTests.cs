@@ -184,6 +184,86 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
+        public void ProviderBakedGalleryPathResolvesMatchingAnimationAsset()
+        {
+            Assert.IsTrue(
+                RuntimeGalleryCatalogDiscovery.TryDescribeProviderAssetPath(
+                    "Assets/__VoxelStorePreview/Baked",
+                    "Assets/__VoxelStorePreview/Baked/Avatars/fixture.avatar/fixture.avatar.assembly.asset",
+                    out string catalog,
+                    out string modelName,
+                    out string animationAssetPath));
+            Assert.AreEqual("Avatars", catalog);
+            Assert.AreEqual("fixture.avatar", modelName);
+            Assert.AreEqual(
+                "Assets/__VoxelStorePreview/Baked/Avatars/fixture.avatar/fixture.avatar.animation.asset",
+                animationAssetPath);
+
+            Assert.IsFalse(
+                RuntimeGalleryCatalogDiscovery.TryDescribeProviderAssetPath(
+                    "Assets/__VoxelStorePreview/Baked",
+                    "Assets/__VoxelStorePreview/Baked/Avatars/Avatars/Foo/Source/Foo.asset",
+                    out _,
+                    out _,
+                    out _));
+        }
+
+
+        [Test]
+        public void MissingBakedAnimationFailsSynchronizedGalleryLoad()
+        {
+            var model = new RuntimeGalleryModel
+            {
+                Catalog = "Avatars",
+                Name = "MissingAnimation",
+                AssetPath =
+                    "Assets/__VoxelStorePreview/Baked/Avatars/MissingAnimation/MissingAnimation.assembly.asset",
+                AnimationAssetPath =
+                    "Assets/__VoxelStorePreview/Baked/Avatars/MissingAnimation/MissingAnimation.animation.asset"
+            };
+
+            InvalidOperationException exception =
+                Assert.Throws<InvalidOperationException>(
+                    () => RuntimeGalleryCatalogDiscovery.LoadAnimation(model));
+            StringAssert.Contains(
+                "requires the baked authored animation asset",
+                exception.Message);
+        }
+
+        [Test]
+        public void MismatchedBakedAnimationFailsSynchronizedGalleryLoad()
+        {
+            RuntimeGalleryModel[] models =
+                RuntimeGalleryCatalogDiscovery.Discover();
+            Assert.That(models.Length, Is.GreaterThanOrEqualTo(2));
+
+            RuntimeGalleryModel first = models[0];
+            RuntimeGalleryModel second = models
+                .Skip(1)
+                .First(x =>
+                    !string.Equals(
+                        x.AssetPath,
+                        first.AssetPath,
+                        StringComparison.Ordinal));
+
+            var stale = new RuntimeGalleryModel
+            {
+                Catalog = first.Catalog,
+                Name = first.Name,
+                AssetPath = first.AssetPath,
+                AnimationAssetPath =
+                    second.AnimationAssetPath
+            };
+
+            InvalidOperationException exception =
+                Assert.Throws<InvalidOperationException>(
+                    () => RuntimeGalleryCatalogDiscovery.LoadAnimation(stale));
+            StringAssert.Contains(
+                "targets a different assembly",
+                exception.Message);
+        }
+
+        [Test]
         public void GridMathUsesFiveColumnsForTwentyFiveWithoutOverlap()
         {
             Assert.AreEqual(5, PreviewGridLayout.ColumnsForCount(25));

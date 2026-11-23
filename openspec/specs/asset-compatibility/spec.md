@@ -17,17 +17,6 @@ An avatar participating in reusable equipment composition SHALL expose exactly o
 - **WHEN** an avatar relies on additional articulated parts to satisfy reusable equipment composition
 - **THEN** compatibility validation fails for the rigid-body contract instead of treating those parts as attachment authority
 
-### Requirement: Equipment placement derives from normalized Body bounds ratios
-Reusable equipment composition SHALL derive local equipment position from the avatar's canonical `Body` local bounds and a normalized offset ratio, without model-authored sockets, mount transforms, or per-avatar corrective transforms.
-
-#### Scenario: Ratio placement is evaluated
-- **WHEN** a consumer composes equipment at a normalized offset ratio
-- **THEN** the local equipment position is derived deterministically from canonical `Body` bounds center and extents
-
-#### Scenario: Avatar size changes
-- **WHEN** two conforming avatars have different canonical Body dimensions
-- **THEN** the same normalized offset ratio scales placement proportionally to each avatar's Body bounds
-
 ### Requirement: Reusable models share one canonical Unity model frame
 All published reusable avatar and equipment models SHALL resolve through Hero.Voxel into the same canonical Unity local orientation: Right `+X`, Up `+Y`, Forward `-Z`. Model category SHALL NOT introduce another forward axis or require attachment-time orientation compensation.
 
@@ -42,64 +31,6 @@ All published reusable avatar and equipment models SHALL resolve through Hero.Vo
 #### Scenario: Provider coordinate conversion is applied
 - **WHEN** Hero.Voxel maps source coordinates into Unity coordinates
 - **THEN** coordinate conversion and authored facing remain separate concerns and the resulting published model still satisfies the global canonical Unity model frame
-
-### Requirement: Equipment exposes a canonical local composition frame
-Reusable equipment SHALL provide a canonical local origin and the shared Unity orientation (`+X` Right, `+Y` Up, `-Z` Forward) so it can be placed against any conforming Body-ratio position with identity placement rotation and without avatar-specific, slot-specific, or pair-specific corrective transforms.
-
-#### Scenario: Equipment composes at different ratios
-- **WHEN** the same equipment asset is placed at different valid normalized Body ratios
-- **THEN** its stable asset identity and canonical local frame remain unchanged
-
-#### Scenario: Equipment needs an avatar-specific correction
-- **WHEN** acceptable composition requires a transform unique to one avatar/equipment pair
-- **THEN** compatibility proof fails and the owning asset or global composition convention must be corrected
-
-### Requirement: Multiple equipment instances use deterministic independent ratio placements
-A conforming Body SHALL support simultaneous composition of multiple independent equipment instances by assigning each instance a deterministic normalized Body-bounds ratio and canonical equipment frame; one instance SHALL NOT require a model-authored socket or another equipment instance as its parent.
-
-#### Scenario: Two equipment assets are composed simultaneously
-- **WHEN** a consumer assigns two equipment instances distinct normalized Body ratios
-- **THEN** both instances resolve independently under the same rigid presentation composition
-
-#### Scenario: More equipment instances are requested
-- **WHEN** a consumer provides additional valid ratio placements
-- **THEN** the composition model remains unchanged and does not require new avatar authoring metadata
-
-### Requirement: Compatibility proof uses canonical composition evidence
-Compatibility health SHALL be derived from deterministic Body-plus-equipment composition evidence using canonical Body bounds, normalized placement ratios, and canonical equipment frames rather than profile/socket attachment matrices.
-
-#### Scenario: Representative composition passes
-- **WHEN** current avatar and equipment candidates compose successfully under the canonical ratio-placement evidence set
-- **THEN** compatibility health reports the applicable assets and placements as passing
-
-#### Scenario: Representative composition fails
-- **WHEN** equipment intersects, scales, or orients incompatibly under required canonical ratio-placement evidence
-- **THEN** compatibility health reports the failing avatar, equipment, and placement ratio or convention
-
-### Requirement: Rigid presentation motion preserves composition relationships
-Once Body and equipment local placement is resolved, presentation motion SHALL preserve their relative composition by moving the unified presentation transform rather than re-solving avatar/equipment attachment during the motion.
-
-#### Scenario: Presentation motion is applied
-- **WHEN** a consumer applies presentation-only translation or rotation to the unified composition
-- **THEN** Body and every composed equipment instance preserve their established local relationships
-
-### Requirement: Equipment authoring density is independent of Body-ratio composition
-Equipment SHALL be allowed to use a different positive `voxelsPerUnit` from an avatar when its canonical local origin, orientation, normalized physical scale, and Body-ratio composition behavior remain compatible after normalization to world space.
-
-#### Scenario: High-density equipment composes with a lower-density avatar
-- **WHEN** equipment uses a higher positive `voxelsPerUnit` than a conforming avatar but preserves its canonical local frame and normalized physical scale
-- **THEN** compatibility validation accepts the density difference and evaluates ordinary Body-ratio composition evidence
-
-#### Scenario: Equipment has no valid normalized composition frame
-- **WHEN** equipment uses any `voxelsPerUnit` but lacks a canonical local origin/orientation or cannot satisfy required Body-ratio composition evidence
-- **THEN** compatibility validation fails regardless of authoring density
-
-### Requirement: Compatibility contracts remain reusable across games
-Body-ratio and canonical equipment-frame conventions SHALL use visual and physical terms only. They SHALL NOT encode combat class, damage type, inventory slot rules, AI behavior, balance restrictions, attack behavior, or other consuming-game semantics.
-
-#### Scenario: Consumer assigns gameplay meaning
-- **WHEN** a game treats a composed asset as a sword, tool, cosmetic, primary weapon, secondary weapon, or another product-specific role
-- **THEN** that gameplay meaning remains outside the store compatibility contract and does not alter Body-ratio composition semantics
 
 ### Requirement: Reusable models share one semantic canonical Unity model frame
 All published reusable avatar and equipment models SHALL resolve through Hero.Voxel into one canonical Unity local frame: Right `+X`, Up `+Y`, Forward `-Z`. Under the provider source-to-Unity mapping, semantic Forward is authored toward source `-Y`. Forward SHALL represent semantic facing/action rather than a coordinate-conversion label or geometrically inferred axis.
@@ -131,3 +62,119 @@ All published reusable avatar and equipment models SHALL resolve through Hero.Vo
 #### Scenario: Canonical front proof is rendered
 - **WHEN** Hero.Voxel renders `front.png` for a conforming published model
 - **THEN** the camera is on the Unity `-Z` side looking toward `+Z`, so the image means the observer is standing in front of the model looking back at it and therefore proves semantic Forward points toward `-Z`
+
+### Requirement: Avatar equipment slots are model-owned physical frames
+Reusable equipment attachment SHALL resolve from Hero.Voxel sockets authored on the avatar model rather than from normalized Body-bounds ratios.
+
+#### Scenario: Capability resolves to a concrete socket
+- **WHEN** equipment requires capability `Hand` and an avatar exposes one or more `Equip.Hand.<Side>.<Instance>` sockets compatible with the equipment side policy
+- **THEN** compatibility can select one concrete socket instance while preserving the equipment's capability-level identity
+
+#### Scenario: Avatar lacks the required capability
+- **WHEN** no avatar socket matches the equipment's declared logical capability
+- **THEN** compatibility fails with the missing capability/socket evidence
+
+### Requirement: Equipment attachment uses its authored Mount frame
+Reusable equipment SHALL align its evaluated Mount socket to the selected evaluated avatar equipment socket.
+
+#### Scenario: Static attachment is solved
+- **WHEN** body and equipment are evaluated at neutral pose
+- **THEN** equipment root is solved as avatar-socket matrix multiplied by the inverse equipment-Mount matrix
+
+#### Scenario: Equipment pivot differs from its grip
+- **WHEN** the equipment root/pivot is not located at the authored Mount socket
+- **THEN** compatibility uses the Mount frame and does not require a corrective Unity offset
+
+#### Scenario: Pair-specific correction is required
+- **WHEN** acceptable composition requires an extra transform unique to one avatar/equipment pair
+- **THEN** compatibility fails instead of persisting the correction
+
+### Requirement: Multiple equipment instances attach independently by slot
+A reusable avatar SHALL support multiple equipment instances, including repeated instances of the same equipment asset or form, by resolving each instance against a distinct compatible physical socket without making another equipment item its attachment parent.
+
+#### Scenario: Two equipment instances are composed
+- **WHEN** a consumer selects two compatible avatar socket instances
+- **THEN** each equipment root is solved independently from its selected socket and own Mount frame
+
+#### Scenario: Same equipment asset is composed multiple times
+- **WHEN** one body exposes three `Back` socket instances and a consumer composes three instances of the same bow asset requiring `Back`
+- **THEN** compatibility accepts all three physical compositions when each bow is bound to a distinct compatible side-aware Back socket
+
+#### Scenario: Consumer applies occupancy rules
+- **WHEN** a game decides that two items cannot simultaneously occupy particular slots
+- **THEN** that decision remains outside voxel-store physical compatibility
+
+#### Scenario: Capability has finite physical capacity
+- **WHEN** a body exposes two `Back` socket instances and a physical compatibility proof requests three simultaneously attached `Back` items
+- **THEN** the third composition has no free physical slot instance and the proof reports insufficient body slot capacity without changing the equipment asset contract
+
+#### Scenario: Left and right slots are physically distinct
+- **WHEN** a body exposes `Equip.Hand.Left.0` and `Equip.Hand.Right.0`
+- **THEN** compatibility preserves their distinct side semantics and never treats them as interchangeable anonymous `Hand.0`/`Hand.1` instances
+
+### Requirement: Driver slot side selects authored motion variant
+A semantic equipped action SHALL carry one driver binding whose physical slot side selects the preferred side-specific body/equipment clip variant before falling back to the base semantic clip.
+
+#### Scenario: Left-hand attack drives body response
+- **WHEN** semantic `Attack` is driven by equipment bound to `Equip.Hand.Left.0`
+- **THEN** body playback resolves `Attack.Left` before `Attack`, and the driver equipment resolves `Attack.Left` before `Attack`
+
+#### Scenario: Right-hand attack drives body response
+- **WHEN** semantic `Attack` is driven by equipment bound to `Equip.Hand.Right.0`
+- **THEN** body playback resolves `Attack.Right` before `Attack`, producing a body response distinct from the left-hand variant when both are authored
+
+#### Scenario: Side-specific equipment clip is absent
+- **WHEN** a side-reusable equipment asset does not author a side-specific variant for the selected driver side
+- **THEN** equipment playback uses its base semantic clip while the body may still use its side-specific body variant
+
+### Requirement: Authored body and equipment animation share one semantic phase
+Equipped presentation SHALL sample the selected body semantic clip and every attached equipment clip at the same normalized phase.
+
+#### Scenario: Attack is sampled
+- **WHEN** equipped presentation evaluates `Attack` at normalized phase `p`
+- **THEN** the body `Attack` clip and each equipment `Attack` clip are sampled at exactly `p`
+
+#### Scenario: Authored clip durations differ
+- **WHEN** body and equipment semantic clips have different authored duration metadata
+- **THEN** equipped playback uses the body clip as wall-clock phase authority and samples equipment by normalized body phase without independent clock drift
+
+#### Scenario: Multiple equipment items are animated
+- **WHEN** multiple equipment instances are attached during one semantic motion
+- **THEN** every item samples its resolved semantic clip at the same body-owned normalized phase while the declared driver binding alone determines the body side variant
+
+### Requirement: Animated attachment uses current body socket and equipment bind Mount
+Equipment attachment SHALL solve the equipment root from the current animated body socket and the equipment's bind Mount frame, then sample equipment animation relative to that root.
+
+#### Scenario: Body socket moves during animation
+- **WHEN** the single `Body` part changes pose and therefore moves a left/right equipment socket
+- **THEN** the equipment attachment root follows that current socket frame at the same semantic phase
+
+#### Scenario: Single-part weapon rotates during animation
+- **WHEN** a current one-part equipment clip rotates its Mount-bearing part around a pivot colocated with Mount
+- **THEN** the weapon visibly rotates around the grip while the attachment root remains bound to the body socket
+
+#### Scenario: Runtime tries to solve against evaluated animated Mount
+- **WHEN** composition would use the evaluated animated Mount matrix as the inverse root-solving input for a one-part weapon
+- **THEN** compatibility rejects that method because it cancels the weapon's authored part transform
+
+#### Scenario: Single-part weapon translates its Mount-bearing part
+- **WHEN** equipped semantic animation contains a position track on the current one-part Mount-bearing part
+- **THEN** compatibility fails because the grip would translate away from the body socket
+
+### Requirement: Socket and animation compatibility remain density-independent
+Different positive avatar/equipment authoring densities SHALL remain compatible when baked world scale, socket frames, Mount alignment, and semantic animation sampling satisfy the shared contracts.
+
+#### Scenario: High-density equipment attaches to lower-density avatar
+- **WHEN** equipment uses a different positive VPU from its avatar
+- **THEN** compatibility evaluates baked world-space socket/animation frames and does not reject the pair solely for density difference
+
+### Requirement: Socket and animation contracts remain gameplay-neutral
+Attachment capabilities and semantic visual motions SHALL describe reusable physical/presentation behavior only and SHALL NOT encode damage, attack result, inventory occupancy, AI, balance, progression, or consuming-game combat class.
+
+#### Scenario: Game gives a weapon gameplay meaning
+- **WHEN** a consumer interprets an equipment asset as a primary weapon, secondary weapon, tool, or cosmetic
+- **THEN** that meaning does not alter its store attachment capability, Mount frame, or semantic animation contract
+
+#### Scenario: Consumer chooses active left or right equipment
+- **WHEN** a game chooses which equipped instance drives an action
+- **THEN** that runtime choice supplies the driver binding/side context without changing the reusable asset's catalog identity

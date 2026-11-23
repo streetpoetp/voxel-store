@@ -22,23 +22,21 @@ public sealed record GateResult(string Id, bool Passed, string Message, string? 
 public sealed record CoverageGap(
     string Id,
     string Kind,
-    string? Profile,
-    string? Capability,
     string? Form,
     bool Required);
 public sealed record MaintenanceJob(string Priority, string Kind, string Target, string Reason);
 public sealed record CompatibilityResult(
     string Avatar,
     string Equipment,
-    string Profile,
     string Capability,
-    string Attachment,
-    string Pose,
+    string Socket,
+    string Side,
+    string Motion,
+    float Phase,
     bool Passed,
+    string Detail,
     string Evidence);
 
-public sealed record PartWorldFrame(Vector3 Origin, Vector3 WorldX, Vector3 WorldY, Vector3 WorldZ);
-public sealed record SocketWorldFrame(Vector3 Origin, Vector3 WorldX, Vector3 WorldY, Vector3 WorldZ);
 public sealed record PngInfo(int Width, int Height);
 public sealed record ReferenceStyleAuthority(
     string Id,
@@ -54,8 +52,12 @@ public sealed class AssetHealth
     public required string Kind { get; init; }
     public required string UnitRef { get; init; }
     public string? Form { get; init; }
-    public string? Profile { get; init; }
-    public string? Capability { get; init; }
+    public string? AttachmentCapability { get; set; }
+    public string? AttachmentSide { get; set; }
+    public string? AttachmentAnchor { get; set; }
+    public List<string> SlotInstances { get; } = new();
+    public Dictionary<string, int> SlotCounts { get; } = new(StringComparer.Ordinal);
+    public List<string> SemanticMotions { get; } = new();
     public bool BasePublished { get; set; }
     public bool Published { get; set; }
     public string? FailedGate { get; set; }
@@ -98,6 +100,20 @@ public sealed class StoreEngine
         "visualEvidenceDominance",
         "implementationNeutral"
     };
+    private static readonly string[] RequiredSemanticMotions =
+    {
+        "Idle",
+        "WalkForward",
+        "Attack",
+        "Hit",
+        "Death"
+    };
+    private static readonly HashSet<string> AttachmentCapabilities =
+        new(StringComparer.Ordinal) { "Hand", "Back", "Head", "Hip", "Chest" };
+    private static readonly HashSet<string> AttachmentSides =
+        new(StringComparer.Ordinal) { "Any", "Left", "Right" };
+    private static readonly HashSet<string> SlotSides =
+        new(StringComparer.Ordinal) { "Left", "Right", "Center" };
     private readonly string _root;
     private readonly HeroVoxelProvider _provider;
 
@@ -213,14 +229,13 @@ public sealed class StoreEngine
         StorePolicy policy = LoadStorePolicy();
         CollectionManifest collection = LoadCollection(policy);
         IReadOnlyList<AssetRecord> assets = DiscoverAssets();
-        Dictionary<string, CompatibilityProfile> profiles = LoadProfiles();
         var healthById = new Dictionary<string, AssetHealth>(StringComparer.Ordinal);
 
         foreach (AssetRecord asset in assets)
-            healthById.Add(asset.Manifest.Id, EvaluateBaseHealth(asset, policy, profiles));
+            healthById.Add(asset.Manifest.Id, EvaluateBaseHealth(asset, policy));
 
         List<CompatibilityResult> compatibility =
-            EvaluateCompatibility(assets, healthById, profiles, writeCompatibility);
+            EvaluateCompatibility(assets, healthById, writeCompatibility);
 
         foreach (AssetHealth health in healthById.Values)
         {
@@ -301,6 +316,7 @@ public sealed class StoreEngine
             .Replace(Path.DirectorySeparatorChar, '/')
             .Replace(Path.AltDirectorySeparatorChar, '/');
     }
+
 
     public void Generate(string assetId)
     {
@@ -484,8 +500,7 @@ public sealed class StoreEngine
 
     private AssetHealth EvaluateBaseHealth(
         AssetRecord asset,
-        StorePolicy policy,
-        IReadOnlyDictionary<string, CompatibilityProfile> profiles)
+        StorePolicy policy)
     {
         var health = new AssetHealth
         {
@@ -493,10 +508,11 @@ public sealed class StoreEngine
             Kind = asset.Manifest.Kind,
             UnitRef = asset.Manifest.UnitRef,
             Form = asset.Manifest.Form,
-            Profile = asset.Manifest.Family ?? asset.Manifest.Mount?.Profile,
-            Capability = asset.Manifest.Mount?.Capability
+            AttachmentCapability = asset.Manifest.Attachment?.Capability,
+            AttachmentSide = asset.Manifest.Attachment?.Side,
+            AttachmentAnchor = asset.Manifest.Attachment?.Anchor
         };
-        AddGate(health, "manifest", () => ValidateManifest(asset, profiles));
+        AddGate(health, "manifest", () => ValidateManifest(asset));
         AddGate(health, "reference", () => ValidateReference(asset));
         if (IsReferenceDrivenDensity(asset.Manifest))
             AddGate(health, "density", () => ValidateDensityEvidence(asset, policy));
@@ -505,6 +521,14 @@ public sealed class StoreEngine
         AddGate(health, "generation", () =>
         {
             compiled = _provider.Compile(asset, writeGenerated: false);
+            if (asset.Manifest.Kind == "avatar")
+                ValidateRigidBodyAvatar(compiled.Compilation);
+            else
+                ValidateEquipmentCompositionFrame(
+                    compiled.Compilation,
+                    asset.Manifest.Attachment ?? throw new InvalidDataException("Equipment attachment metadata is missing."));
+            PopulateAssetProjection(health, compiled.Compilation);
+
             ReferenceContract reference = ContractYaml.Load<ReferenceContract>(
                 Path.Combine(asset.ReferenceDirectory, "reference.yaml"));
             string[] expectedParts = reference.RequiredParts.OrderBy(x => x, StringComparer.Ordinal).ToArray();
@@ -569,32 +593,13 @@ public sealed class StoreEngine
         if (!full.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
             return evidence;
 
-        return Path.GetRelativePath(_root, full).Replace('\\', '/');    }
+        return Path.GetRelativePath(_root, full).Replace('\\', '/');
+    }
 
-    private string ValidateManifest(
-        AssetRecord asset,
-        IReadOnlyDictionary<string, CompatibilityProfile> profiles)
+    private string ValidateManifest(AssetRecord asset)
     {
         AssetManifest m = asset.Manifest;
         ResolveReferenceStyle(m.Style.Family, m.Kind);
-        if (m.Kind == "avatar")
-        {
-            if (string.IsNullOrWhiteSpace(m.Family) || !profiles.ContainsKey(m.Family))
-                throw new InvalidDataException("Avatar must declare an existing compatibility family.");
-            if (m.Mount != null)
-                throw new InvalidDataException("Avatar cannot declare equipment mount metadata.");
-        }
-        else
-        {
-            if (m.Mount == null || !profiles.TryGetValue(m.Mount.Profile, out CompatibilityProfile? profile))
-                throw new InvalidDataException("Equipment must declare an existing compatibility profile.");
-            if (profile.Version != 2 ||
-                !profile.RequiredMountCapabilities.Concat(profile.OptionalMountCapabilities)
-                    .Any(x => x.Capability == m.Mount.Capability))
-                throw new InvalidDataException($"Equipment capability '{m.Mount.Capability}' is not declared by profile '{profile.Id}'.");
-            if (!string.IsNullOrWhiteSpace(m.Family))
-                throw new InvalidDataException("Equipment compatibility belongs in mount.profile, not family.");
-        }
         return asset.ManifestPath;
     }
 
@@ -1053,127 +1058,195 @@ public sealed class StoreEngine
         return audit;
     }
 
-    private Dictionary<string, CompatibilityProfile> LoadProfiles()
+    private sealed record CompatibilitySample(string Motion, float Phase);
+    private sealed record SlotAddress(
+        string Capability,
+        string Side,
+        int Instance,
+        CompiledSocket Socket);
+    private readonly record struct SampledPartPose(
+        Vector3 Position,
+        Quaternion Rotation,
+        Vector3 Scale);
+
+    private static readonly CompatibilitySample[] CanonicalCompatibilitySamples =
     {
-        string root = Path.Combine(_root, "Profiles");
-        var profiles = new Dictionary<string, CompatibilityProfile>(StringComparer.Ordinal);
-        if (!Directory.Exists(root))
-            return profiles;
-        foreach (string path in Directory.GetFiles(root, "*.yaml").OrderBy(x => x, StringComparer.Ordinal))
-        {
-            CompatibilityProfile profile = ContractYaml.Load<CompatibilityProfile>(path);
-            ValidateProfile(profile, path);
-            if (!profiles.TryAdd(profile.Id, profile))
-                throw new InvalidDataException($"Duplicate compatibility profile '{profile.Id}'.");
-            ValidateHistoricalProfile(profile, path);
-        }
-        return profiles;
-    }
+        new("Idle", 0f),
+        new("Idle", 0.5f),
+        new("WalkForward", 0.5f),
+        new("Attack", 0f),
+        new("Attack", 0.5f),
+        new("Attack", 1f),
+        new("Hit", 0.5f),
+        new("Death", 1f)
+    };
 
     private List<CompatibilityResult> EvaluateCompatibility(
         IReadOnlyList<AssetRecord> assets,
         IReadOnlyDictionary<string, AssetHealth> health,
-        IReadOnlyDictionary<string, CompatibilityProfile> profiles,
         bool write)
     {
         var result = new List<CompatibilityResult>();
-        foreach (AssetRecord avatar in assets.Where(x => x.Manifest.Kind == "avatar" && health[x.Manifest.Id].BasePublished))
+        AssetRecord[] equipmentAssets = assets
+            .Where(x => x.Manifest.Kind == "equipment" && health[x.Manifest.Id].BasePublished)
+            .OrderBy(x => x.Manifest.Id, StringComparer.Ordinal)
+            .ToArray();
+
+        foreach (AssetRecord avatar in assets
+                     .Where(x => x.Manifest.Kind == "avatar" && health[x.Manifest.Id].BasePublished)
+                     .OrderBy(x => x.Manifest.Id, StringComparer.Ordinal))
         {
-            CompatibilityProfile profile = profiles[avatar.Manifest.Family!];
-            HeroVoxelProvider.CompiledAsset avatarCompiled = _provider.Compile(avatar, false);
-            Dictionary<string, Dictionary<string, PartWorldFrame>> poseSamples = LoadPoseSamples(avatar);
+            VoxelCompilation avatarCompilation = _provider.Compile(avatar, false).Compilation;
+            ValidateRigidBodyAvatar(avatarCompilation);
 
-            foreach (MountCapabilityContract required in profile.RequiredMountCapabilities)
+            foreach (AssetRecord equipment in equipmentAssets)
             {
-                foreach (string attachment in required.Sockets)
-                {
-                    CompiledSocket? socket = avatarCompiled.Compilation.Sockets.SingleOrDefault(x => x.Name == attachment);
-                    string? failure = socket == null
-                        ? "required attachment missing"
-                        : avatarCompiled.Compilation.VoxelsPerUnit != profile.VoxelsPerUnit
-                            ? "voxelsPerUnit mismatch"
-                            : !SocketMatchesContract(socket, required.Forward, required.Up)
-                                ? "attachment frame mismatch"
-                                : null;
-                    if (failure != null)
-                    {
-                        result.Add(new CompatibilityResult(
-                            avatar.Manifest.Id, "", profile.Id, required.Capability, attachment, "bind", false, failure));
-                    }
-                }
-            }
-
-            foreach (AssetRecord equipment in assets.Where(x =>
-                         x.Manifest.Kind == "equipment" &&
-                         x.Manifest.Mount?.Profile == profile.Id &&
-                         health[x.Manifest.Id].BasePublished))
-            {
-                HeroVoxelProvider.CompiledAsset equipmentCompiled = _provider.Compile(equipment, false);
-                bool equipmentFrameValid =
-                    IsEquipmentMountFrameValid(equipmentCompiled.Compilation);
+                VoxelCompilation equipmentCompilation = _provider.Compile(equipment, false).Compilation;
+                AssetAttachment attachment =
+                    equipment.Manifest.Attachment
+                    ?? throw new InvalidDataException("Equipment attachment metadata is missing.");
+                ValidateEquipmentCompositionFrame(
+                    equipmentCompilation,
+                    attachment);
                 string evidencePath = Path.Combine(
-                    avatar.ProofDirectory, "Compatibility", Sanitize(equipment.Manifest.Id) + ".json");
+                    avatar.ProofDirectory,
+                    "Compatibility",
+                    Sanitize(equipment.Manifest.Id) + ".json");
                 string evidenceRef = NormalizeEvidence(evidencePath)!;
-                var sampleRows = new List<object>();
+                var samples = new List<object>();
+                SlotAddress[] compatibleSlots =
+                    GetCompatibleSlots(
+                        avatarCompilation,
+                        attachment)
+                    .ToArray();
 
-                string capability = equipment.Manifest.Mount!.Capability!;
-                MountCapabilityContract contract = profile.RequiredMountCapabilities
-                    .Concat(profile.OptionalMountCapabilities)
-                    .Single(x => x.Capability == capability);
-                IEnumerable<(string Attachment, float[] Forward, float[] Up)> attachments =
-                    contract.Sockets.Select(x => (x, contract.Forward, contract.Up)).ToArray();
-
-                foreach ((string attachment, float[] forward, float[] up) in attachments)
+                if (compatibleSlots.Length == 0)
                 {
-                    CompiledSocket? socket = avatarCompiled.Compilation.Sockets.SingleOrDefault(x => x.Name == attachment);
-                    bool socketFrameValid = socket != null && SocketMatchesContract(socket, forward, up);
-
-                    if (profile.RepresentativePoseSamples.Count == 0)
+                    string detail =
+                        $"Avatar does not expose a compatible '{attachment.Capability}' " +
+                        $"slot for side policy '{attachment.Side}'.";
+                    result.Add(new CompatibilityResult(
+                        avatar.Manifest.Id,
+                        equipment.Manifest.Id,
+                        attachment.Capability,
+                        string.Empty,
+                        string.Empty,
+                        string.Empty,
+                        0f,
+                        false,
+                        detail,
+                        evidenceRef));
+                    samples.Add(new
                     {
-                        bool pass = socket != null && socketFrameValid && equipmentFrameValid;
-                        string detail = CompatibilityDetail(socket, socketFrameValid, equipmentFrameValid, null);
-                        result.Add(new CompatibilityResult(
-                            avatar.Manifest.Id, equipment.Manifest.Id, profile.Id, capability, attachment, "bind", pass, evidenceRef));
-                        sampleRows.Add(new
-                        {
-                            capability,
-                            attachment,
-                            pose = "bind",
-                            passed = pass,
-                            detail,
-                            socketParent = socket?.ParentName,
-                            socketTranslation = SocketTranslation(socket)
-                        });
-                        continue;
+                        passed = false,
+                        detail
+                    });
+                }
+                else
+                {
+                    CompiledSocket mount =
+                        equipmentCompilation.Sockets.Single(
+                            x => string.Equals(
+                                x.Name,
+                                attachment.Anchor,
+                                StringComparison.Ordinal));
+                    Matrix4x4 mountBind =
+                        BuildSocketBindMatrix(
+                            equipmentCompilation,
+                            mount);
+                    if (!Matrix4x4.Invert(
+                            mountBind,
+                            out Matrix4x4 inverseMountBind))
+                    {
+                        throw new InvalidDataException(
+                            "Equipment Mount bind frame is singular.");
                     }
 
-                    foreach (PoseSampleContract sample in profile.RepresentativePoseSamples)
+                    foreach (SlotAddress slot in compatibleSlots)
+                    foreach (CompatibilitySample sample in CanonicalCompatibilitySamples)
                     {
-                        string key = PoseKey(sample.Clip, sample.NormalizedTime);
-                        SocketWorldFrame? frame = socket == null ||
-                                                  !poseSamples.TryGetValue(key, out Dictionary<string, PartWorldFrame>? parts)
-                            ? null
-                            : ResolveSocketWorldFrame(avatarCompiled.Compilation, socket, parts);
-                        bool pass = socket != null && socketFrameValid && equipmentFrameValid && frame != null;
-                        string detail = CompatibilityDetail(socket, socketFrameValid, equipmentFrameValid, frame == null ? key : null);
+                        string bodyClipName =
+                            ResolveSemanticClipName(
+                                avatarCompilation,
+                                sample.Motion,
+                                slot.Side);
+                        string equipmentClipName =
+                            ResolveSemanticClipName(
+                                equipmentCompilation,
+                                sample.Motion,
+                                slot.Side);
+                        CompiledAnimationClip bodyClip =
+                            avatarCompilation.Animations.Single(
+                                x => string.Equals(
+                                    x.Name,
+                                    bodyClipName,
+                                    StringComparison.Ordinal));
+                        CompiledAnimationClip equipmentClip =
+                            equipmentCompilation.Animations.Single(
+                                x => string.Equals(
+                                    x.Name,
+                                    equipmentClipName,
+                                    StringComparison.Ordinal));
+
+                        Matrix4x4 bodySocket =
+                            EvaluateBodySocketFrame(
+                                avatarCompilation,
+                                slot.Socket,
+                                bodyClip,
+                                sample.Phase);
+                        Matrix4x4 equipmentRoot =
+                            inverseMountBind * bodySocket;
+                        SampledPartPose equipmentPose =
+                            SampleRootPartPose(
+                                equipmentCompilation,
+                                equipmentClip,
+                                sample.Phase);
+                        Matrix4x4 equipmentPartPose =
+                            BuildPoseMatrix(
+                                equipmentPose,
+                                equipmentCompilation.VoxelsPerUnit);
+                        Matrix4x4 evaluatedMount =
+                            mountBind *
+                            equipmentPartPose *
+                            equipmentRoot;
+
+                        Vector3 bodySocketOrigin =
+                            MatrixOrigin(bodySocket);
+                        Vector3 evaluatedMountOrigin =
+                            MatrixOrigin(evaluatedMount);
+                        bool passed =
+                            Vector3.Distance(
+                                bodySocketOrigin,
+                                evaluatedMountOrigin) <= 0.0001f;
+                        string detail = passed
+                            ? "PASS"
+                            : "Animated equipment Mount position drifted from the body socket.";
+
                         result.Add(new CompatibilityResult(
-                            avatar.Manifest.Id, equipment.Manifest.Id, profile.Id, capability, attachment, key, pass, evidenceRef));
-                        sampleRows.Add(new
-                        {
-                            capability,
-                            attachment,
-                            pose = key,
-                            passed = pass,
+                            avatar.Manifest.Id,
+                            equipment.Manifest.Id,
+                            attachment.Capability,
+                            slot.Socket.Name,
+                            slot.Side,
+                            sample.Motion,
+                            sample.Phase,
+                            passed,
                             detail,
-                            socketParent = socket?.ParentName,
-                            socketTranslation = SocketTranslation(socket),
-                            frame = frame == null ? null : new
-                            {
-                                origin = Vector(frame.Origin),
-                                worldX = Vector(frame.WorldX),
-                                worldY = Vector(frame.WorldY),
-                                worldZ = Vector(frame.WorldZ)
-                            }
+                            evidenceRef));
+                        samples.Add(new
+                        {
+                            capability = attachment.Capability,
+                            socket = slot.Socket.Name,
+                            side = slot.Side,
+                            motion = sample.Motion,
+                            phase = sample.Phase,
+                            bodyClip = bodyClipName,
+                            equipmentClip = equipmentClipName,
+                            bodySocketOrigin = Vector(bodySocketOrigin),
+                            equipmentRootOrigin = Vector(MatrixOrigin(equipmentRoot)),
+                            evaluatedMountOrigin = Vector(evaluatedMountOrigin),
+                            passed,
+                            detail
                         });
                     }
                 }
@@ -1183,20 +1256,520 @@ public sealed class StoreEngine
                     Directory.CreateDirectory(Path.GetDirectoryName(evidencePath)!);
                     File.WriteAllText(evidencePath, JsonSerializer.Serialize(new
                     {
+                        convention = "model-socket-semantic-phase.v1",
                         avatar = avatar.Manifest.Id,
                         equipment = equipment.Manifest.Id,
-                        profile = profile.Id,
-                        capability,
-                        samples = sampleRows
+                        attachment = new
+                        {
+                            capability = attachment.Capability,
+                            side = attachment.Side,
+                            anchor = attachment.Anchor
+                        },
+                        samples
                     }, JsonOptions));
                 }
             }
         }
+
         return result;
     }
 
-    internal static bool IsEquipmentMountFrameValid(VoxelCompilation compilation) =>
-        compilation.VoxelsPerUnit > 0 && compilation.AssemblyOrigin != null;
+    internal static void ValidateRigidBodyAvatar(VoxelCompilation compilation)
+    {
+        if (compilation.VoxelsPerUnit <= 0)
+            throw new InvalidDataException("Rigid-body avatar voxelsPerUnit must be positive.");
+        if (compilation.Parts.Count != 1 ||
+            !string.Equals(compilation.Parts[0].Name, "Body", StringComparison.Ordinal))
+            throw new InvalidDataException("Rigid-body avatar must contain exactly one authored part named 'Body'.");
+
+        CompiledPart body = compilation.Parts[0];
+        if (body.ParentName != null ||
+            body.Transform.Translation != default ||
+            body.Transform.Rotation != default)
+            throw new InvalidDataException("Rigid-body avatar Body must be an untransformed root part.");
+        if (body.Voxels.Count == 0)
+            throw new InvalidDataException("Rigid-body avatar Body must contain voxel geometry.");
+        if (compilation.AssemblyOrigin == null ||
+            !string.Equals(compilation.AssemblyOrigin.PartName, "Body", StringComparison.Ordinal))
+            throw new InvalidDataException("Rigid-body avatar assemblyOrigin must be Body.");
+
+        SlotAddress[] slots = compilation.Sockets
+            .Select(ParseSlotAddress)
+            .ToArray();
+        if (slots.Select(x => x.Socket.Name)
+                .Distinct(StringComparer.Ordinal).Count() !=
+            slots.Length)
+        {
+            throw new InvalidDataException(
+                "Rigid-body avatar equipment socket names must be unique.");
+        }
+        if (slots.Any(x =>
+                !string.Equals(
+                    x.Socket.ParentName,
+                    "Body",
+                    StringComparison.Ordinal)))
+        {
+            throw new InvalidDataException(
+                "Rigid-body avatar equipment sockets must be parented to Body.");
+        }
+        if (!slots.Any(x => x.Capability == "Hand" && x.Side == "Left") ||
+            !slots.Any(x => x.Capability == "Hand" && x.Side == "Right"))
+        {
+            throw new InvalidDataException(
+                "Rigid-body avatar must expose both Left and Right Hand slot instances.");
+        }
+
+        ValidateSemanticAnimationSet(
+            compilation,
+            requireSideAttackVariants: true);
+    }
+
+
+    internal static void ValidateEquipmentCompositionFrame(
+        VoxelCompilation compilation,
+        AssetAttachment attachment)
+    {
+        if (compilation.VoxelsPerUnit <= 0 ||
+            compilation.Parts.Count != 1 ||
+            compilation.AssemblyOrigin == null)
+        {
+            throw new InvalidDataException(
+                "Equipment must contain one positive-density root part and assembly origin.");
+        }
+
+        CompiledPart part = compilation.Parts[0];
+        if (part.Voxels.Count == 0 ||
+            part.ParentName != null ||
+            part.Transform.Translation != default ||
+            part.Transform.Rotation != default ||
+            !string.Equals(
+                compilation.AssemblyOrigin.PartName,
+                part.Name,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                "Equipment root part must remain the untransformed assembly origin.");
+        }
+
+        if (compilation.Sockets.Count != 1)
+            throw new InvalidDataException("Equipment must declare exactly one Mount socket.");
+        CompiledSocket mount = compilation.Sockets[0];
+        if (!string.Equals(mount.Name, attachment.Anchor, StringComparison.Ordinal) ||
+            !string.Equals(mount.Name, "Mount", StringComparison.Ordinal) ||
+            !string.Equals(mount.ParentName, part.Name, StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                "Equipment Mount socket must match attachment.anchor and be parented to the root part.");
+        }
+        if (!Near(mount.Transform.Translation, part.Pivot))
+        {
+            throw new InvalidDataException(
+                "Current single-part equipment Mount position must coincide with the authored part pivot.");
+        }
+
+        ValidateSemanticAnimationSet(
+            compilation,
+            requireSideAttackVariants: false);
+        foreach (CompiledAnimationClip clip in compilation.Animations)
+        foreach (CompiledAnimationTrack track in clip.Tracks)
+        {
+            if (string.Equals(track.PartName, part.Name, StringComparison.Ordinal) &&
+                track.Position != null)
+            {
+                throw new InvalidDataException(
+                    $"Equipment clip '{clip.Name}' must not translate the current Mount-bearing root part.");
+            }
+        }
+    }
+
+    internal static bool IsEquipmentCompositionFrameValid(VoxelCompilation compilation)
+    {
+        try
+        {
+            ValidateEquipmentCompositionFrame(
+                compilation,
+                new AssetAttachment
+                {
+                    Capability = "Hand",
+                    Side = "Any",
+                    Anchor = "Mount"
+                });
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void PopulateAssetProjection(
+        AssetHealth health,
+        VoxelCompilation compilation)
+    {
+        health.SlotInstances.Clear();
+        health.SlotCounts.Clear();
+        health.SemanticMotions.Clear();
+
+        foreach (CompiledAnimationClip clip in compilation.Animations
+                     .OrderBy(x => x.Name, StringComparer.Ordinal))
+        {
+            health.SemanticMotions.Add(clip.Name);
+        }
+
+        if (health.Kind != "avatar")
+            return;
+
+        foreach (SlotAddress slot in compilation.Sockets
+                     .Select(ParseSlotAddress)
+                     .OrderBy(x => x.Capability, StringComparer.Ordinal)
+                     .ThenBy(x => SlotSideOrder(x.Side))
+                     .ThenBy(x => x.Instance))
+        {
+            health.SlotInstances.Add(slot.Socket.Name);
+            string key = slot.Capability + "." + slot.Side;
+            health.SlotCounts[key] =
+                health.SlotCounts.TryGetValue(key, out int count)
+                    ? count + 1
+                    : 1;
+        }
+    }
+
+    internal static IReadOnlyList<string> ResolveCompatibleSlotNames(
+        VoxelCompilation compilation,
+        AssetAttachment attachment,
+        int requestedCount)
+    {
+        if (requestedCount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(requestedCount),
+                "Requested equipment slot count must be positive.");
+        }
+
+        SlotAddress[] available =
+            GetCompatibleSlots(
+                compilation,
+                attachment)
+            .ToArray();
+        if (available.Length < requestedCount)
+        {
+            throw new InvalidDataException(
+                "Insufficient body slot capacity for capability '" +
+                attachment.Capability +
+                "' and side policy '" +
+                attachment.Side +
+                "'. requested=" +
+                requestedCount +
+                " available=" +
+                available.Length +
+                ".");
+        }
+
+        return available
+            .Take(requestedCount)
+            .Select(x => x.Socket.Name)
+            .ToArray();
+    }
+
+    private static IEnumerable<SlotAddress> GetCompatibleSlots(
+        VoxelCompilation compilation,
+        AssetAttachment attachment) =>
+        compilation.Sockets
+            .Select(ParseSlotAddress)
+            .Where(x =>
+                string.Equals(
+                    x.Capability,
+                    attachment.Capability,
+                    StringComparison.Ordinal) &&
+                (string.Equals(attachment.Side, "Any", StringComparison.Ordinal) ||
+                 string.Equals(x.Side, attachment.Side, StringComparison.Ordinal)))
+            .OrderBy(x => SlotSideOrder(x.Side))
+            .ThenBy(x => x.Instance);
+
+    private static SlotAddress ParseSlotAddress(CompiledSocket socket)
+    {
+        string[] parts = socket.Name.Split('.');
+        if (parts.Length != 4 ||
+            !string.Equals(parts[0], "Equip", StringComparison.Ordinal) ||
+            !AttachmentCapabilities.Contains(parts[1]) ||
+            !SlotSides.Contains(parts[2]) ||
+            !int.TryParse(
+                parts[3],
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out int instance) ||
+            instance < 0)
+        {
+            throw new InvalidDataException(
+                $"Equipment slot '{socket.Name}' must match Equip.<Capability>.<Side>.<Instance>.");
+        }
+        return new SlotAddress(
+            parts[1],
+            parts[2],
+            instance,
+            socket);
+    }
+
+    private static int SlotSideOrder(string side) => side switch
+    {
+        "Left" => 0,
+        "Right" => 1,
+        "Center" => 2,
+        _ => 3
+    };
+
+    private static void ValidateSemanticAnimationSet(
+        VoxelCompilation compilation,
+        bool requireSideAttackVariants)
+    {
+        foreach (string motion in RequiredSemanticMotions)
+        {
+            CompiledAnimationClip clip =
+                compilation.Animations.SingleOrDefault(
+                    x => string.Equals(
+                        x.Name,
+                        motion,
+                        StringComparison.Ordinal))
+                ?? throw new InvalidDataException(
+                    $"Required semantic animation clip '{motion}' is missing.");
+            bool shouldLoop =
+                motion is "Idle" or "WalkForward";
+            if (clip.Loop != shouldLoop)
+            {
+                throw new InvalidDataException(
+                    $"Semantic animation clip '{motion}' loop setting is invalid.");
+            }
+        }
+
+        if (!requireSideAttackVariants)
+            return;
+
+        foreach (string side in new[] { "Left", "Right" })
+        {
+            string name = "Attack." + side;
+            CompiledAnimationClip clip =
+                compilation.Animations.SingleOrDefault(
+                    x => string.Equals(
+                        x.Name,
+                        name,
+                        StringComparison.Ordinal))
+                ?? throw new InvalidDataException(
+                    $"Side-reactive avatar animation clip '{name}' is missing.");
+            if (clip.Loop)
+                throw new InvalidDataException(
+                    $"Side-reactive avatar animation clip '{name}' must be non-looping.");
+        }
+    }
+
+    private static string ResolveSemanticClipName(
+        VoxelCompilation compilation,
+        string motion,
+        string side)
+    {
+        string sideName = motion + "." + side;
+        if (compilation.Animations.Any(
+                x => string.Equals(
+                    x.Name,
+                    sideName,
+                    StringComparison.Ordinal)))
+        {
+            return sideName;
+        }
+        if (compilation.Animations.Any(
+                x => string.Equals(
+                    x.Name,
+                    motion,
+                    StringComparison.Ordinal)))
+        {
+            return motion;
+        }
+        throw new InvalidDataException(
+            $"Semantic animation clip '{motion}' is unavailable.");
+    }
+
+    private static Matrix4x4 EvaluateBodySocketFrame(
+        VoxelCompilation compilation,
+        CompiledSocket socket,
+        CompiledAnimationClip clip,
+        float phase)
+    {
+        CompiledPart body = compilation.Parts[0];
+        SampledPartPose pose =
+            SampleRootPartPose(
+                compilation,
+                clip,
+                phase);
+        Matrix4x4 bodyPose =
+            BuildPoseMatrix(
+                pose,
+                compilation.VoxelsPerUnit);
+        Vector3 socketPosition =
+            (ToVector(socket.Transform.Translation) -
+             ToVector(body.Pivot)) /
+            compilation.VoxelsPerUnit;
+        Matrix4x4 socketLocal =
+            Matrix4x4.CreateFromQuaternion(
+                Euler(socket.Transform.Rotation)) *
+            Matrix4x4.CreateTranslation(socketPosition);
+        return socketLocal * bodyPose;
+    }
+
+    private static Matrix4x4 BuildSocketBindMatrix(
+        VoxelCompilation compilation,
+        CompiledSocket socket)
+    {
+        CompiledPart part = compilation.Parts.Single(
+            x => string.Equals(
+                x.Name,
+                socket.ParentName,
+                StringComparison.Ordinal));
+        Vector3 socketPosition =
+            (ToVector(socket.Transform.Translation) -
+             ToVector(part.Pivot)) /
+            compilation.VoxelsPerUnit;
+        return Matrix4x4.CreateFromQuaternion(
+                   Euler(socket.Transform.Rotation)) *
+               Matrix4x4.CreateTranslation(socketPosition);
+    }
+
+    private static SampledPartPose SampleRootPartPose(
+        VoxelCompilation compilation,
+        CompiledAnimationClip clip,
+        float phase)
+    {
+        string partName = compilation.Parts[0].Name;
+        CompiledAnimationTrack? track =
+            clip.Tracks.SingleOrDefault(
+                x => string.Equals(
+                    x.PartName,
+                    partName,
+                    StringComparison.Ordinal));
+        if (track == null)
+        {
+            return new SampledPartPose(
+                Vector3.Zero,
+                Quaternion.Identity,
+                Vector3.One);
+        }
+
+        float time = Math.Clamp(phase, 0f, 1f);
+        return new SampledPartPose(
+            track.Position == null
+                ? Vector3.Zero
+                : ToVector(SampleVector(track.Position, time, Vector3.Zero)),
+            track.Rotation == null
+                ? Quaternion.Identity
+                : SampleRotation(track.Rotation, time),
+            track.Scale == null
+                ? Vector3.One
+                : ToVector(SampleVector(track.Scale, time, Vector3.One)));
+    }
+
+    private static Matrix4x4 BuildPoseMatrix(
+        SampledPartPose pose,
+        int voxelsPerUnit) =>
+        Matrix4x4.CreateScale(pose.Scale) *
+        Matrix4x4.CreateFromQuaternion(pose.Rotation) *
+        Matrix4x4.CreateTranslation(
+            pose.Position / voxelsPerUnit);
+
+    private static Float3 SampleVector(
+        CompiledAnimationVectorChannel channel,
+        float time,
+        Vector3 fallback)
+    {
+        int count = channel.Keys.Count;
+        if (count == 0)
+            return new Float3(fallback.X, fallback.Y, fallback.Z);
+        if (count == 1 || time <= channel.Keys[0].Time)
+            return channel.Keys[0].Value;
+        if (time >= channel.Keys[count - 1].Time)
+            return channel.Keys[count - 1].Value;
+
+        int upper = 1;
+        while (upper < count && channel.Keys[upper].Time < time)
+            upper++;
+        CompiledAnimationVectorKey a = channel.Keys[upper - 1];
+        CompiledAnimationVectorKey b = channel.Keys[upper];
+        if (time == b.Time)
+            return b.Value;
+        float t = (time - a.Time) / (b.Time - a.Time);
+        t = channel.Interpolation switch
+        {
+            CompiledAnimationInterpolation.Step => 0f,
+            CompiledAnimationInterpolation.Linear => t,
+            CompiledAnimationInterpolation.SmoothStep =>
+                t * t * (3f - 2f * t),
+            _ => throw new ArgumentOutOfRangeException(nameof(channel))
+        };
+        return new Float3(
+            a.Value.X + ((b.Value.X - a.Value.X) * t),
+            a.Value.Y + ((b.Value.Y - a.Value.Y) * t),
+            a.Value.Z + ((b.Value.Z - a.Value.Z) * t));
+    }
+
+    private static Quaternion SampleRotation(
+        CompiledAnimationVectorChannel channel,
+        float time)
+    {
+        int count = channel.Keys.Count;
+        if (count == 0)
+            return Quaternion.Identity;
+        if (count == 1 || time <= channel.Keys[0].Time)
+            return Euler(channel.Keys[0].Value);
+        if (time >= channel.Keys[count - 1].Time)
+            return Euler(channel.Keys[count - 1].Value);
+
+        int upper = 1;
+        while (upper < count && channel.Keys[upper].Time < time)
+            upper++;
+        CompiledAnimationVectorKey a = channel.Keys[upper - 1];
+        CompiledAnimationVectorKey b = channel.Keys[upper];
+        if (time == b.Time)
+            return Euler(b.Value);
+        float t = (time - a.Time) / (b.Time - a.Time);
+        t = channel.Interpolation switch
+        {
+            CompiledAnimationInterpolation.Step => 0f,
+            CompiledAnimationInterpolation.Linear => t,
+            CompiledAnimationInterpolation.SmoothStep =>
+                t * t * (3f - 2f * t),
+            _ => throw new ArgumentOutOfRangeException(nameof(channel))
+        };
+        return Quaternion.Normalize(
+            Quaternion.Slerp(
+                Euler(a.Value),
+                Euler(b.Value),
+                t));
+    }
+
+    private static Quaternion Euler(Float3 degrees)
+    {
+        float x = degrees.X * (MathF.PI / 180f);
+        float y = degrees.Y * (MathF.PI / 180f);
+        float z = degrees.Z * (MathF.PI / 180f);
+        Quaternion qx =
+            Quaternion.CreateFromAxisAngle(Vector3.UnitX, x);
+        Quaternion qy =
+            Quaternion.CreateFromAxisAngle(Vector3.UnitY, y);
+        Quaternion qz =
+            Quaternion.CreateFromAxisAngle(Vector3.UnitZ, z);
+        return Quaternion.Normalize(qy * qx * qz);
+    }
+
+    private static bool Near(Int3 value, Float3 other) =>
+        MathF.Abs(value.X - other.X) <= 0.0001f &&
+        MathF.Abs(value.Y - other.Y) <= 0.0001f &&
+        MathF.Abs(value.Z - other.Z) <= 0.0001f;
+
+    private static Vector3 MatrixOrigin(Matrix4x4 matrix) =>
+        Vector3.Transform(Vector3.Zero, matrix);
+
+    private static Vector3 ToVector(Int3 value) =>
+        new(value.X, value.Y, value.Z);
+
+    private static Vector3 ToVector(Float3 value) =>
+        new(value.X, value.Y, value.Z);
 
     internal static void ValidatePublicationBudget(int voxels, int parts, StoreBudget budget)
     {
@@ -1206,131 +1779,8 @@ public sealed class StoreEngine
             throw new InvalidDataException($"Part budget exceeded: {parts}>{budget.MaxPartsPerAsset}.");
     }
 
-    private static string CompatibilityDetail(
-        CompiledSocket? socket,
-        bool socketFrameValid,
-        bool equipmentFrameValid,
-        string? unavailablePose)
-    {
-        if (socket == null)
-            return "required attachment missing";
-        if (!socketFrameValid)
-            return "attachment frame mismatch";
-        if (!equipmentFrameValid)
-            return "equipment mount frame is incompatible";
-        if (unavailablePose != null)
-            return $"pose/socket frame unavailable: {unavailablePose}";
-        return "PASS";
-    }
-
-    private static float[]? SocketTranslation(CompiledSocket? socket) =>
-        socket == null
-            ? null
-            : new float[]
-            {
-                socket.Transform.Translation.X,
-                socket.Transform.Translation.Y,
-                socket.Transform.Translation.Z
-            };
-
-    private static bool SocketMatchesContract(CompiledSocket socket, float[] forward, float[] up)
-    {
-        Quaternion rotation = Euler(socket.Transform.Rotation);
-        Vector3 actualForward = Vector3.Normalize(Vector3.Transform(Vector3.UnitZ, rotation));
-        Vector3 actualUp = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
-        Vector3 expectedForward = Vector3.Normalize(new Vector3(forward[0], forward[1], forward[2]));
-        Vector3 expectedUp = Vector3.Normalize(new Vector3(up[0], up[1], up[2]));
-        return Vector3.Distance(actualForward, expectedForward) < 0.001f &&
-               Vector3.Distance(actualUp, expectedUp) < 0.001f;
-    }
-
-
-    private static Dictionary<string, Dictionary<string, PartWorldFrame>> LoadPoseSamples(AssetRecord avatar)
-    {
-        string path = Path.Combine(avatar.ProofDirectory, "Standalone", "preview-poses.json");
-        var samples = new Dictionary<string, Dictionary<string, PartWorldFrame>>(StringComparer.Ordinal);
-        if (!File.Exists(path))
-            return samples;
-        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
-        if (!document.RootElement.TryGetProperty("Samples", out JsonElement sampleArray))
-            return samples;
-        foreach (JsonElement sample in sampleArray.EnumerateArray())
-        {
-            string clip = sample.GetProperty("Clip").GetString() ?? "";
-            float time = sample.GetProperty("NormalizedTime").GetSingle();
-            var parts = new Dictionary<string, PartWorldFrame>(StringComparer.Ordinal);
-            foreach (JsonElement part in sample.GetProperty("Parts").EnumerateArray())
-            {
-                string name = part.GetProperty("Part").GetString() ?? "";
-                parts.Add(name, new PartWorldFrame(
-                    ReadVector(part, "WorldOrigin"),
-                    ReadVector(part, "WorldX"),
-                    ReadVector(part, "WorldY"),
-                    ReadVector(part, "WorldZ")));
-            }
-            samples.Add(PoseKey(clip, time), parts);
-        }
-        return samples;
-    }
-
-    private static SocketWorldFrame? ResolveSocketWorldFrame(
-        VoxelCompilation compilation,
-        CompiledSocket socket,
-        IReadOnlyDictionary<string, PartWorldFrame> sampledParts)
-    {
-        if (!sampledParts.TryGetValue(socket.ParentName, out PartWorldFrame? parentFrame))
-            return null;
-        CompiledPart? parentPart = compilation.Parts.SingleOrDefault(x => x.Name == socket.ParentName);
-        if (parentPart == null)
-            return null;
-
-        Vector3 basisX = parentFrame.WorldX - parentFrame.Origin;
-        Vector3 basisY = parentFrame.WorldY - parentFrame.Origin;
-        Vector3 basisZ = parentFrame.WorldZ - parentFrame.Origin;
-        var socketFromPivot = new Vector3(
-            socket.Transform.Translation.X - parentPart.Pivot.X,
-            socket.Transform.Translation.Y - parentPart.Pivot.Y,
-            socket.Transform.Translation.Z - parentPart.Pivot.Z);
-        Vector3 origin = parentFrame.Origin + TransformDirection(socketFromPivot, basisX, basisY, basisZ);
-
-        Quaternion rotation = Euler(socket.Transform.Rotation);
-        Vector3 localX = Vector3.Transform(Vector3.UnitX, rotation);
-        Vector3 localY = Vector3.Transform(Vector3.UnitY, rotation);
-        Vector3 localZ = Vector3.Transform(Vector3.UnitZ, rotation);
-        return new SocketWorldFrame(
-            origin,
-            origin + TransformDirection(localX, basisX, basisY, basisZ),
-            origin + TransformDirection(localY, basisX, basisY, basisZ),
-            origin + TransformDirection(localZ, basisX, basisY, basisZ));
-    }
-
-    private static Vector3 TransformDirection(
-        Vector3 local,
-        Vector3 basisX,
-        Vector3 basisY,
-        Vector3 basisZ) =>
-        (basisX * local.X) + (basisY * local.Y) + (basisZ * local.Z);
-
-    private static Quaternion Euler(Float3 degrees)
-    {
-        float x = degrees.X * (MathF.PI / 180f);
-        float y = degrees.Y * (MathF.PI / 180f);
-        float z = degrees.Z * (MathF.PI / 180f);
-        Quaternion qx = Quaternion.CreateFromAxisAngle(Vector3.UnitX, x);
-        Quaternion qy = Quaternion.CreateFromAxisAngle(Vector3.UnitY, y);
-        Quaternion qz = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, z);
-        return Quaternion.Normalize(qy * qx * qz);
-    }
-
-    private static Vector3 ReadVector(JsonElement owner, string property)
-    {
-        float[] value = owner.GetProperty(property).EnumerateArray().Select(x => x.GetSingle()).ToArray();
-        if (value.Length != 3 || value.Any(x => !float.IsFinite(x)))
-            throw new InvalidDataException($"Pose report property '{property}' is not a finite 3D vector.");
-        return new Vector3(value[0], value[1], value[2]);
-    }
-
     private static float[] Vector(Vector3 value) => new[] { value.X, value.Y, value.Z };
+
 
     private static List<CoverageGap> EvaluateCoverage(
         CollectionManifest coverage,
@@ -1343,17 +1793,11 @@ public sealed class StoreEngine
             bool satisfied = assets.Any(asset =>
                 health[asset.Manifest.Id].Published &&
                 asset.Manifest.Kind == requirement.Kind &&
-                (requirement.Profile == null ||
-                 asset.Manifest.Family == requirement.Profile ||
-                 asset.Manifest.Mount?.Profile == requirement.Profile) &&
-                (requirement.Capability == null || asset.Manifest.Mount?.Capability == requirement.Capability) &&
                 (requirement.Form == null || asset.Manifest.Form == requirement.Form));
             if (!satisfied)
                 gaps.Add(new CoverageGap(
                     requirement.Id,
                     requirement.Kind,
-                    requirement.Profile,
-                    requirement.Capability,
                     requirement.Form,
                     requirement.Required));
         }
@@ -1406,8 +1850,17 @@ public sealed class StoreEngine
                 x.Kind,
                 x.UnitRef,
                 x.Form,
-                x.Profile,
-                x.Capability
+                attachment = x.Kind == "equipment"
+                    ? new
+                    {
+                        capability = x.AttachmentCapability,
+                        side = x.AttachmentSide,
+                        anchor = x.AttachmentAnchor
+                    }
+                    : null,
+                slotInstances = x.Kind == "avatar" ? x.SlotInstances : null,
+                slotCounts = x.Kind == "avatar" ? x.SlotCounts : null,
+                semanticMotions = x.SemanticMotions
             }).OrderBy(x => x.Id).ToArray()
         }, JsonOptions));
         File.WriteAllText(
@@ -1799,10 +2252,10 @@ public sealed class StoreEngine
     private static bool IsReferenceDrivenDensity(AssetManifest manifest) =>
         string.Equals(manifest.Density, "reference-driven", StringComparison.Ordinal);
 
-    private static void ValidateManifestShape(AssetManifest m, string path)
+    internal static void ValidateManifestShape(AssetManifest m, string path)
     {
-        if (m.Version != 2)
-            throw new InvalidDataException($"Active asset manifests must use version 2 in {path}.");
+        if (m.Version != 3)
+            throw new InvalidDataException($"Active asset manifests must use version 3 in {path}.");
         if (string.IsNullOrWhiteSpace(m.Id) || string.IsNullOrWhiteSpace(m.UnitRef))
             throw new InvalidDataException($"Asset id and UnitRef are required in {path}.");
         if (m.Kind is not ("avatar" or "equipment"))
@@ -1816,18 +2269,31 @@ public sealed class StoreEngine
 
         if (m.Kind == "avatar")
         {
-            if (m.Mount != null || !string.IsNullOrWhiteSpace(m.Form) || !string.IsNullOrWhiteSpace(m.Density))
-                throw new InvalidDataException($"Avatar manifest cannot declare equipment form/mount/density metadata in {path}.");
+            if (!string.IsNullOrWhiteSpace(m.Form) ||
+                !string.IsNullOrWhiteSpace(m.Density) ||
+                m.Attachment != null)
+            {
+                throw new InvalidDataException(
+                    $"Avatar manifest cannot declare equipment form/density/attachment metadata in {path}.");
+            }
             return;
         }
 
-        if (m.Mount == null || string.IsNullOrWhiteSpace(m.Mount.Profile))
-            throw new InvalidDataException($"Equipment mount profile is required in {path}.");
-        if (string.IsNullOrWhiteSpace(m.Mount.Capability) ||
-            string.IsNullOrWhiteSpace(m.Form))
-            throw new InvalidDataException($"Equipment must declare form plus logical capability in {path}.");
+        if (string.IsNullOrWhiteSpace(m.Form))
+            throw new InvalidDataException($"Equipment must declare a reusable physical form in {path}.");
         if (!string.IsNullOrWhiteSpace(m.Density) && !IsReferenceDrivenDensity(m))
             throw new InvalidDataException($"Equipment density must be 'reference-driven' when declared in {path}.");
+        if (m.Attachment == null)
+            throw new InvalidDataException($"Equipment must declare attachment metadata in {path}.");
+        if (!AttachmentCapabilities.Contains(m.Attachment.Capability))
+            throw new InvalidDataException(
+                $"Equipment attachment capability '{m.Attachment.Capability}' is unsupported in {path}.");
+        if (!AttachmentSides.Contains(m.Attachment.Side))
+            throw new InvalidDataException(
+                $"Equipment attachment side '{m.Attachment.Side}' is unsupported in {path}.");
+        if (!string.Equals(m.Attachment.Anchor, "Mount", StringComparison.Ordinal))
+            throw new InvalidDataException(
+                $"Equipment attachment anchor must be 'Mount' in {path}.");
     }
 
     private static void ValidatePolicy(StorePolicy policy)
@@ -1852,65 +2318,16 @@ public sealed class StoreEngine
         {
             if (requirement.Kind is not ("avatar" or "equipment"))
                 throw new InvalidDataException($"Unsupported collection requirement kind '{requirement.Kind}'.");
-
-            if (string.IsNullOrWhiteSpace(requirement.Profile))
-                throw new InvalidDataException("Collection requirements require a profile.");
             if (requirement.Kind == "equipment")
             {
-                if (string.IsNullOrWhiteSpace(requirement.Capability) || string.IsNullOrWhiteSpace(requirement.Form))
-                    throw new InvalidDataException("Equipment collection requirements require capability and form.");
+                if (string.IsNullOrWhiteSpace(requirement.Form))
+                    throw new InvalidDataException("Equipment collection requirements require a form.");
             }
-            else if (!string.IsNullOrWhiteSpace(requirement.Capability) || !string.IsNullOrWhiteSpace(requirement.Form))
+            else if (!string.IsNullOrWhiteSpace(requirement.Form))
             {
-                throw new InvalidDataException("Avatar collection requirements cannot declare equipment capability/form.");
+                throw new InvalidDataException("Avatar collection requirements cannot declare equipment form.");
             }
         }
-    }
-
-    private static void ValidateProfile(CompatibilityProfile profile, string path)
-    {
-        if (profile.Version != 2 || string.IsNullOrWhiteSpace(profile.Id) || profile.VoxelsPerUnit <= 0)
-            throw new InvalidDataException($"Active compatibility profile must use version 2: {path}");
-
-        if (profile.RequiredMountCapabilities.Count == 0)
-            throw new InvalidDataException($"Compatibility profile requires at least one mount capability: {path}");
-        var capabilities = new HashSet<string>(StringComparer.Ordinal);
-        var sockets = new HashSet<string>(StringComparer.Ordinal);
-        foreach (MountCapabilityContract mount in profile.RequiredMountCapabilities.Concat(profile.OptionalMountCapabilities))
-        {
-            if (string.IsNullOrWhiteSpace(mount.Capability) || !capabilities.Add(mount.Capability))
-                throw new InvalidDataException($"Duplicate/empty mount capability '{mount.Capability}' in {path}.");
-            if (mount.Sockets.Count == 0 || mount.Sockets.Any(string.IsNullOrWhiteSpace))
-                throw new InvalidDataException($"Mount capability '{mount.Capability}' requires physical socket instances in {path}.");
-            if (mount.Sockets.Distinct(StringComparer.Ordinal).Count() != mount.Sockets.Count)
-                throw new InvalidDataException($"Mount capability '{mount.Capability}' contains duplicate socket instances in {path}.");
-            foreach (string socket in mount.Sockets)
-                if (!sockets.Add(socket))
-                    throw new InvalidDataException($"Physical socket instance '{socket}' is assigned more than once in {path}.");
-            ValidateFrameContract(mount.Capability, mount.Forward, mount.Up, mount.Envelope, path);
-        }
-    }
-
-    private static void ValidateFrameContract(
-        string label,
-        float[] forward,
-        float[] up,
-        float[] envelope,
-        string path)
-    {
-        if (forward.Length != 3 || up.Length != 3 || envelope.Length != 3 ||
-            forward.Any(x => !float.IsFinite(x)) || up.Any(x => !float.IsFinite(x)) ||
-            envelope.Any(x => !float.IsFinite(x)))
-            throw new InvalidDataException($"Mount '{label}' must define finite 3D forward/up/envelope vectors in {path}.");
-        if (envelope.Any(x => x <= 0))
-            throw new InvalidDataException($"Mount '{label}' envelope components must be positive in {path}.");
-
-        var forwardVector = new Vector3(forward[0], forward[1], forward[2]);
-        var upVector = new Vector3(up[0], up[1], up[2]);
-        if (MathF.Abs(forwardVector.Length() - 1f) > 0.001f ||
-            MathF.Abs(upVector.Length() - 1f) > 0.001f ||
-            MathF.Abs(Vector3.Dot(forwardVector, upVector)) > 0.001f)
-            throw new InvalidDataException($"Mount '{label}' forward/up vectors must be normalized and orthogonal in {path}.");
     }
 
     private void ValidateHistoricalIdentity(AssetRecord asset)
@@ -1976,19 +2393,6 @@ public sealed class StoreEngine
             return value.Trim('"', '\'');
         }
         return null;
-    }
-    private void ValidateHistoricalProfile(CompatibilityProfile profile, string path)
-    {
-        string relative = Path.GetRelativePath(_root, path).Replace('\\', '/');
-        string? previous = GitShow(relative);
-        if (previous == null)
-            return;
-        CompatibilityProfile old = ContractYaml.Parse<CompatibilityProfile>(previous);
-        string oldJson = JsonSerializer.Serialize(old);
-        string currentJson = JsonSerializer.Serialize(profile);
-        if (!string.Equals(oldJson, currentJson, StringComparison.Ordinal))
-            throw new InvalidDataException(
-                $"Compatibility profile '{profile.Id}' changed in-place; publish a new profile version.");
     }
 
     private string? GitShow(string relative)

@@ -4,67 +4,636 @@ assemblyOrigin:
   part: Body
 parts:
   - part: Body
+    pivot: [1, 0, 0]
     voxels:
-      - box: { min: [0, 1, 9], size: [10, 4, 3], color: robeLight }
-      - box: { min: [1, 1, 8], size: [8, 4, 2], color: robe }
-      - box: { min: [2, 1, 2], size: [6, 4, 7], color: robeDark }
-      - box: { min: [1, 1, 0], size: [8, 4, 3], color: robe }
-      - box: { min: [0, 2, 0], size: [10, 3, 1], color: robeDark }
-      - box: { min: [4, 0, 2], size: [2, 1, 7], color: gold }
-      - voxel: { at: [4, 0, 3], color: robeAccent }
-      - voxel: { at: [5, 0, 5], color: robeAccent }
-      - voxel: { at: [4, 0, 7], color: robeAccent }
-      - box: { min: [1, 0, 9], size: [2, 1, 2], color: gold }
-      - box: { min: [7, 0, 9], size: [2, 1, 2], color: gold }
-  - part: Head
-    parent: Body
-    transform:
-      translate: [2, 0, 11]
-    voxels:
-      - box: { min: [0, 0, 1], size: [6, 5, 5], color: robeDark }
-      - box: { min: [1, 0, 1], size: [4, 1, 4], color: bone }
-      - box: { min: [1, 0, 3], size: [1, 1, 1], color: eyeCavity }
-      - box: { min: [4, 0, 3], size: [1, 1, 1], color: eyeCavity }
-      - voxel: { at: [1, 0, 3], color: glow }
-      - voxel: { at: [4, 0, 3], color: glow }
-      - box: { min: [0, 1, 5], size: [1, 2, 3], color: gold }
-      - box: { min: [5, 1, 5], size: [1, 2, 3], color: gold }
-      - voxel: { at: [2, 0, 1], color: boneShadow }
-      - voxel: { at: [3, 0, 1], color: boneShadow }
-  - part: Arm.L
-    parent: Body
-    transform:
-      translate: [-1, 1, 5]
-    voxels:
-      - box: { min: [0, 0, 3], size: [2, 3, 4], color: robe }
-      - box: { min: [0, 0, 1], size: [2, 3, 3], color: robeLight }
-      - box: { min: [0, 0, 0], size: [2, 2, 2], color: bone }
-      - voxel: { at: [0, 0, 0], color: glow }
-  - part: Arm.R
-    parent: Body
-    transform:
-      translate: [9, 1, 5]
-    voxels:
-      - box: { min: [0, 0, 3], size: [2, 3, 4], color: robeDark }
-      - box: { min: [0, 0, 1], size: [2, 3, 3], color: robeLight }
-      - box: { min: [0, 0, 0], size: [2, 2, 2], color: bone }
-      - voxel: { at: [1, 0, 0], color: glow }
+      - voxel: { at: [2, 1, 0], color: robe }
+      - voxel: { at: [3, 1, 0], color: robe }
+      - voxel: { at: [4, 1, 0], color: robe }
+      - voxel: { at: [5, 1, 0], color: robe }
+      - voxel: { at: [6, 1, 0], color: robe }
+      - voxel: { at: [7, 1, 0], color: robe }
+      - voxel: { at: [8, 1, 0], color: robe }
+      - voxel: { at: [9, 1, 0], color: robe }
+      - voxel: { at: [1, 2, 0], color: robeDark }
+      - voxel: { at: [2, 2, 0], color: robeDark }
+      - voxel: { at: [3, 2, 0], color: robeDark }
+      - voxel: { at: [4, 2, 0], color: robeDark }
+      - voxel: { at: [5, 2, 0], color: robeDark }
+      - voxel: { at: [6, 2, 0], color: robeDark }
+      - voxel: { at: [7, 2, 0], color: robeDark }
+      - voxel: { at: [8, 2, 0], color: robeDark }
+      - voxel: { at: [9, 2, 0], color: robeDark }
+      - voxel: { at: [10, 2, 0], color: robeDark }
+      - voxel: { at: [1, 3, 0], color: robeDark }
+      - voxel: { at: [2, 3, 0], color: robeDark }
+      - voxel: { at: [3, 3, 0], color: robeDark }
+      - voxel: { at: [4, 3, 0], color: robeDark }
+      - voxel: { at: [5, 3, 0], color: robeDark }
+      - voxel: { at: [6, 3, 0], color: robeDark }
+      - voxel: { at: [7, 3, 0], color: robeDark }
+      - voxel: { at: [8, 3, 0], color: robeDark }
+      - voxel: { at: [9, 3, 0], color: robeDark }
+      - voxel: { at: [10, 3, 0], color: robeDark }
+      - voxel: { at: [1, 4, 0], color: robeDark }
+      - voxel: { at: [2, 4, 0], color: robeDark }
+      - voxel: { at: [3, 4, 0], color: robeDark }
+      - voxel: { at: [4, 4, 0], color: robeDark }
+      - voxel: { at: [5, 4, 0], color: robeDark }
+      - voxel: { at: [6, 4, 0], color: robeDark }
+      - voxel: { at: [7, 4, 0], color: robeDark }
+      - voxel: { at: [8, 4, 0], color: robeDark }
+      - voxel: { at: [9, 4, 0], color: robeDark }
+      - voxel: { at: [10, 4, 0], color: robeDark }
+      - voxel: { at: [2, 1, 1], color: robe }
+      - voxel: { at: [3, 1, 1], color: robe }
+      - voxel: { at: [4, 1, 1], color: robe }
+      - voxel: { at: [5, 1, 1], color: robe }
+      - voxel: { at: [6, 1, 1], color: robe }
+      - voxel: { at: [7, 1, 1], color: robe }
+      - voxel: { at: [8, 1, 1], color: robe }
+      - voxel: { at: [9, 1, 1], color: robe }
+      - voxel: { at: [2, 2, 1], color: robe }
+      - voxel: { at: [3, 2, 1], color: robe }
+      - voxel: { at: [4, 2, 1], color: robe }
+      - voxel: { at: [5, 2, 1], color: robe }
+      - voxel: { at: [6, 2, 1], color: robe }
+      - voxel: { at: [7, 2, 1], color: robe }
+      - voxel: { at: [8, 2, 1], color: robe }
+      - voxel: { at: [9, 2, 1], color: robe }
+      - voxel: { at: [2, 3, 1], color: robe }
+      - voxel: { at: [3, 3, 1], color: robe }
+      - voxel: { at: [4, 3, 1], color: robe }
+      - voxel: { at: [5, 3, 1], color: robe }
+      - voxel: { at: [6, 3, 1], color: robe }
+      - voxel: { at: [7, 3, 1], color: robe }
+      - voxel: { at: [8, 3, 1], color: robe }
+      - voxel: { at: [9, 3, 1], color: robe }
+      - voxel: { at: [2, 4, 1], color: robe }
+      - voxel: { at: [3, 4, 1], color: robe }
+      - voxel: { at: [4, 4, 1], color: robe }
+      - voxel: { at: [5, 4, 1], color: robe }
+      - voxel: { at: [6, 4, 1], color: robe }
+      - voxel: { at: [7, 4, 1], color: robe }
+      - voxel: { at: [8, 4, 1], color: robe }
+      - voxel: { at: [9, 4, 1], color: robe }
+      - voxel: { at: [5, 0, 2], color: gold }
+      - voxel: { at: [6, 0, 2], color: gold }
+      - voxel: { at: [2, 1, 2], color: robe }
+      - voxel: { at: [3, 1, 2], color: robe }
+      - voxel: { at: [4, 1, 2], color: robe }
+      - voxel: { at: [5, 1, 2], color: robe }
+      - voxel: { at: [6, 1, 2], color: robe }
+      - voxel: { at: [7, 1, 2], color: robe }
+      - voxel: { at: [8, 1, 2], color: robe }
+      - voxel: { at: [9, 1, 2], color: robe }
+      - voxel: { at: [2, 2, 2], color: robe }
+      - voxel: { at: [3, 2, 2], color: robe }
+      - voxel: { at: [4, 2, 2], color: robe }
+      - voxel: { at: [5, 2, 2], color: robe }
+      - voxel: { at: [6, 2, 2], color: robe }
+      - voxel: { at: [7, 2, 2], color: robe }
+      - voxel: { at: [8, 2, 2], color: robe }
+      - voxel: { at: [9, 2, 2], color: robe }
+      - voxel: { at: [2, 3, 2], color: robe }
+      - voxel: { at: [3, 3, 2], color: robe }
+      - voxel: { at: [4, 3, 2], color: robe }
+      - voxel: { at: [5, 3, 2], color: robe }
+      - voxel: { at: [6, 3, 2], color: robe }
+      - voxel: { at: [7, 3, 2], color: robe }
+      - voxel: { at: [8, 3, 2], color: robe }
+      - voxel: { at: [9, 3, 2], color: robe }
+      - voxel: { at: [2, 4, 2], color: robe }
+      - voxel: { at: [3, 4, 2], color: robe }
+      - voxel: { at: [4, 4, 2], color: robe }
+      - voxel: { at: [5, 4, 2], color: robe }
+      - voxel: { at: [6, 4, 2], color: robe }
+      - voxel: { at: [7, 4, 2], color: robe }
+      - voxel: { at: [8, 4, 2], color: robe }
+      - voxel: { at: [9, 4, 2], color: robe }
+      - voxel: { at: [5, 0, 3], color: robeAccent }
+      - voxel: { at: [6, 0, 3], color: gold }
+      - voxel: { at: [3, 1, 3], color: robeDark }
+      - voxel: { at: [4, 1, 3], color: robeDark }
+      - voxel: { at: [5, 1, 3], color: robeDark }
+      - voxel: { at: [6, 1, 3], color: robeDark }
+      - voxel: { at: [7, 1, 3], color: robeDark }
+      - voxel: { at: [8, 1, 3], color: robeDark }
+      - voxel: { at: [3, 2, 3], color: robeDark }
+      - voxel: { at: [4, 2, 3], color: robeDark }
+      - voxel: { at: [5, 2, 3], color: robeDark }
+      - voxel: { at: [6, 2, 3], color: robeDark }
+      - voxel: { at: [7, 2, 3], color: robeDark }
+      - voxel: { at: [8, 2, 3], color: robeDark }
+      - voxel: { at: [3, 3, 3], color: robeDark }
+      - voxel: { at: [4, 3, 3], color: robeDark }
+      - voxel: { at: [5, 3, 3], color: robeDark }
+      - voxel: { at: [6, 3, 3], color: robeDark }
+      - voxel: { at: [7, 3, 3], color: robeDark }
+      - voxel: { at: [8, 3, 3], color: robeDark }
+      - voxel: { at: [3, 4, 3], color: robeDark }
+      - voxel: { at: [4, 4, 3], color: robeDark }
+      - voxel: { at: [5, 4, 3], color: robeDark }
+      - voxel: { at: [6, 4, 3], color: robeDark }
+      - voxel: { at: [7, 4, 3], color: robeDark }
+      - voxel: { at: [8, 4, 3], color: robeDark }
+      - voxel: { at: [5, 0, 4], color: gold }
+      - voxel: { at: [6, 0, 4], color: gold }
+      - voxel: { at: [3, 1, 4], color: robeDark }
+      - voxel: { at: [4, 1, 4], color: robeDark }
+      - voxel: { at: [5, 1, 4], color: robeDark }
+      - voxel: { at: [6, 1, 4], color: robeDark }
+      - voxel: { at: [7, 1, 4], color: robeDark }
+      - voxel: { at: [8, 1, 4], color: robeDark }
+      - voxel: { at: [3, 2, 4], color: robeDark }
+      - voxel: { at: [4, 2, 4], color: robeDark }
+      - voxel: { at: [5, 2, 4], color: robeDark }
+      - voxel: { at: [6, 2, 4], color: robeDark }
+      - voxel: { at: [7, 2, 4], color: robeDark }
+      - voxel: { at: [8, 2, 4], color: robeDark }
+      - voxel: { at: [3, 3, 4], color: robeDark }
+      - voxel: { at: [4, 3, 4], color: robeDark }
+      - voxel: { at: [5, 3, 4], color: robeDark }
+      - voxel: { at: [6, 3, 4], color: robeDark }
+      - voxel: { at: [7, 3, 4], color: robeDark }
+      - voxel: { at: [8, 3, 4], color: robeDark }
+      - voxel: { at: [3, 4, 4], color: robeDark }
+      - voxel: { at: [4, 4, 4], color: robeDark }
+      - voxel: { at: [5, 4, 4], color: robeDark }
+      - voxel: { at: [6, 4, 4], color: robeDark }
+      - voxel: { at: [7, 4, 4], color: robeDark }
+      - voxel: { at: [8, 4, 4], color: robeDark }
+      - voxel: { at: [5, 0, 5], color: gold }
+      - voxel: { at: [6, 0, 5], color: robeAccent }
+      - voxel: { at: [0, 1, 5], color: glow }
+      - voxel: { at: [1, 1, 5], color: bone }
+      - voxel: { at: [3, 1, 5], color: robeDark }
+      - voxel: { at: [4, 1, 5], color: robeDark }
+      - voxel: { at: [5, 1, 5], color: robeDark }
+      - voxel: { at: [6, 1, 5], color: robeDark }
+      - voxel: { at: [7, 1, 5], color: robeDark }
+      - voxel: { at: [8, 1, 5], color: robeDark }
+      - voxel: { at: [10, 1, 5], color: bone }
+      - voxel: { at: [11, 1, 5], color: glow }
+      - voxel: { at: [0, 2, 5], color: bone }
+      - voxel: { at: [1, 2, 5], color: bone }
+      - voxel: { at: [3, 2, 5], color: robeDark }
+      - voxel: { at: [4, 2, 5], color: robeDark }
+      - voxel: { at: [5, 2, 5], color: robeDark }
+      - voxel: { at: [6, 2, 5], color: robeDark }
+      - voxel: { at: [7, 2, 5], color: robeDark }
+      - voxel: { at: [8, 2, 5], color: robeDark }
+      - voxel: { at: [10, 2, 5], color: bone }
+      - voxel: { at: [11, 2, 5], color: bone }
+      - voxel: { at: [3, 3, 5], color: robeDark }
+      - voxel: { at: [4, 3, 5], color: robeDark }
+      - voxel: { at: [5, 3, 5], color: robeDark }
+      - voxel: { at: [6, 3, 5], color: robeDark }
+      - voxel: { at: [7, 3, 5], color: robeDark }
+      - voxel: { at: [8, 3, 5], color: robeDark }
+      - voxel: { at: [3, 4, 5], color: robeDark }
+      - voxel: { at: [4, 4, 5], color: robeDark }
+      - voxel: { at: [5, 4, 5], color: robeDark }
+      - voxel: { at: [6, 4, 5], color: robeDark }
+      - voxel: { at: [7, 4, 5], color: robeDark }
+      - voxel: { at: [8, 4, 5], color: robeDark }
+      - voxel: { at: [5, 0, 6], color: gold }
+      - voxel: { at: [6, 0, 6], color: gold }
+      - voxel: { at: [0, 1, 6], color: bone }
+      - voxel: { at: [1, 1, 6], color: bone }
+      - voxel: { at: [3, 1, 6], color: robeDark }
+      - voxel: { at: [4, 1, 6], color: robeDark }
+      - voxel: { at: [5, 1, 6], color: robeDark }
+      - voxel: { at: [6, 1, 6], color: robeDark }
+      - voxel: { at: [7, 1, 6], color: robeDark }
+      - voxel: { at: [8, 1, 6], color: robeDark }
+      - voxel: { at: [10, 1, 6], color: bone }
+      - voxel: { at: [11, 1, 6], color: bone }
+      - voxel: { at: [0, 2, 6], color: bone }
+      - voxel: { at: [1, 2, 6], color: bone }
+      - voxel: { at: [3, 2, 6], color: robeDark }
+      - voxel: { at: [4, 2, 6], color: robeDark }
+      - voxel: { at: [5, 2, 6], color: robeDark }
+      - voxel: { at: [6, 2, 6], color: robeDark }
+      - voxel: { at: [7, 2, 6], color: robeDark }
+      - voxel: { at: [8, 2, 6], color: robeDark }
+      - voxel: { at: [10, 2, 6], color: bone }
+      - voxel: { at: [11, 2, 6], color: bone }
+      - voxel: { at: [0, 3, 6], color: robeLight }
+      - voxel: { at: [1, 3, 6], color: robeLight }
+      - voxel: { at: [3, 3, 6], color: robeDark }
+      - voxel: { at: [4, 3, 6], color: robeDark }
+      - voxel: { at: [5, 3, 6], color: robeDark }
+      - voxel: { at: [6, 3, 6], color: robeDark }
+      - voxel: { at: [7, 3, 6], color: robeDark }
+      - voxel: { at: [8, 3, 6], color: robeDark }
+      - voxel: { at: [10, 3, 6], color: robeLight }
+      - voxel: { at: [11, 3, 6], color: robeLight }
+      - voxel: { at: [3, 4, 6], color: robeDark }
+      - voxel: { at: [4, 4, 6], color: robeDark }
+      - voxel: { at: [5, 4, 6], color: robeDark }
+      - voxel: { at: [6, 4, 6], color: robeDark }
+      - voxel: { at: [7, 4, 6], color: robeDark }
+      - voxel: { at: [8, 4, 6], color: robeDark }
+      - voxel: { at: [5, 0, 7], color: robeAccent }
+      - voxel: { at: [6, 0, 7], color: gold }
+      - voxel: { at: [0, 1, 7], color: robeLight }
+      - voxel: { at: [1, 1, 7], color: robeLight }
+      - voxel: { at: [3, 1, 7], color: robeDark }
+      - voxel: { at: [4, 1, 7], color: robeDark }
+      - voxel: { at: [5, 1, 7], color: robeDark }
+      - voxel: { at: [6, 1, 7], color: robeDark }
+      - voxel: { at: [7, 1, 7], color: robeDark }
+      - voxel: { at: [8, 1, 7], color: robeDark }
+      - voxel: { at: [10, 1, 7], color: robeLight }
+      - voxel: { at: [11, 1, 7], color: robeLight }
+      - voxel: { at: [0, 2, 7], color: robeLight }
+      - voxel: { at: [1, 2, 7], color: robeLight }
+      - voxel: { at: [3, 2, 7], color: robeDark }
+      - voxel: { at: [4, 2, 7], color: robeDark }
+      - voxel: { at: [5, 2, 7], color: robeDark }
+      - voxel: { at: [6, 2, 7], color: robeDark }
+      - voxel: { at: [7, 2, 7], color: robeDark }
+      - voxel: { at: [8, 2, 7], color: robeDark }
+      - voxel: { at: [10, 2, 7], color: robeLight }
+      - voxel: { at: [11, 2, 7], color: robeLight }
+      - voxel: { at: [0, 3, 7], color: robeLight }
+      - voxel: { at: [1, 3, 7], color: robeLight }
+      - voxel: { at: [3, 3, 7], color: robeDark }
+      - voxel: { at: [4, 3, 7], color: robeDark }
+      - voxel: { at: [5, 3, 7], color: robeDark }
+      - voxel: { at: [6, 3, 7], color: robeDark }
+      - voxel: { at: [7, 3, 7], color: robeDark }
+      - voxel: { at: [8, 3, 7], color: robeDark }
+      - voxel: { at: [10, 3, 7], color: robeLight }
+      - voxel: { at: [11, 3, 7], color: robeLight }
+      - voxel: { at: [3, 4, 7], color: robeDark }
+      - voxel: { at: [4, 4, 7], color: robeDark }
+      - voxel: { at: [5, 4, 7], color: robeDark }
+      - voxel: { at: [6, 4, 7], color: robeDark }
+      - voxel: { at: [7, 4, 7], color: robeDark }
+      - voxel: { at: [8, 4, 7], color: robeDark }
+      - voxel: { at: [5, 0, 8], color: gold }
+      - voxel: { at: [6, 0, 8], color: gold }
+      - voxel: { at: [0, 1, 8], color: robeLight }
+      - voxel: { at: [1, 1, 8], color: robeLight }
+      - voxel: { at: [2, 1, 8], color: robe }
+      - voxel: { at: [3, 1, 8], color: robeDark }
+      - voxel: { at: [4, 1, 8], color: robeDark }
+      - voxel: { at: [5, 1, 8], color: robeDark }
+      - voxel: { at: [6, 1, 8], color: robeDark }
+      - voxel: { at: [7, 1, 8], color: robeDark }
+      - voxel: { at: [8, 1, 8], color: robeDark }
+      - voxel: { at: [9, 1, 8], color: robe }
+      - voxel: { at: [10, 1, 8], color: robeLight }
+      - voxel: { at: [11, 1, 8], color: robeLight }
+      - voxel: { at: [0, 2, 8], color: robeLight }
+      - voxel: { at: [1, 2, 8], color: robeLight }
+      - voxel: { at: [2, 2, 8], color: robe }
+      - voxel: { at: [3, 2, 8], color: robeDark }
+      - voxel: { at: [4, 2, 8], color: robeDark }
+      - voxel: { at: [5, 2, 8], color: robeDark }
+      - voxel: { at: [6, 2, 8], color: robeDark }
+      - voxel: { at: [7, 2, 8], color: robeDark }
+      - voxel: { at: [8, 2, 8], color: robeDark }
+      - voxel: { at: [9, 2, 8], color: robe }
+      - voxel: { at: [10, 2, 8], color: robeLight }
+      - voxel: { at: [11, 2, 8], color: robeLight }
+      - voxel: { at: [0, 3, 8], color: robeLight }
+      - voxel: { at: [1, 3, 8], color: robeLight }
+      - voxel: { at: [2, 3, 8], color: robe }
+      - voxel: { at: [3, 3, 8], color: robeDark }
+      - voxel: { at: [4, 3, 8], color: robeDark }
+      - voxel: { at: [5, 3, 8], color: robeDark }
+      - voxel: { at: [6, 3, 8], color: robeDark }
+      - voxel: { at: [7, 3, 8], color: robeDark }
+      - voxel: { at: [8, 3, 8], color: robeDark }
+      - voxel: { at: [9, 3, 8], color: robe }
+      - voxel: { at: [10, 3, 8], color: robeLight }
+      - voxel: { at: [11, 3, 8], color: robeLight }
+      - voxel: { at: [2, 4, 8], color: robe }
+      - voxel: { at: [3, 4, 8], color: robeDark }
+      - voxel: { at: [4, 4, 8], color: robeDark }
+      - voxel: { at: [5, 4, 8], color: robeDark }
+      - voxel: { at: [6, 4, 8], color: robeDark }
+      - voxel: { at: [7, 4, 8], color: robeDark }
+      - voxel: { at: [8, 4, 8], color: robeDark }
+      - voxel: { at: [9, 4, 8], color: robe }
+      - voxel: { at: [2, 0, 9], color: gold }
+      - voxel: { at: [3, 0, 9], color: gold }
+      - voxel: { at: [8, 0, 9], color: gold }
+      - voxel: { at: [9, 0, 9], color: gold }
+      - voxel: { at: [0, 1, 9], color: robe }
+      - voxel: { at: [1, 1, 9], color: robe }
+      - voxel: { at: [2, 1, 9], color: robe }
+      - voxel: { at: [3, 1, 9], color: robe }
+      - voxel: { at: [4, 1, 9], color: robe }
+      - voxel: { at: [5, 1, 9], color: robe }
+      - voxel: { at: [6, 1, 9], color: robe }
+      - voxel: { at: [7, 1, 9], color: robe }
+      - voxel: { at: [8, 1, 9], color: robe }
+      - voxel: { at: [9, 1, 9], color: robe }
+      - voxel: { at: [10, 1, 9], color: robeDark }
+      - voxel: { at: [11, 1, 9], color: robeDark }
+      - voxel: { at: [0, 2, 9], color: robe }
+      - voxel: { at: [1, 2, 9], color: robe }
+      - voxel: { at: [2, 2, 9], color: robe }
+      - voxel: { at: [3, 2, 9], color: robe }
+      - voxel: { at: [4, 2, 9], color: robe }
+      - voxel: { at: [5, 2, 9], color: robe }
+      - voxel: { at: [6, 2, 9], color: robe }
+      - voxel: { at: [7, 2, 9], color: robe }
+      - voxel: { at: [8, 2, 9], color: robe }
+      - voxel: { at: [9, 2, 9], color: robe }
+      - voxel: { at: [10, 2, 9], color: robeDark }
+      - voxel: { at: [11, 2, 9], color: robeDark }
+      - voxel: { at: [0, 3, 9], color: robe }
+      - voxel: { at: [1, 3, 9], color: robe }
+      - voxel: { at: [2, 3, 9], color: robe }
+      - voxel: { at: [3, 3, 9], color: robe }
+      - voxel: { at: [4, 3, 9], color: robe }
+      - voxel: { at: [5, 3, 9], color: robe }
+      - voxel: { at: [6, 3, 9], color: robe }
+      - voxel: { at: [7, 3, 9], color: robe }
+      - voxel: { at: [8, 3, 9], color: robe }
+      - voxel: { at: [9, 3, 9], color: robe }
+      - voxel: { at: [10, 3, 9], color: robeDark }
+      - voxel: { at: [11, 3, 9], color: robeDark }
+      - voxel: { at: [1, 4, 9], color: robeLight }
+      - voxel: { at: [2, 4, 9], color: robe }
+      - voxel: { at: [3, 4, 9], color: robe }
+      - voxel: { at: [4, 4, 9], color: robe }
+      - voxel: { at: [5, 4, 9], color: robe }
+      - voxel: { at: [6, 4, 9], color: robe }
+      - voxel: { at: [7, 4, 9], color: robe }
+      - voxel: { at: [8, 4, 9], color: robe }
+      - voxel: { at: [9, 4, 9], color: robe }
+      - voxel: { at: [10, 4, 9], color: robeLight }
+      - voxel: { at: [2, 0, 10], color: gold }
+      - voxel: { at: [3, 0, 10], color: gold }
+      - voxel: { at: [8, 0, 10], color: gold }
+      - voxel: { at: [9, 0, 10], color: gold }
+      - voxel: { at: [0, 1, 10], color: robe }
+      - voxel: { at: [1, 1, 10], color: robe }
+      - voxel: { at: [2, 1, 10], color: robeLight }
+      - voxel: { at: [3, 1, 10], color: robeLight }
+      - voxel: { at: [4, 1, 10], color: robeLight }
+      - voxel: { at: [5, 1, 10], color: robeLight }
+      - voxel: { at: [6, 1, 10], color: robeLight }
+      - voxel: { at: [7, 1, 10], color: robeLight }
+      - voxel: { at: [8, 1, 10], color: robeLight }
+      - voxel: { at: [9, 1, 10], color: robeLight }
+      - voxel: { at: [10, 1, 10], color: robeDark }
+      - voxel: { at: [11, 1, 10], color: robeDark }
+      - voxel: { at: [0, 2, 10], color: robe }
+      - voxel: { at: [1, 2, 10], color: robe }
+      - voxel: { at: [2, 2, 10], color: robeLight }
+      - voxel: { at: [3, 2, 10], color: robeLight }
+      - voxel: { at: [4, 2, 10], color: robeLight }
+      - voxel: { at: [5, 2, 10], color: robeLight }
+      - voxel: { at: [6, 2, 10], color: robeLight }
+      - voxel: { at: [7, 2, 10], color: robeLight }
+      - voxel: { at: [8, 2, 10], color: robeLight }
+      - voxel: { at: [9, 2, 10], color: robeLight }
+      - voxel: { at: [10, 2, 10], color: robeDark }
+      - voxel: { at: [11, 2, 10], color: robeDark }
+      - voxel: { at: [0, 3, 10], color: robe }
+      - voxel: { at: [1, 3, 10], color: robe }
+      - voxel: { at: [2, 3, 10], color: robeLight }
+      - voxel: { at: [3, 3, 10], color: robeLight }
+      - voxel: { at: [4, 3, 10], color: robeLight }
+      - voxel: { at: [5, 3, 10], color: robeLight }
+      - voxel: { at: [6, 3, 10], color: robeLight }
+      - voxel: { at: [7, 3, 10], color: robeLight }
+      - voxel: { at: [8, 3, 10], color: robeLight }
+      - voxel: { at: [9, 3, 10], color: robeLight }
+      - voxel: { at: [10, 3, 10], color: robeDark }
+      - voxel: { at: [11, 3, 10], color: robeDark }
+      - voxel: { at: [1, 4, 10], color: robeLight }
+      - voxel: { at: [2, 4, 10], color: robeLight }
+      - voxel: { at: [3, 4, 10], color: robeLight }
+      - voxel: { at: [4, 4, 10], color: robeLight }
+      - voxel: { at: [5, 4, 10], color: robeLight }
+      - voxel: { at: [6, 4, 10], color: robeLight }
+      - voxel: { at: [7, 4, 10], color: robeLight }
+      - voxel: { at: [8, 4, 10], color: robeLight }
+      - voxel: { at: [9, 4, 10], color: robeLight }
+      - voxel: { at: [10, 4, 10], color: robeLight }
+      - voxel: { at: [0, 1, 11], color: robe }
+      - voxel: { at: [1, 1, 11], color: robe }
+      - voxel: { at: [2, 1, 11], color: robeLight }
+      - voxel: { at: [3, 1, 11], color: robeLight }
+      - voxel: { at: [4, 1, 11], color: robeLight }
+      - voxel: { at: [5, 1, 11], color: robeLight }
+      - voxel: { at: [6, 1, 11], color: robeLight }
+      - voxel: { at: [7, 1, 11], color: robeLight }
+      - voxel: { at: [8, 1, 11], color: robeLight }
+      - voxel: { at: [9, 1, 11], color: robeLight }
+      - voxel: { at: [10, 1, 11], color: robeDark }
+      - voxel: { at: [11, 1, 11], color: robeDark }
+      - voxel: { at: [0, 2, 11], color: robe }
+      - voxel: { at: [1, 2, 11], color: robe }
+      - voxel: { at: [2, 2, 11], color: robeLight }
+      - voxel: { at: [3, 2, 11], color: robeLight }
+      - voxel: { at: [4, 2, 11], color: robeLight }
+      - voxel: { at: [5, 2, 11], color: robeLight }
+      - voxel: { at: [6, 2, 11], color: robeLight }
+      - voxel: { at: [7, 2, 11], color: robeLight }
+      - voxel: { at: [8, 2, 11], color: robeLight }
+      - voxel: { at: [9, 2, 11], color: robeLight }
+      - voxel: { at: [10, 2, 11], color: robeDark }
+      - voxel: { at: [11, 2, 11], color: robeDark }
+      - voxel: { at: [0, 3, 11], color: robe }
+      - voxel: { at: [1, 3, 11], color: robe }
+      - voxel: { at: [2, 3, 11], color: robeLight }
+      - voxel: { at: [3, 3, 11], color: robeLight }
+      - voxel: { at: [4, 3, 11], color: robeLight }
+      - voxel: { at: [5, 3, 11], color: robeLight }
+      - voxel: { at: [6, 3, 11], color: robeLight }
+      - voxel: { at: [7, 3, 11], color: robeLight }
+      - voxel: { at: [8, 3, 11], color: robeLight }
+      - voxel: { at: [9, 3, 11], color: robeLight }
+      - voxel: { at: [10, 3, 11], color: robeDark }
+      - voxel: { at: [11, 3, 11], color: robeDark }
+      - voxel: { at: [1, 4, 11], color: robeLight }
+      - voxel: { at: [2, 4, 11], color: robeLight }
+      - voxel: { at: [3, 4, 11], color: robeLight }
+      - voxel: { at: [4, 4, 11], color: robeLight }
+      - voxel: { at: [5, 4, 11], color: robeLight }
+      - voxel: { at: [6, 4, 11], color: robeLight }
+      - voxel: { at: [7, 4, 11], color: robeLight }
+      - voxel: { at: [8, 4, 11], color: robeLight }
+      - voxel: { at: [9, 4, 11], color: robeLight }
+      - voxel: { at: [10, 4, 11], color: robeLight }
+      - voxel: { at: [3, 0, 12], color: robeDark }
+      - voxel: { at: [4, 0, 12], color: bone }
+      - voxel: { at: [5, 0, 12], color: boneShadow }
+      - voxel: { at: [6, 0, 12], color: boneShadow }
+      - voxel: { at: [7, 0, 12], color: bone }
+      - voxel: { at: [8, 0, 12], color: robeDark }
+      - voxel: { at: [3, 1, 12], color: robeDark }
+      - voxel: { at: [4, 1, 12], color: robeDark }
+      - voxel: { at: [5, 1, 12], color: robeDark }
+      - voxel: { at: [6, 1, 12], color: robeDark }
+      - voxel: { at: [7, 1, 12], color: robeDark }
+      - voxel: { at: [8, 1, 12], color: robeDark }
+      - voxel: { at: [3, 2, 12], color: robeDark }
+      - voxel: { at: [4, 2, 12], color: robeDark }
+      - voxel: { at: [5, 2, 12], color: robeDark }
+      - voxel: { at: [6, 2, 12], color: robeDark }
+      - voxel: { at: [7, 2, 12], color: robeDark }
+      - voxel: { at: [8, 2, 12], color: robeDark }
+      - voxel: { at: [3, 3, 12], color: robeDark }
+      - voxel: { at: [4, 3, 12], color: robeDark }
+      - voxel: { at: [5, 3, 12], color: robeDark }
+      - voxel: { at: [6, 3, 12], color: robeDark }
+      - voxel: { at: [7, 3, 12], color: robeDark }
+      - voxel: { at: [8, 3, 12], color: robeDark }
+      - voxel: { at: [3, 4, 12], color: robeDark }
+      - voxel: { at: [4, 4, 12], color: robeDark }
+      - voxel: { at: [5, 4, 12], color: robeDark }
+      - voxel: { at: [6, 4, 12], color: robeDark }
+      - voxel: { at: [7, 4, 12], color: robeDark }
+      - voxel: { at: [8, 4, 12], color: robeDark }
+      - voxel: { at: [3, 0, 13], color: robeDark }
+      - voxel: { at: [4, 0, 13], color: bone }
+      - voxel: { at: [5, 0, 13], color: bone }
+      - voxel: { at: [6, 0, 13], color: bone }
+      - voxel: { at: [7, 0, 13], color: bone }
+      - voxel: { at: [8, 0, 13], color: robeDark }
+      - voxel: { at: [3, 1, 13], color: robeDark }
+      - voxel: { at: [4, 1, 13], color: robeDark }
+      - voxel: { at: [5, 1, 13], color: robeDark }
+      - voxel: { at: [6, 1, 13], color: robeDark }
+      - voxel: { at: [7, 1, 13], color: robeDark }
+      - voxel: { at: [8, 1, 13], color: robeDark }
+      - voxel: { at: [3, 2, 13], color: robeDark }
+      - voxel: { at: [4, 2, 13], color: robeDark }
+      - voxel: { at: [5, 2, 13], color: robeDark }
+      - voxel: { at: [6, 2, 13], color: robeDark }
+      - voxel: { at: [7, 2, 13], color: robeDark }
+      - voxel: { at: [8, 2, 13], color: robeDark }
+      - voxel: { at: [3, 3, 13], color: robeDark }
+      - voxel: { at: [4, 3, 13], color: robeDark }
+      - voxel: { at: [5, 3, 13], color: robeDark }
+      - voxel: { at: [6, 3, 13], color: robeDark }
+      - voxel: { at: [7, 3, 13], color: robeDark }
+      - voxel: { at: [8, 3, 13], color: robeDark }
+      - voxel: { at: [3, 4, 13], color: robeDark }
+      - voxel: { at: [4, 4, 13], color: robeDark }
+      - voxel: { at: [5, 4, 13], color: robeDark }
+      - voxel: { at: [6, 4, 13], color: robeDark }
+      - voxel: { at: [7, 4, 13], color: robeDark }
+      - voxel: { at: [8, 4, 13], color: robeDark }
+      - voxel: { at: [3, 0, 14], color: robeDark }
+      - voxel: { at: [4, 0, 14], color: glow }
+      - voxel: { at: [5, 0, 14], color: bone }
+      - voxel: { at: [6, 0, 14], color: bone }
+      - voxel: { at: [7, 0, 14], color: glow }
+      - voxel: { at: [8, 0, 14], color: robeDark }
+      - voxel: { at: [3, 1, 14], color: robeDark }
+      - voxel: { at: [4, 1, 14], color: robeDark }
+      - voxel: { at: [5, 1, 14], color: robeDark }
+      - voxel: { at: [6, 1, 14], color: robeDark }
+      - voxel: { at: [7, 1, 14], color: robeDark }
+      - voxel: { at: [8, 1, 14], color: robeDark }
+      - voxel: { at: [3, 2, 14], color: robeDark }
+      - voxel: { at: [4, 2, 14], color: robeDark }
+      - voxel: { at: [5, 2, 14], color: robeDark }
+      - voxel: { at: [6, 2, 14], color: robeDark }
+      - voxel: { at: [7, 2, 14], color: robeDark }
+      - voxel: { at: [8, 2, 14], color: robeDark }
+      - voxel: { at: [3, 3, 14], color: robeDark }
+      - voxel: { at: [4, 3, 14], color: robeDark }
+      - voxel: { at: [5, 3, 14], color: robeDark }
+      - voxel: { at: [6, 3, 14], color: robeDark }
+      - voxel: { at: [7, 3, 14], color: robeDark }
+      - voxel: { at: [8, 3, 14], color: robeDark }
+      - voxel: { at: [3, 4, 14], color: robeDark }
+      - voxel: { at: [4, 4, 14], color: robeDark }
+      - voxel: { at: [5, 4, 14], color: robeDark }
+      - voxel: { at: [6, 4, 14], color: robeDark }
+      - voxel: { at: [7, 4, 14], color: robeDark }
+      - voxel: { at: [8, 4, 14], color: robeDark }
+      - voxel: { at: [3, 0, 15], color: robeDark }
+      - voxel: { at: [4, 0, 15], color: bone }
+      - voxel: { at: [5, 0, 15], color: bone }
+      - voxel: { at: [6, 0, 15], color: bone }
+      - voxel: { at: [7, 0, 15], color: bone }
+      - voxel: { at: [8, 0, 15], color: robeDark }
+      - voxel: { at: [3, 1, 15], color: robeDark }
+      - voxel: { at: [4, 1, 15], color: robeDark }
+      - voxel: { at: [5, 1, 15], color: robeDark }
+      - voxel: { at: [6, 1, 15], color: robeDark }
+      - voxel: { at: [7, 1, 15], color: robeDark }
+      - voxel: { at: [8, 1, 15], color: robeDark }
+      - voxel: { at: [3, 2, 15], color: robeDark }
+      - voxel: { at: [4, 2, 15], color: robeDark }
+      - voxel: { at: [5, 2, 15], color: robeDark }
+      - voxel: { at: [6, 2, 15], color: robeDark }
+      - voxel: { at: [7, 2, 15], color: robeDark }
+      - voxel: { at: [8, 2, 15], color: robeDark }
+      - voxel: { at: [3, 3, 15], color: robeDark }
+      - voxel: { at: [4, 3, 15], color: robeDark }
+      - voxel: { at: [5, 3, 15], color: robeDark }
+      - voxel: { at: [6, 3, 15], color: robeDark }
+      - voxel: { at: [7, 3, 15], color: robeDark }
+      - voxel: { at: [8, 3, 15], color: robeDark }
+      - voxel: { at: [3, 4, 15], color: robeDark }
+      - voxel: { at: [4, 4, 15], color: robeDark }
+      - voxel: { at: [5, 4, 15], color: robeDark }
+      - voxel: { at: [6, 4, 15], color: robeDark }
+      - voxel: { at: [7, 4, 15], color: robeDark }
+      - voxel: { at: [8, 4, 15], color: robeDark }
+      - voxel: { at: [3, 0, 16], color: robeDark }
+      - voxel: { at: [4, 0, 16], color: robeDark }
+      - voxel: { at: [5, 0, 16], color: robeDark }
+      - voxel: { at: [6, 0, 16], color: robeDark }
+      - voxel: { at: [7, 0, 16], color: robeDark }
+      - voxel: { at: [8, 0, 16], color: robeDark }
+      - voxel: { at: [3, 1, 16], color: gold }
+      - voxel: { at: [4, 1, 16], color: robeDark }
+      - voxel: { at: [5, 1, 16], color: robeDark }
+      - voxel: { at: [6, 1, 16], color: robeDark }
+      - voxel: { at: [7, 1, 16], color: robeDark }
+      - voxel: { at: [8, 1, 16], color: gold }
+      - voxel: { at: [3, 2, 16], color: gold }
+      - voxel: { at: [4, 2, 16], color: robeDark }
+      - voxel: { at: [5, 2, 16], color: robeDark }
+      - voxel: { at: [6, 2, 16], color: robeDark }
+      - voxel: { at: [7, 2, 16], color: robeDark }
+      - voxel: { at: [8, 2, 16], color: gold }
+      - voxel: { at: [3, 3, 16], color: robeDark }
+      - voxel: { at: [4, 3, 16], color: robeDark }
+      - voxel: { at: [5, 3, 16], color: robeDark }
+      - voxel: { at: [6, 3, 16], color: robeDark }
+      - voxel: { at: [7, 3, 16], color: robeDark }
+      - voxel: { at: [8, 3, 16], color: robeDark }
+      - voxel: { at: [3, 4, 16], color: robeDark }
+      - voxel: { at: [4, 4, 16], color: robeDark }
+      - voxel: { at: [5, 4, 16], color: robeDark }
+      - voxel: { at: [6, 4, 16], color: robeDark }
+      - voxel: { at: [7, 4, 16], color: robeDark }
+      - voxel: { at: [8, 4, 16], color: robeDark }
+      - voxel: { at: [3, 1, 17], color: gold }
+      - voxel: { at: [8, 1, 17], color: gold }
+      - voxel: { at: [3, 2, 17], color: gold }
+      - voxel: { at: [8, 2, 17], color: gold }
+      - voxel: { at: [3, 1, 18], color: gold }
+      - voxel: { at: [8, 1, 18], color: gold }
+      - voxel: { at: [3, 2, 18], color: gold }
+      - voxel: { at: [8, 2, 18], color: gold }
 sockets:
-  - socket: Hand.0
-    parent: Arm.R
-    transform:
-      translate: [1, 1, 0]
-  - socket: Hand.1
-    parent: Arm.L
-    transform:
-      translate: [1, 1, 0]
-  - socket: Back
+  - socket: Equip.Hand.Left.0
     parent: Body
     transform:
-      translate: [5, 4, 9]
+      translate: [1, 2, 5]
+  - socket: Equip.Hand.Right.0
+    parent: Body
+    transform:
+      translate: [11, 2, 5]
 animations:
   - clip: Idle
-    duration: 1
+    duration: 1.2
     loop: true
     tracks:
       - part: Body
@@ -74,6 +643,115 @@ animations:
             - time: 0
               value: [0, 0, 0]
             - time: 0.5
-              value: [0, 0, 0.1]
+              value: [0, 0, 0.2]
             - time: 1
               value: [0, 0, 0]
+  - clip: WalkForward
+    duration: 0.6
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.33
+              value: [0, -0.6, 1.2]
+            - time: 0.66
+              value: [0, -1.2, 0]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Attack
+    duration: 0.45
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0.3, 0]
+            - time: 0.55
+              value: [0, -1.2, 0]
+            - time: 1
+              value: [0, -0.3, 0]
+  - clip: Attack.Left
+    duration: 0.45
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0.3, 0]
+            - time: 0.55
+              value: [0, -1.2, 0]
+            - time: 1
+              value: [0, -0.3, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 8]
+            - time: 0.55
+              value: [0, 0, -14]
+            - time: 1
+              value: [0, 0, -4]
+  - clip: Attack.Right
+    duration: 0.45
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0.3, 0]
+            - time: 0.55
+              value: [0, -1.2, 0]
+            - time: 1
+              value: [0, -0.3, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, -8]
+            - time: 0.55
+              value: [0, 0, 14]
+            - time: 1
+              value: [0, 0, 4]
+  - clip: Hit
+    duration: 0.35
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.45
+              value: [0, 1.0, 0.2]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Death
+    duration: 0.75
+    loop: false
+    tracks:
+      - part: Body
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 1
+              value: [0, 0, 82]
+        scale:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [1, 1, 1]
+            - time: 1
+              value: [1, 1, 0.72]
