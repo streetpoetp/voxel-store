@@ -4,17 +4,18 @@ assemblyOrigin:
   part: Spear
 parts:
   - part: Spear
-    pivot: [4, 1, 6]
+    pivot: [4, 10, 1]
     voxels:
-      - box: { min: [3, 0, 1], size: [1, 1, 11], color: shaft.mid }
-      - box: { min: [4, 1, 1], size: [1, 1, 11], color: shaft.dark }
-      - box: { min: [3, 0, 4], size: [2, 1, 3], color: grip.ivory }
-      - box: { min: [3, 0, 4], size: [1, 1, 3], color: grip.light }
-      - box: { min: [3, 0, 0], size: [2, 1, 1], color: gold.mid }
-      - box: { min: [3, 0, 11], size: [2, 1, 2], color: gold.mid }
-      - box: { min: [2, 0, 12], size: [3, 2, 2], color: blade.mid }
-      - box: { min: [1, 0, 14], size: [5, 2, 1], color: blade.mid }
-      - box: { min: [2, 0, 15], size: [3, 2, 1], color: blade.mid }
-      - box: { min: [3, 0, 15], size: [1, 2, 1], color: blade.light }
-      - box: { min: [1, 0, 14], size: [1, 2, 1], color: edge.ivory }
-      - box: { min: [2, 0, 15], size: [1, 2, 1], color: edge.ivory }
+      # Semantic Forward / thrust direction toward spear tip is source -Y -> Unity -Z.
+      - box: { min: [3, 4, 0], size: [1, 11, 1], color: shaft.mid }
+      - box: { min: [4, 4, 1], size: [1, 11, 1], color: shaft.dark }
+      - box: { min: [3, 9, 0], size: [2, 3, 1], color: grip.ivory }
+      - box: { min: [3, 9, 0], size: [1, 3, 1], color: grip.light }
+      - box: { min: [3, 15, 0], size: [2, 1, 1], color: gold.mid }
+      - box: { min: [3, 3, 0], size: [2, 2, 1], color: gold.mid }
+      - box: { min: [2, 2, 0], size: [3, 2, 2], color: blade.mid }
+      - box: { min: [1, 1, 0], size: [5, 1, 2], color: blade.mid }
+      - box: { min: [2, 0, 0], size: [3, 1, 2], color: blade.mid }
+      - box: { min: [3, 0, 0], size: [1, 1, 2], color: blade.light }
+      - box: { min: [1, 1, 0], size: [1, 1, 2], color: edge.ivory }
+      - box: { min: [2, 0, 0], size: [1, 1, 2], color: edge.ivory }

@@ -6,75 +6,128 @@ Defines reusable physical compatibility between independently authored voxel ava
 
 ## Requirements
 
-### Requirement: Compatibility profiles define physical mount contracts
-The store SHALL define versioned compatibility profiles that name required and optional logical mount capabilities, the physical attachment instances that satisfy each capability, and their visual frame, scale, and envelope conventions. Profile identifiers SHALL be stable and SHALL describe physical visual compatibility rather than gameplay roles or handedness.
+### Requirement: Compatible avatars are single rigid Body assets
+An avatar participating in reusable equipment composition SHALL expose exactly one authored rigid part named `Body`; independently animated head, arm, hand, foot, or equivalent attachment parts SHALL NOT be required for compatibility.
 
-#### Scenario: Profile is declared
-- **WHEN** a compatibility profile is added with a unique versioned id and a complete set of required mount-capability conventions
-- **THEN** avatars and equipment may reference that profile as their shared physical compatibility contract
+#### Scenario: Avatar uses the rigid-body contract
+- **WHEN** an avatar is evaluated for reusable equipment composition
+- **THEN** its authored geometry resolves to exactly one `Body` part whose canonical local bounds define the placement space
 
-#### Scenario: Profile semantics change incompatibly
-- **WHEN** required mount-capability, attachment-instance, frame, or scale semantics would change for an existing profile
-- **THEN** the store requires a new profile version instead of silently redefining the old compatibility contract
+#### Scenario: Avatar contains articulated compatibility parts
+- **WHEN** an avatar relies on additional articulated parts to satisfy reusable equipment composition
+- **THEN** compatibility validation fails for the rigid-body contract instead of treating those parts as attachment authority
 
-### Requirement: Avatars prove profile conformance
-An avatar that declares a compatibility profile SHALL provide every required logical mount capability with the profile's required number of physical attachment instances and expected frame semantics. Optional capabilities MAY be omitted, but every provided profile attachment instance SHALL conform to the same contract in neutral and animated poses.
+### Requirement: Equipment placement derives from normalized Body bounds ratios
+Reusable equipment composition SHALL derive local equipment position from the avatar's canonical `Body` local bounds and a normalized offset ratio, without model-authored sockets, mount transforms, or per-avatar corrective transforms.
 
-#### Scenario: Avatar satisfies its declared profile
-- **WHEN** an avatar provides every required mount capability with conforming physical attachment instances and verification confirms their bind and animated frames
-- **THEN** the avatar passes profile conformance for that compatibility family
+#### Scenario: Ratio placement is evaluated
+- **WHEN** a consumer composes equipment at a normalized offset ratio
+- **THEN** the local equipment position is derived deterministically from canonical `Body` bounds center and extents
 
-#### Scenario: Required avatar socket is missing
-- **WHEN** an avatar declares a profile but lacks a required mount capability, exposes too few required physical attachment instances, or exposes an instance with incompatible frame semantics
-- **THEN** avatar compatibility validation fails and the avatar cannot publish as conforming to that profile
+#### Scenario: Avatar size changes
+- **WHEN** two conforming avatars have different canonical Body dimensions
+- **THEN** the same normalized offset ratio scales placement proportionally to each avatar's Body bounds
 
-### Requirement: Equipment declares one canonical mount contract
-Mountable equipment SHALL remain an independent voxel asset and SHALL declare the compatibility profile and logical mount capability it requires, not a side-specific physical attachment instance. Its canonical local mount frame SHALL compose through every conforming physical instance of that capability without a per-avatar, per-instance, or per-pair corrective transform.
+### Requirement: Reusable models share one canonical Unity model frame
+All published reusable avatar and equipment models SHALL resolve through Hero.Voxel into the same canonical Unity local orientation: Right `+X`, Up `+Y`, Forward `-Z`. Model category SHALL NOT introduce another forward axis or require attachment-time orientation compensation.
 
-#### Scenario: Equipment mounts through the declared socket
-- **WHEN** compatible equipment is composed with a conforming avatar at any physical attachment instance satisfying its declared mount capability
-- **THEN** the equipment's canonical mount frame aligns through that instance without a pair-specific or side-specific corrective asset or transform record
+#### Scenario: Avatar and equipment are composed
+- **WHEN** a conforming avatar and conforming equipment asset are baked and composed at a Body-ratio position
+- **THEN** both models expose the same canonical local Right, Up, and Forward axes and the equipment placement rotation remains identity
 
-#### Scenario: Hand-neutral equipment is evaluated on either physical hand
-- **WHEN** equipment declares the logical `Hand` mount capability and a conforming avatar exposes multiple physical attachment instances for `Hand`
-- **THEN** the same equipment asset is eligible for composition at every such hand instance without changing its identity or mount declaration
+#### Scenario: Equipment source faces another direction
+- **WHEN** an equipment source would bake with a forward direction different from canonical Unity `-Z`
+- **THEN** the owning voxel source and pivot are corrected before publication rather than persisting a preview, avatar-specific, equipment-specific, or runtime corrective rotation
 
-#### Scenario: Equipment requires a pair-specific correction
-- **WHEN** an equipment/avatar/attachment-instance combination only becomes visually acceptable after adding a correction unique to that combination
-- **THEN** compatibility proof fails and the owning avatar, equipment, or compatibility profile must be corrected or explicitly reclassified
+#### Scenario: Provider coordinate conversion is applied
+- **WHEN** Hero.Voxel maps source coordinates into Unity coordinates
+- **THEN** coordinate conversion and authored facing remain separate concerns and the resulting published model still satisfies the global canonical Unity model frame
 
-### Requirement: Family compatibility is verified by composition evidence
-For each declared avatar/equipment compatibility family, current published candidates SHALL be composition-tested at every physical attachment instance satisfying the equipment's declared logical mount capability under required canonical poses. Compatibility health SHALL be derived from those results and SHALL identify the failing asset pair, capability, attachment instance, or profile rule.
+### Requirement: Equipment exposes a canonical local composition frame
+Reusable equipment SHALL provide a canonical local origin and the shared Unity orientation (`+X` Right, `+Y` Up, `-Z` Forward) so it can be placed against any conforming Body-ratio position with identity placement rotation and without avatar-specific, slot-specific, or pair-specific corrective transforms.
 
-#### Scenario: New equipment is compatible with the family
-- **WHEN** equipment declares a profile and mount capability and passes required composition evidence against every matching physical attachment instance on every current published avatar that claims that profile
-- **THEN** the equipment passes the family compatibility gate for that store snapshot
+#### Scenario: Equipment composes at different ratios
+- **WHEN** the same equipment asset is placed at different valid normalized Body ratios
+- **THEN** its stable asset identity and canonical local frame remain unchanged
 
-#### Scenario: New avatar breaks existing family compatibility
-- **WHEN** a newly added avatar claims a profile but any physical attachment instance for a required capability fails composition evidence with existing published equipment for that capability
-- **THEN** regenerated compatibility health reports the failing pair and attachment instance and the avatar does not qualify as a conforming published member of the family
+#### Scenario: Equipment needs an avatar-specific correction
+- **WHEN** acceptable composition requires a transform unique to one avatar/equipment pair
+- **THEN** compatibility proof fails and the owning asset or global composition convention must be corrected
 
-### Requirement: Avatar animation preserves equipment attachment semantics
-Compatibility validation SHALL include attachment behavior under the profile's required representative avatar poses or animation samples. Equipment SHALL follow each evaluated physical attachment instance satisfying its logical mount capability without requiring equipment geometry to be merged into the avatar assembly.
+### Requirement: Multiple equipment instances use deterministic independent ratio placements
+A conforming Body SHALL support simultaneous composition of multiple independent equipment instances by assigning each instance a deterministic normalized Body-bounds ratio and canonical equipment frame; one instance SHALL NOT require a model-authored socket or another equipment instance as its parent.
 
-#### Scenario: Animated socket moves
-- **WHEN** a conforming avatar is evaluated at a required animated pose and equipment is composed at a physical attachment instance satisfying its declared mount capability
-- **THEN** the equipment follows the evaluated attachment frame and remains within the profile's accepted attachment relationship
+#### Scenario: Two equipment assets are composed simultaneously
+- **WHEN** a consumer assigns two equipment instances distinct normalized Body ratios
+- **THEN** both instances resolve independently under the same rigid presentation composition
+
+#### Scenario: More equipment instances are requested
+- **WHEN** a consumer provides additional valid ratio placements
+- **THEN** the composition model remains unchanged and does not require new avatar authoring metadata
+
+### Requirement: Compatibility proof uses canonical composition evidence
+Compatibility health SHALL be derived from deterministic Body-plus-equipment composition evidence using canonical Body bounds, normalized placement ratios, and canonical equipment frames rather than profile/socket attachment matrices.
+
+#### Scenario: Representative composition passes
+- **WHEN** current avatar and equipment candidates compose successfully under the canonical ratio-placement evidence set
+- **THEN** compatibility health reports the applicable assets and placements as passing
+
+#### Scenario: Representative composition fails
+- **WHEN** equipment intersects, scales, or orients incompatibly under required canonical ratio-placement evidence
+- **THEN** compatibility health reports the failing avatar, equipment, and placement ratio or convention
+
+### Requirement: Rigid presentation motion preserves composition relationships
+Once Body and equipment local placement is resolved, presentation motion SHALL preserve their relative composition by moving the unified presentation transform rather than re-solving avatar/equipment attachment during the motion.
+
+#### Scenario: Presentation motion is applied
+- **WHEN** a consumer applies presentation-only translation or rotation to the unified composition
+- **THEN** Body and every composed equipment instance preserve their established local relationships
+
+### Requirement: Equipment authoring density is independent of Body-ratio composition
+Equipment SHALL be allowed to use a different positive `voxelsPerUnit` from an avatar when its canonical local origin, orientation, normalized physical scale, and Body-ratio composition behavior remain compatible after normalization to world space.
+
+#### Scenario: High-density equipment composes with a lower-density avatar
+- **WHEN** equipment uses a higher positive `voxelsPerUnit` than a conforming avatar but preserves its canonical local frame and normalized physical scale
+- **THEN** compatibility validation accepts the density difference and evaluates ordinary Body-ratio composition evidence
+
+#### Scenario: Equipment has no valid normalized composition frame
+- **WHEN** equipment uses any `voxelsPerUnit` but lacks a canonical local origin/orientation or cannot satisfy required Body-ratio composition evidence
+- **THEN** compatibility validation fails regardless of authoring density
 
 ### Requirement: Compatibility contracts remain reusable across games
-Compatibility profiles and equipment mount declarations SHALL use visual/physical terms only. They SHALL NOT encode combat class, damage type, inventory slot rules, AI behavior, balance restrictions, or other consuming-game semantics.
+Body-ratio and canonical equipment-frame conventions SHALL use visual and physical terms only. They SHALL NOT encode combat class, damage type, inventory slot rules, AI behavior, balance restrictions, attack behavior, or other consuming-game semantics.
 
 #### Scenario: Consumer assigns gameplay meaning
-- **WHEN** a game uses a store asset as a sword, tool, cosmetic, or other product-specific role
-- **THEN** that gameplay meaning remains outside the store compatibility contract and does not alter the asset's physical mount compatibility
+- **WHEN** a game treats a composed asset as a sword, tool, cosmetic, primary weapon, secondary weapon, or another product-specific role
+- **THEN** that gameplay meaning remains outside the store compatibility contract and does not alter Body-ratio composition semantics
 
-### Requirement: Equipment authoring density is independent of avatar authoring density
-Equipment that declares a valid compatibility profile SHALL be allowed to use a different positive `voxelsPerUnit` from the avatar/profile authoring density when its canonical assembly origin and mount-frame behavior remain physically compatible after normalization to world space.
+### Requirement: Reusable models share one semantic canonical Unity model frame
+All published reusable avatar and equipment models SHALL resolve through Hero.Voxel into one canonical Unity local frame: Right `+X`, Up `+Y`, Forward `-Z`. Under the provider source-to-Unity mapping, semantic Forward is authored toward source `-Y`. Forward SHALL represent semantic facing/action rather than a coordinate-conversion label or geometrically inferred axis.
 
-#### Scenario: High-density equipment mounts to a lower-density avatar
-- **WHEN** equipment uses a higher positive `voxelsPerUnit` than a conforming avatar but preserves its canonical mount frame and normalized physical scale
-- **THEN** compatibility validation accepts the density difference and evaluates the ordinary profile/socket evidence
+#### Scenario: Avatar and equipment are composed
+- **WHEN** a conforming avatar and conforming equipment asset are baked and composed at a Body-ratio position
+- **THEN** both models expose the same canonical local Right, Up, and Forward axes and the equipment placement rotation remains identity
 
-#### Scenario: Equipment has no valid normalized mount frame
-- **WHEN** equipment uses any `voxelsPerUnit` but lacks a canonical assembly origin or cannot satisfy the declared mount-frame evidence
-- **THEN** compatibility validation fails regardless of authoring density
+#### Scenario: Equipment semantic front is audited
+- **WHEN** equipment is normalized for publication
+- **THEN** its semantic Forward is determined from intended game use and authoring evidence per asset, not from its longest dimension, an arbitrary mesh axis, or a blanket transform applied to the equipment catalog
+
+#### Scenario: Projectile equipment is authored
+- **WHEN** a bow, crossbow, rifle, or equivalent projectile model has a defined target/launch direction
+- **THEN** that launch direction resolves to canonical Unity `-Z` even when doing so makes the canonical front view different from the model's broadest side view
+
+#### Scenario: Directional melee equipment is authored
+- **WHEN** a dagger, sword, spear, axe, hammer, pick, scythe, or equivalent melee model has a defined primary thrust/cut/strike direction
+- **THEN** that functional action direction resolves to canonical Unity `-Z` even when its neutral broad-side presentation would otherwise suggest a different front
+
+#### Scenario: Equipment is authored with opposite forward
+- **WHEN** an equipment source would bake with a semantic forward direction different from canonical Unity `-Z`
+- **THEN** the equipment source geometry/pivot SHALL be corrected before publication rather than storing a preview, avatar-specific, equipment-specific, or runtime corrective rotation
+
+#### Scenario: Provider axis conversion is applied
+- **WHEN** Hero.Voxel maps source coordinates into Unity coordinates
+- **THEN** the store treats that mapping only as coordinate conversion and independently requires the resulting published model to satisfy the semantic canonical Unity model frame
+
+#### Scenario: Canonical front proof is rendered
+- **WHEN** Hero.Voxel renders `front.png` for a conforming published model
+- **THEN** the camera is on the Unity `-Z` side looking toward `+Z`, so the image means the observer is standing in front of the model looking back at it and therefore proves semantic Forward points toward `-Z`

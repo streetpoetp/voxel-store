@@ -4,19 +4,20 @@ assemblyOrigin:
   part: Mace
 parts:
   - part: Mace
-    pivot: [4, 1, 4]
+    pivot: [4, 8, 1]
     voxels:
-      - box: { min: [4, 0, 1], size: [1, 2, 8], color: ash.mid }
-      - box: { min: [4, 1, 1], size: [1, 1, 8], color: ash.dark }
-      - box: { min: [4, 0, 2], size: [1, 2, 2], color: cyan.mid }
-      - box: { min: [4, 0, 2], size: [1, 1, 2], color: cyan.light }
-      - box: { min: [3, 0, 0], size: [3, 2, 1], color: brass.mid }
-      - box: { min: [4, 0, 9], size: [1, 2, 1], color: brass.dark }
-      - box: { min: [3, 0, 9], size: [3, 2, 2], color: mace.mid }
-      - box: { min: [3, 0, 9], size: [3, 2, 3], color: mace.mid }
-      - box: { min: [2, 0, 10], size: [1, 2, 1], color: mace.dark }
-      - box: { min: [6, 0, 10], size: [1, 2, 1], color: mace.dark }
-      - box: { min: [4, 0, 11], size: [1, 2, 1], color: mace.light }
-      - box: { min: [4, 0, 9], size: [1, 2, 1], color: mace.dark }
-      - box: { min: [3, 0, 10], size: [3, 1, 1], color: brass.mid }
-      - box: { min: [4, 0, 11], size: [1, 1, 1], color: brass.light }
+      # Semantic Forward / leading head/strike direction is source -Y -> Unity -Z.
+      - box: { min: [4, 3, 0], size: [1, 8, 2], color: ash.mid }
+      - box: { min: [4, 3, 1], size: [1, 8, 1], color: ash.dark }
+      - box: { min: [4, 8, 0], size: [1, 2, 2], color: cyan.mid }
+      - box: { min: [4, 8, 0], size: [1, 2, 1], color: cyan.light }
+      - box: { min: [3, 11, 0], size: [3, 1, 2], color: brass.mid }
+      - box: { min: [4, 2, 0], size: [1, 1, 2], color: brass.dark }
+      - box: { min: [3, 1, 0], size: [3, 2, 2], color: mace.mid }
+      - box: { min: [3, 0, 0], size: [3, 3, 2], color: mace.mid }
+      - box: { min: [2, 1, 0], size: [1, 1, 2], color: mace.dark }
+      - box: { min: [6, 1, 0], size: [1, 1, 2], color: mace.dark }
+      - box: { min: [4, 0, 0], size: [1, 1, 2], color: mace.light }
+      - box: { min: [4, 2, 0], size: [1, 1, 2], color: mace.dark }
+      - box: { min: [3, 1, 0], size: [3, 1, 1], color: brass.mid }
+      - box: { min: [4, 0, 0], size: [1, 1, 1], color: brass.light }

@@ -6,16 +6,27 @@ Defines how reusable voxel avatars and equipment become source-authoritative, ve
 
 ## Requirements
 
-### Requirement: Asset records own stable semantic identity
-Each authored asset SHALL have one repository-owned manifest that declares a unique stable asset id, asset kind, immutable semantic `UnitRef`, compatibility classification, canonical source/reference locations, and any applicable reusable physical-form classification. Published identity SHALL NOT be derived from display names, folder paths, generated filenames, Unity asset paths, or a particular physical hand instance.
+### Requirement: Rigid-body avatars publish from exactly one Body part
+An avatar using the rigid-body composition contract SHALL publish only when its authoritative Hero.Voxel source resolves to exactly one authored part named `Body` and required standalone evidence is current for that Body geometry.
+
+#### Scenario: Single-Body avatar passes source structure
+- **WHEN** an avatar declares the rigid-body composition contract and its authoritative source contains exactly one part named `Body`
+- **THEN** the avatar may proceed to later publication gates
+
+#### Scenario: Rigid-body avatar retains articulated parts
+- **WHEN** an avatar under the rigid-body composition contract contains additional authored parts such as `Head`, `Arm`, `Hand`, or `Foot`
+- **THEN** publication fails at the source/compatibility boundary until those parts are converged into `Body`
+
+### Requirement: Asset records own stable placement-neutral semantic identity
+Each authored asset SHALL have one repository-owned manifest that declares a unique stable asset id, asset kind, immutable semantic `UnitRef`, canonical source/reference locations, and any applicable reusable physical-form classification. Published identity SHALL NOT depend on Body placement ratios or consumer-selected equipment indices.
 
 #### Scenario: New asset declares a valid identity
-- **WHEN** an avatar or equipment asset is added with a unique asset id and `UnitRef` plus any required compatibility and physical-form classification
+- **WHEN** an avatar or equipment asset is added with a unique asset id and `UnitRef` plus any required reusable physical-form classification
 - **THEN** the store accepts those values as the asset's stable authoring identity and includes the reusable classification in derived publication data
 
-#### Scenario: Hand-mounted equipment declares side-neutral identity
-- **WHEN** equipment mounts through a logical hand capability that can resolve to multiple physical hand attachment instances
-- **THEN** its stable id, `UnitRef`, and mount declaration remain independent of which physical hand instance a consumer chooses
+#### Scenario: Ratio-composed equipment keeps placement-neutral identity
+- **WHEN** equipment is composed at one or more normalized Body-bounds ratios
+- **THEN** its stable id and `UnitRef` remain independent of the ratio or consumer-selected equipment index
 
 #### Scenario: Published semantic identity changes
 - **WHEN** a previously published asset changes its stable asset id or `UnitRef` without an explicit migration
@@ -44,7 +55,7 @@ Spec-driven assets SHALL keep editable VoxelSpec sources and machine-owned gener
 - **THEN** the asset is unhealthy and cannot satisfy publication until the generated artifact is refreshed or the authoritative source is intentionally changed
 
 ### Requirement: Publication status is evidence-derived
-An asset SHALL be publishable only when its manifest, identity, reference-package coverage, authoritative source, deterministic generation, required standalone visual proof, applicable compatibility proof, and declared budget checks all pass. Publication status SHALL be derived from current evidence rather than a manually editable approval flag.
+An asset SHALL be publishable only when its manifest, identity, reference-package coverage, authoritative source, deterministic generation, required standalone visual proof, applicable rigid-body composition proof, and declared budget checks all pass. Publication status SHALL be derived from current evidence rather than a manually editable approval flag.
 
 #### Scenario: All publication gates pass
 - **WHEN** every required publication gate for an asset passes against current authoritative inputs
@@ -104,20 +115,20 @@ For agent-authored equipment design or creative repair, accepted visual authorit
 - **WHEN** an explicit migration/recovery task uses existing VoxelSpec or proof output to reconstruct missing reference evidence
 - **THEN** that output is treated as reconstruction evidence only and the reconstructed Product Target/reference package still requires independent visual acceptance under current authority
 
-### Requirement: Equipment reference authority remains implementation-neutral
-Equipment Product Targets and construction sheets SHALL define visual identity, rigid-part ownership, proportions, material/color hierarchy, meaningful construction detail, and visual attachment intent only. They SHALL NOT own exact pivots, assembly origin, runtime socket encoding, mount transforms, pair-specific corrective transforms, exact VPU, exact voxel dimensions, or source voxel budgets.
+### Requirement: Equipment reference authority remains ratio-placement-neutral
+Equipment Product Targets and construction sheets SHALL define visual identity, rigid-part ownership, proportions, material/color hierarchy, meaningful construction detail, and visual attachment intent only. They SHALL NOT own exact assembly origin, runtime Body-ratio offsets, consumer equipment indices, pair-specific corrective transforms, exact VPU, exact voxel dimensions, or source voxel budgets.
 
-#### Scenario: Handheld equipment shows a grip region
-- **WHEN** a target/reference sheet visually indicates where a hand should hold an equipment item
-- **THEN** the sheet may communicate the grip/attachment region without defining an exact Hero.Voxel pivot, assembly origin, socket, or transform
+#### Scenario: Equipment shows an intended grip or attachment region
+- **WHEN** a target/reference sheet visually indicates how an equipment item should appear relative to a character
+- **THEN** the sheet may communicate that visual intent without defining exact runtime Body-ratio placement or consumer slot/index semantics
 
 #### Scenario: Reference image attempts to freeze VPU or voxel bounds
 - **WHEN** a Product Target, Composition Sheet, or Part Sheet declares exact implementation density such as VPU or fixed voxel W x H x D dimensions
 - **THEN** reference acceptance fails and the density/bounds decision remains downstream of accepted visual authority
 
-#### Scenario: Equipment is compatible with an avatar mount
-- **WHEN** later compatibility verification composes equipment with a declared avatar socket/profile
-- **THEN** the compatibility implementation remains downstream evidence and does not become Product Target or construction-reference authority
+#### Scenario: Equipment is evaluated with a rigid-body avatar
+- **WHEN** later compatibility verification composes equipment against canonical Body bounds using required ratio-placement evidence
+- **THEN** that composition evidence remains downstream implementation proof and does not become Product Target or construction-reference authority
 
 ### Requirement: Generated catalog is a projection, not authority
 The repository SHALL generate catalog and health outputs from authoritative manifests, sources, policies, and verification evidence. Generated catalog/health files SHALL be safely regenerable and SHALL NOT be accepted as the sole source for identity, compatibility, publication, or coverage decisions.

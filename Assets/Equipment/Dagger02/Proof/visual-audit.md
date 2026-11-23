@@ -2,7 +2,7 @@
 
 **PASS** against the accepted Product Target after per-unit VPU migration.
 
-The canonical model now uses **VPU10**, independently selected from Dagger02's own cadence evidence. It preserves the short broad blade, stepped taper, compact purple/gold guard, dark grip, cyan channel, purple reinforced edge, gold transitions, and restrained blue accents. Its canonical Hero.Voxel +Z orientation rotates the presentation relative to the Product Target without changing those construction relationships.
+The canonical model now uses **VPU10**, independently selected from Dagger02's own cadence evidence. It preserves the short broad blade, stepped taper, compact purple/gold guard, dark grip, cyan channel, purple reinforced edge, gold transitions, and restrained blue accents. Its authored voxel orientation is normalized to the shared Unity model frame (`+X` right, `+Y` up, `-Z` forward), matching avatars without runtime corrective rotation.
 
 VPU8 was rejected because the short blade/guard/grip cadence compressed too far. VPU10 is the first sufficient candidate, matches the intended 1.2-unit long axis exactly, and intentionally retains one-voxel cyan/spine/guard details. Higher candidates add density without a required target gain.
 

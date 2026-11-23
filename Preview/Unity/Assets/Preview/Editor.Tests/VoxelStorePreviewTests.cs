@@ -158,6 +158,32 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
+        public void RuntimeGalleryCatalogComesFromImportedFolderStructure()
+        {
+            Assert.IsTrue(
+                RuntimeGalleryCatalogDiscovery.TryDescribeAssetPath(
+                    "Assets/__VoxelStorePreview/Baked/HumanImport/Avatars/ZombieBrute01/Source/ZombieBrute01.asset",
+                    out string avatarCatalog,
+                    out string avatarName));
+            Assert.AreEqual("Avatars", avatarCatalog);
+            Assert.AreEqual("ZombieBrute01", avatarName);
+
+            Assert.IsTrue(
+                RuntimeGalleryCatalogDiscovery.TryDescribeAssetPath(
+                    "Assets/__VoxelStorePreview/Baked/Anything/Weapons/Bow02/Source/Bow02.asset",
+                    out string weaponCatalog,
+                    out string weaponName));
+            Assert.AreEqual("Weapons", weaponCatalog);
+            Assert.AreEqual("Bow02", weaponName);
+
+            Assert.IsFalse(
+                RuntimeGalleryCatalogDiscovery.TryDescribeAssetPath(
+                    "Assets/__VoxelStorePreview/Baked/Weapons/Bow02/Bow02.asset",
+                    out _,
+                    out _));
+        }
+
+        [Test]
         public void GridMathUsesFiveColumnsForTwentyFiveWithoutOverlap()
         {
             Assert.AreEqual(5, PreviewGridLayout.ColumnsForCount(25));

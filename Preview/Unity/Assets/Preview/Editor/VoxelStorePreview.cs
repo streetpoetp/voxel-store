@@ -318,6 +318,23 @@ namespace VoxelStore.Preview.Editor
                 .ToArray();
         }
 
+        internal static bool LooksLikeGeneratedUnitDirectory(
+            string absoluteDirectory)
+        {
+            if (string.IsNullOrWhiteSpace(absoluteDirectory) ||
+                !Directory.Exists(absoluteDirectory))
+            {
+                return false;
+            }
+
+            return Directory
+                .GetFiles(
+                    absoluteDirectory,
+                    "*.assembly.asset",
+                    SearchOption.TopDirectoryOnly)
+                .Length > 0;
+        }
+
         internal static void CleanupStale(PreviewPlanContract plan)
         {
             var existing = new List<string>();
@@ -335,6 +352,9 @@ namespace VoxelStore.Preview.Editor
 
                 foreach (string directory in Directory.GetDirectories(absoluteKindRoot))
                 {
+                    if (!LooksLikeGeneratedUnitDirectory(directory))
+                        continue;
+
                     existing.Add(
                         "Assets/" + Path.GetRelativePath(
                             Application.dataPath,
@@ -504,9 +524,10 @@ namespace VoxelStore.Preview.Editor
         }
     }
 
+
     public static class VoxelStorePreviewCommand
     {
-        [MenuItem("Voxel Store/Refresh All & Open Preview Grid")]
+
         public static void RefreshAllAndOpenGrid()
         {
             try
@@ -599,10 +620,28 @@ namespace VoxelStore.Preview.Editor
             for (int i = 1; i < result.WorldBounds.Length; i++)
                 all.Encapsulate(result.WorldBounds[i]);
 
+            CaptureSceneView(all, outputPath);
+        }
+
+        private static void CaptureSceneView(
+            Bounds all,
+            string outputPath)
+        {
+            CaptureSceneView(
+                all,
+                outputPath,
+                Quaternion.Euler(35f, 45f, 0f));
+        }
+
+        private static void CaptureSceneView(
+            Bounds all,
+            string outputPath,
+            Quaternion viewRotation)
+        {
             SceneView sceneView = EditorWindow.GetWindow<SceneView>();
             sceneView.position = new Rect(40f, 40f, 1600f, 1000f);
             sceneView.pivot = all.center;
-            sceneView.rotation = Quaternion.Euler(35f, 45f, 0f);
+            sceneView.rotation = viewRotation;
             sceneView.orthographic = true;
             sceneView.size = Mathf.Max(
                 all.size.y,
@@ -613,7 +652,6 @@ namespace VoxelStore.Preview.Editor
                 throw new InvalidOperationException(
                     "SceneView camera is unavailable for preview proof capture.");
 
-            Quaternion viewRotation = Quaternion.Euler(35f, 45f, 0f);
             float distance = Mathf.Max(20f, all.extents.magnitude * 3f);
             camera.transform.rotation = viewRotation;
             camera.transform.position =
