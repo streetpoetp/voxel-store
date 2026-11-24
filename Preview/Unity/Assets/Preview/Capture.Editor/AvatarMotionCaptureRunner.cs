@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Hero.Consumer.Editor;
+using Hero.Voxel.Render.Runtime.Unity;
 using UnityEditor;
 using UnityEngine;
 using VoxelStore.Preview.Editor;
@@ -104,7 +105,7 @@ namespace VoxelStore.Preview.Capture.Editor
                         return;
 
                     SessionState.SetBool(StartedKey, true);
-                    ConfigureCaptureView();
+                    ConfigureCaptureView(players);
                     ValidateCaptureRenderers();
                     _ = CaptureAllAsync(players);
                 }
@@ -146,6 +147,8 @@ namespace VoxelStore.Preview.Capture.Editor
                             point.Motion,
                             point.NormalizedTime,
                             point.Side);
+                        ValidateAttachmentGrip(player, point);
+                        player.SubmitNow();
                     }
 
                     await GameViewCapture.CaptureAsync(
@@ -178,7 +181,8 @@ namespace VoxelStore.Preview.Capture.Editor
             }
         }
 
-        private static void ConfigureCaptureView()
+        private static void ConfigureCaptureView(
+            AvatarMotionPlayer[] players)
         {
             Camera camera = Camera.main;
             if (camera == null)
@@ -187,129 +191,207 @@ namespace VoxelStore.Preview.Capture.Editor
                     "Avatar motion capture requires the runtime gallery Main Camera.");
             }
 
-            Renderer[] renderers =
-                UnityEngine.Object.FindObjectsByType<Renderer>(
-                    FindObjectsInactive.Include,
-                    FindObjectsSortMode.None);
-            if (renderers.Length == 0)
+            if (players == null || players.Length == 0)
             {
                 throw new InvalidOperationException(
-                    "Avatar motion capture requires visible gallery renderers.");
+                    "Avatar motion capture requires at least one avatar player.");
             }
 
-            Bounds bounds = renderers[0].bounds;
-            for (int i = 1; i < renderers.Length; i++)
-                bounds.Encapsulate(renderers[i].bounds);
+            bool hasBounds = false;
+            Bounds bounds = default;
+            try
+            {
+                foreach (CapturePoint point in Points)
+                {
+                    foreach (AvatarMotionPlayer player in players)
+                    {
+                        player.SampleMotion(
+                            point.Motion,
+                            point.NormalizedTime,
+                            point.Side);
+                        ValidateAttachmentGrip(player, point);
+                    }
 
-            float distance = Mathf.Max(
-                20f,
-                Vector3.Distance(
-                    camera.transform.position,
-                    bounds.center));
+                    foreach (AvatarMotionPlayer player in players)
+                    {
+                        Bounds sampled = player.Avatar.GetWorldBounds();
+                        if (!hasBounds)
+                        {
+                            bounds = sampled;
+                            hasBounds = true;
+                        }
+                        else
+                        {
+                            bounds.Encapsulate(sampled);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                foreach (AvatarMotionPlayer player in players)
+                    player?.ResetMotion();
+            }
+
+            if (!hasBounds)
+            {
+                throw new InvalidOperationException(
+                    "Avatar motion capture could not measure provider bounds.");
+            }
+
             camera.transform.rotation =
                 Quaternion.Euler(30f, 35f, 0f);
+            float distance = Mathf.Max(
+                20f,
+                bounds.extents.magnitude * 3f);
             camera.transform.position =
                 bounds.center -
                 camera.transform.forward * distance;
-
-            // The oblique proof view gives semantic Forward (-Z) a visible
-            // screen-space component, so attack travel can be judged from
-            // pixels instead of being hidden along the camera axis.
             camera.orthographicSize =
-                Mathf.Max(
-                    camera.orthographicSize * 1.08f,
-                    bounds.extents.magnitude * 0.72f);
+                RequiredOrthographicSize(camera, bounds) * 1.08f;
         }
 
-        private static void ValidateCaptureRenderers()
+        private static float RequiredOrthographicSize(
+            Camera camera,
+            Bounds bounds)
         {
-            Renderer[] renderers =
-                UnityEngine.Object.FindObjectsByType<Renderer>(
-                    FindObjectsInactive.Include,
-                    FindObjectsSortMode.None);
-            const string expectedShader =
-                "Hidden/Hero/VoxelAssetPreview";
+            Vector3 c = bounds.center;
+            Vector3 e = bounds.extents;
+            float maxX = 0f;
+            float maxY = 0f;
 
-            foreach (Renderer renderer in renderers)
+            for (int x = -1; x <= 1; x += 2)
             {
-                string path =
-                    HierarchyPath(renderer.transform);
-                if (!path.StartsWith(
-                        VoxelStoreRuntimeGalleryBuilder.RootName + "/",
-                        StringComparison.Ordinal))
+                for (int y = -1; y <= 1; y += 2)
                 {
-                    throw new InvalidOperationException(
-                        "Unexpected renderer outside runtime gallery: " +
-                        path);
-                }
-
-                if (renderer is not MeshRenderer)
-                {
-                    throw new InvalidOperationException(
-                        "Unexpected renderer type in runtime gallery: " +
-                        renderer.GetType().Name +
-                        " at " +
-                        HierarchyPath(renderer.transform));
-                }
-
-                MeshFilter filter =
-                    renderer.GetComponent<MeshFilter>();
-                if (filter == null ||
-                    filter.sharedMesh == null)
-                {
-                    throw new InvalidOperationException(
-                        "Runtime gallery renderer is missing its MeshFilter/mesh: " +
-                        HierarchyPath(renderer.transform));
-                }
-
-                Material[] materials =
-                    renderer.sharedMaterials;
-                if (materials.Length !=
-                    filter.sharedMesh.subMeshCount)
-                {
-                    throw new InvalidOperationException(
-                        "Runtime gallery material/submesh mismatch at " +
-                        HierarchyPath(renderer.transform) +
-                        ": materials=" +
-                        materials.Length +
-                        ", submeshes=" +
-                        filter.sharedMesh.subMeshCount);
-                }
-
-                foreach (Material material in materials)
-                {
-                    if (material == null ||
-                        material.shader == null ||
-                        !material.shader.isSupported ||
-                        !string.Equals(
-                            material.shader.name,
-                            expectedShader,
-                            StringComparison.Ordinal))
+                    for (int z = -1; z <= 1; z += 2)
                     {
-                        throw new InvalidOperationException(
-                            "Runtime gallery renderer has invalid live material/shader at " +
-                            HierarchyPath(renderer.transform));
+                        Vector3 corner = c + Vector3.Scale(
+                            e,
+                            new Vector3(x, y, z));
+                        Vector3 local =
+                            camera.transform.InverseTransformPoint(corner);
+                        maxX = Mathf.Max(maxX, Mathf.Abs(local.x));
+                        maxY = Mathf.Max(maxY, Mathf.Abs(local.y));
                     }
                 }
             }
 
-            Debug.Log(
-                "Voxel Store capture renderer integrity passed: " +
-                renderers.Length +
-                " live MeshRenderers.");
+            float aspect = Mathf.Max(0.01f, camera.aspect);
+            return Mathf.Max(maxY, maxX / aspect);
         }
 
-        private static string HierarchyPath(
-            Transform transform)
+        private static void ValidateAttachmentGrip(
+            AvatarMotionPlayer player,
+            CapturePoint point)
         {
-            string path = transform.name;
-            Transform current = transform.parent;
-            while (current != null)
+            const float tolerance = 0.001f;
+            AvatarPresentation avatar = player.Avatar;
+            foreach (EquipmentPresentation equipment in avatar.Equipment)
             {
-                path = current.name + "/" + path;
-                current = current.parent;
+                VoxelRenderInstance instance = equipment.Model.Instance;
+                if (instance == null)
+                {
+                    throw new InvalidOperationException(
+                        "Capture attachment has no provider render instance.");
+                }
+
+                Vector3 expected =
+                    avatar.ResolveBodySocketWorld(equipment.SocketName)
+                        .MultiplyPoint3x4(Vector3.zero);
+                int mountIndex = instance.RequireSocket("Mount");
+                Vector3 actual =
+                    instance.GetSocketWorldMatrix(mountIndex)
+                        .MultiplyPoint3x4(Vector3.zero);
+                float drift = Vector3.Distance(expected, actual);
+                if (drift > tolerance)
+                {
+                    throw new InvalidOperationException(
+                        "Animated attachment grip drift exceeds tolerance at " +
+                        point.Checkpoint +
+                        ": socket=" + equipment.SocketName +
+                        ", drift=" + drift.ToString("R") +
+                        ", tolerance=" + tolerance.ToString("R") + ".");
+                }
             }
-            return path;
+        }
+
+        private static void ValidateCaptureRenderers()
+        {
+            GameObject root =
+                GameObject.Find(VoxelStoreRuntimeGalleryBuilder.RootName);
+            if (root == null)
+            {
+                throw new InvalidOperationException(
+                    "Runtime gallery root is missing.");
+            }
+
+            VoxelRenderWorld world =
+                root.GetComponent<VoxelRenderWorld>();
+            if (world == null)
+            {
+                throw new InvalidOperationException(
+                    "Runtime gallery requires one provider VoxelRenderWorld.");
+            }
+
+            VoxelRenderPresentation[] presentations =
+                root.GetComponentsInChildren<VoxelRenderPresentation>(true);
+            if (presentations.Length == 0)
+            {
+                throw new InvalidOperationException(
+                    "Runtime gallery contains no provider render presentations.");
+            }
+
+            int expectedParts = 0;
+            foreach (VoxelRenderPresentation presentation in presentations)
+            {
+                presentation.EnsureInstance();
+                expectedParts += presentation.Assembly.PartCount;
+
+                if (Quaternion.Angle(
+                        presentation.ModelRoot.localRotation,
+                        Quaternion.identity) > 0.001f)
+                {
+                    throw new InvalidOperationException(
+                        "Runtime gallery contains a model-specific rotation correction: " +
+                        presentation.name);
+                }
+            }
+
+            world.SubmitNow();
+
+            if (world.InstanceCount != presentations.Length)
+            {
+                throw new InvalidOperationException(
+                    "Provider instance count mismatch. expected=" +
+                    presentations.Length +
+                    ", actual=" +
+                    world.InstanceCount);
+            }
+
+            if (world.SubmittedPartCount != expectedParts)
+            {
+                throw new InvalidOperationException(
+                    "Provider submitted part count mismatch. expected=" +
+                    expectedParts +
+                    ", actual=" +
+                    world.SubmittedPartCount);
+            }
+
+            MeshRenderer[] legacyRenderers =
+                root.GetComponentsInChildren<MeshRenderer>(true);
+            if (legacyRenderers.Length != 0)
+            {
+                throw new InvalidOperationException(
+                    "Runtime gallery still contains a local MeshRenderer path.");
+            }
+
+            Debug.Log(
+                "Voxel Store provider render integrity passed: " +
+                presentations.Length +
+                " instances, " +
+                expectedParts +
+                " submitted parts.");
         }
 
         private static AvatarMotionPlayer[] FindPlayers() =>

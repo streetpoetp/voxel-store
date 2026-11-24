@@ -1,4 +1,6 @@
 using System;
+using Hero.Voxel.Render.Runtime.Unity;
+using Hero.Voxel.Runtime.Animation;
 using Hero.Voxel.Runtime.Assets;
 using NUnit.Framework;
 using UnityEngine;
@@ -9,234 +11,294 @@ namespace VoxelStore.Preview.Editor.Tests
     public sealed class AvatarPresentationTests
     {
         [Test]
-        public void AvatarMotionSetIsSemanticAndDeterministic()
-        {
-            CollectionAssert.AreEqual(
-                new[]
-                {
-                    "Idle",
-                    "WalkForward",
-                    "Attack",
-                    "Hit",
-                    "Death"
-                },
-                Enum.GetNames(typeof(AvatarMotion)));
-        }
-
-        [Test]
-        public void PresentationConsumesCanonicalModelFrame()
+        public void CanonicalModelFrameIsSharedByAvatarAndEquipment()
         {
             Assert.AreEqual(
-                Vector3.right,
+                VoxelStoreModelFrame.Right,
                 AvatarPresentation.CanonicalLocalRight);
             Assert.AreEqual(
-                Vector3.up,
+                VoxelStoreModelFrame.Up,
                 AvatarPresentation.CanonicalLocalUp);
             Assert.AreEqual(
-                Vector3.back,
+                VoxelStoreModelFrame.Forward,
                 AvatarPresentation.CanonicalLocalForward);
             Assert.AreEqual(
                 AvatarPresentation.CanonicalLocalForward,
                 EquipmentPresentation.CanonicalLocalForward);
+            Assert.AreEqual(Vector3.back, AvatarPresentation.CanonicalLocalForward);
         }
 
         [Test]
-        public void LeftAndRightSocketsArePhysicalDistinctBindings()
+        public void DistinctBindingsCanReuseSameEquipmentAsset()
         {
-            Fixture fixture = CreateFixture(includeSecondEquipment: true);
-            try
-            {
-                Assert.AreEqual(2, fixture.Avatar.Equipment.Count);
-                Assert.AreEqual(
-                    EquipmentSlotSide.Right,
-                    fixture.Primary.Side);
-                Assert.AreEqual(
-                    EquipmentSlotSide.Left,
-                    fixture.Secondary.Side);
-                Assert.That(
-                    Vector3.Distance(
-                        fixture.Primary.PlacementRoot.localPosition,
-                        fixture.Secondary.PlacementRoot.localPosition),
-                    Is.GreaterThan(0.5f));
-                Assert.That(
-                    fixture.Primary.PlacementRoot.localPosition.x,
-                    Is.GreaterThan(0f));
-                Assert.That(
-                    fixture.Secondary.PlacementRoot.localPosition.x,
-                    Is.LessThan(0f));
-            }
-            finally
-            {
-                fixture.Dispose();
-            }
-        }
+            using Fixture fixture = CreateFixture(includeSecondEquipment: true);
 
-        [Test]
-        public void RepeatedEquipmentCanBindTwoLeftSlotsIndependently()
-        {
-            Fixture fixture = CreateFixture(
-                includeSecondEquipment: true,
-                primarySocketName: "Equip.Hand.Left.0",
-                primarySide: EquipmentSlotSide.Left,
-                secondarySocketName: "Equip.Hand.Left.1",
-                secondarySide: EquipmentSlotSide.Left);
-            try
-            {
-                Assert.AreEqual(2, fixture.Avatar.Equipment.Count);
-                Assert.AreSame(
-                    fixture.Primary.AnimatedModel.Assembly,
-                    fixture.Secondary.AnimatedModel.Assembly);
-                Assert.AreEqual(
-                    EquipmentSlotSide.Left,
-                    fixture.Primary.Side);
-                Assert.AreEqual(
-                    EquipmentSlotSide.Left,
-                    fixture.Secondary.Side);
-                Assert.That(
-                    Vector3.Distance(
-                        fixture.Primary.PlacementRoot.localPosition,
-                        fixture.Secondary.PlacementRoot.localPosition),
-                    Is.GreaterThan(0.1f));
-            }
-            finally
-            {
-                fixture.Dispose();
-            }
+            Assert.AreSame(
+                fixture.Primary.Model.Assembly,
+                fixture.Secondary.Model.Assembly);
+            Assert.AreNotSame(
+                fixture.Primary.Model.Instance,
+                fixture.Secondary.Model.Instance);
+            Assert.AreNotEqual(
+                fixture.Primary.BindingId,
+                fixture.Secondary.BindingId);
+
+            Vector3 primary = SocketPosition(
+                fixture.Primary.Model.Instance,
+                "Mount");
+            Vector3 secondary = SocketPosition(
+                fixture.Secondary.Model.Instance,
+                "Mount");
+            Assert.That(
+                Vector3.Distance(primary, secondary),
+                Is.GreaterThan(0.1f));
+            Assert.AreEqual(3, fixture.World.InstanceCount);
         }
 
         [Test]
         public void LeftAndRightAttackSelectDifferentWholeBodyClips()
         {
-            Fixture fixture = CreateFixture();
-            try
-            {
-                fixture.Player.SampleMotion(
-                    AvatarMotion.Attack,
-                    0.5f,
-                    EquipmentSlotSide.Left);
-                Quaternion left =
-                    fixture.BodyPart.localRotation;
+            using Fixture fixture = CreateFixture();
 
-                fixture.Player.SampleMotion(
-                    AvatarMotion.Attack,
-                    0.5f,
-                    EquipmentSlotSide.Right);
-                Quaternion right =
-                    fixture.BodyPart.localRotation;
+            fixture.Player.SampleMotion(
+                AvatarMotion.Attack,
+                0.5f,
+                EquipmentSlotSide.Left);
+            Quaternion left =
+                fixture.Avatar.ResolveBodyPartWorld("Body").rotation;
 
-                Assert.That(
-                    Quaternion.Angle(
-                        Quaternion.identity,
-                        left),
-                    Is.GreaterThan(10f));
-                Assert.That(
-                    Quaternion.Angle(
-                        Quaternion.identity,
-                        right),
-                    Is.GreaterThan(10f));
-                Assert.That(
-                    Quaternion.Angle(left, right),
-                    Is.GreaterThan(20f));
+            fixture.Player.SampleMotion(
+                AvatarMotion.Attack,
+                0.5f,
+                EquipmentSlotSide.Right);
+            Quaternion right =
+                fixture.Avatar.ResolveBodyPartWorld("Body").rotation;
 
-                // Current avatars really are one animated Body part.
-                Assert.AreEqual(
-                    1,
-                    fixture.BodyAssembly.PartCount);
-                Assert.AreEqual(
-                    "Body",
-                    fixture.BodyAssembly.GetPart(0).Name);
-            }
-            finally
-            {
-                fixture.Dispose();
-            }
+            Assert.That(
+                Quaternion.Angle(Quaternion.identity, left),
+                Is.GreaterThan(10f));
+            Assert.That(
+                Quaternion.Angle(Quaternion.identity, right),
+                Is.GreaterThan(10f));
+            Assert.That(
+                Quaternion.Angle(left, right),
+                Is.GreaterThan(20f));
         }
 
         [Test]
-        public void WeaponAttackUsesOwnAuthoredClipAndMountStaysBound()
+        public void DifferentAuthoredDurationsUseSameNormalizedPhase()
         {
-            Fixture fixture = CreateFixture();
-            try
+            using Fixture fixture = CreateFixture();
+
+            Assert.That(
+                fixture.BodyAnimation.GetClip(
+                    RequireClip(fixture.BodyAnimation, "Attack.Right")).Duration,
+                Is.EqualTo(0.4f).Within(0.0001f));
+            Assert.That(
+                fixture.EquipmentAnimation.GetClip(
+                    RequireClip(fixture.EquipmentAnimation, "Attack")).Duration,
+                Is.EqualTo(1.2f).Within(0.0001f));
+
+            fixture.Player.SampleMotion(
+                AvatarMotion.Attack,
+                0.5f,
+                EquipmentSlotSide.Right);
+
+            Quaternion equipment =
+                fixture.Primary.Model.Instance
+                    .GetPartWorldMatrix(0)
+                    .rotation;
+            Assert.That(
+                Quaternion.Angle(
+                    Quaternion.identity,
+                    equipment),
+                Is.EqualTo(47.5f).Within(0.1f));
+            AssertMountBound(fixture, fixture.Primary);
+        }
+
+        [Test]
+        public void WeaponAttackUsesOwnAuthoredClipAndBindAnchor()
+        {
+            using Fixture fixture = CreateFixture();
+
+            fixture.Player.SampleMotion(
+                AvatarMotion.Attack,
+                0.5f,
+                EquipmentSlotSide.Right);
+
+            Quaternion weapon =
+                fixture.Primary.Model.Instance
+                    .GetPartWorldMatrix(0)
+                    .rotation;
+            Assert.That(
+                Quaternion.Angle(
+                    Quaternion.identity,
+                    weapon),
+                Is.GreaterThan(20f));
+            AssertMountBound(fixture, fixture.Primary);
+        }
+
+        [Test]
+        public void RepeatedSampleResetDoesNotDriftProviderBinding()
+        {
+            using Fixture fixture = CreateFixture();
+            Vector3 neutral =
+                SocketPosition(
+                    fixture.Primary.Model.Instance,
+                    "Mount");
+
+            for (int i = 0; i < 3; i++)
             {
                 fixture.Player.SampleMotion(
                     AvatarMotion.Attack,
                     0.5f,
                     EquipmentSlotSide.Right);
-
-                Assert.That(
-                    Quaternion.Angle(
-                        Quaternion.identity,
-                        fixture.PrimaryPart.localRotation),
-                    Is.GreaterThan(20f));
-
-                Matrix4x4 bodySocket =
-                    fixture.Avatar.ResolveBodySocketInPresentation(
-                        "Equip.Hand.Right.0");
-                Vector3 bodySocketOrigin =
-                    bodySocket.MultiplyPoint3x4(Vector3.zero);
-                Matrix4x4 mountWorldInPresentation =
-                    fixture.Primary.PlacementRoot.localToWorldMatrix *
-                    fixture.Primary.AnimatedModel.ModelRoot.localToWorldMatrix.inverse;
-                _ = mountWorldInPresentation;
+                fixture.Player.ResetMotion();
 
                 Assert.That(
                     Vector3.Distance(
-                        bodySocketOrigin,
-                        fixture.Primary.PlacementRoot.localPosition),
+                        neutral,
+                        SocketPosition(
+                            fixture.Primary.Model.Instance,
+                            "Mount")),
                     Is.LessThan(0.0001f));
-            }
-            finally
-            {
-                fixture.Dispose();
+                Assert.That(
+                    Quaternion.Angle(
+                        Quaternion.identity,
+                        fixture.Avatar
+                            .ResolveBodyPartWorld("Body")
+                            .rotation),
+                    Is.LessThan(0.0001f));
+                Assert.That(
+                    Quaternion.Angle(
+                        Quaternion.identity,
+                        fixture.Primary.Model.Instance
+                            .GetPartWorldMatrix(0)
+                            .rotation),
+                    Is.LessThan(0.0001f));
             }
         }
 
         [Test]
-        public void RepeatedSampleResetDoesNotDriftSocketPlacement()
+        public void MissingSemanticClipFailsClosed()
         {
-            Fixture fixture = CreateFixture();
-            try
-            {
-                Vector3 neutralPlacement =
-                    fixture.Primary.PlacementRoot.localPosition;
+            using Fixture fixture =
+                CreateFixture(omitEquipmentDeath: true);
 
-                for (int i = 0; i < 3; i++)
-                {
-                    fixture.Player.SampleMotion(
-                        AvatarMotion.Attack,
-                        0.5f,
-                        EquipmentSlotSide.Right);
-                    fixture.Player.ResetMotion();
+            Assert.Throws<InvalidOperationException>(() =>
+                fixture.Player.SampleMotion(
+                    AvatarMotion.Death,
+                    0.5f,
+                    EquipmentSlotSide.Right));
+        }
 
-                    Assert.That(
-                        Vector3.Distance(
-                            neutralPlacement,
-                            fixture.Primary.PlacementRoot.localPosition),
-                        Is.LessThan(0.0001f));
-                    Assert.That(
-                        Quaternion.Angle(
-                            Quaternion.identity,
-                            fixture.BodyPart.localRotation),
-                        Is.LessThan(0.0001f));
-                    Assert.That(
-                        Quaternion.Angle(
-                            Quaternion.identity,
-                            fixture.PrimaryPart.localRotation),
-                        Is.LessThan(0.0001f));
-                }
-            }
-            finally
-            {
-                fixture.Dispose();
-            }
+        [Test]
+        public void ProviderBoundsNeedNoSceneMeshRendererHierarchy()
+        {
+            using Fixture fixture = CreateFixture(includeSecondEquipment: true);
+
+            Bounds bounds = fixture.Avatar.GetWorldBounds();
+            Assert.That(bounds.size.sqrMagnitude, Is.GreaterThan(0f));
+            Assert.AreEqual(
+                0,
+                fixture.Unit.GetComponentsInChildren<MeshRenderer>(true).Length);
+            Assert.AreEqual(3, fixture.World.InstanceCount);
+        }
+
+        [Test]
+        public void ReleaseAndReinitializeOwnsProviderLifecycle()
+        {
+            using Fixture fixture = CreateFixture(includeSecondEquipment: true);
+            Assert.AreEqual(3, fixture.World.InstanceCount);
+
+            fixture.Avatar.ReleaseProvider();
+            Assert.AreEqual(0, fixture.World.InstanceCount);
+            Assert.IsFalse(fixture.Avatar.IsProviderInitialized);
+
+            fixture.Avatar.InitializeProvider();
+            Assert.AreEqual(3, fixture.World.InstanceCount);
+            Assert.IsTrue(fixture.Avatar.IsProviderInitialized);
+        }
+
+        [Test]
+        public void ExplicitLoopPolicyUsesProviderClock()
+        {
+            using Fixture fixture = CreateFixture();
+
+            fixture.Avatar.StartMotion(
+                AvatarMotion.Attack,
+                EquipmentSlotSide.Right,
+                shouldLoop: true);
+            float attackDuration = fixture.Avatar.CurrentDuration;
+            Assert.That(
+                fixture.Avatar.Advance(attackDuration),
+                Is.EqualTo(0f).Within(0.0001f));
+            Assert.IsTrue(fixture.Avatar.IsPlaying);
+
+            fixture.Avatar.ResetPose();
+            fixture.Avatar.StartMotion(
+                AvatarMotion.Idle,
+                EquipmentSlotSide.Right,
+                shouldLoop: false);
+            float idleDuration = fixture.Avatar.CurrentDuration;
+            Assert.That(
+                fixture.Avatar.Advance(idleDuration * 1.5f),
+                Is.EqualTo(1f).Within(0.0001f));
+            Assert.IsFalse(fixture.Avatar.IsPlaying);
+        }
+
+        [Test]
+        public void AvatarWithoutEquipmentUsesRootOnlyProviderActor()
+        {
+            using Fixture fixture =
+                CreateFixture(includePrimaryEquipment: false);
+
+            Assert.AreEqual(0, fixture.Avatar.Equipment.Count);
+            Assert.AreEqual(1, fixture.World.InstanceCount);
+
+            fixture.Player.SampleMotion(
+                AvatarMotion.Idle,
+                0.5f,
+                EquipmentSlotSide.Right);
+
+            Assert.IsTrue(fixture.Avatar.IsProviderInitialized);
+            Assert.AreEqual(1, fixture.World.InstanceCount);
+        }
+
+        [Test]
+        public void DriverSideChangeRebuildsPlanAtCurrentProviderPhase()
+        {
+            using Fixture fixture = CreateFixture();
+
+            fixture.Player.Play(
+                AvatarMotion.Attack,
+                true,
+                1f);
+            float duration = fixture.Avatar.CurrentDuration;
+            fixture.Avatar.Advance(duration * 0.5f);
+            Assert.That(
+                fixture.Avatar.CurrentNormalizedPhase,
+                Is.EqualTo(0.5f).Within(0.0001f));
+            Quaternion right =
+                fixture.Avatar.ResolveBodyPartWorld("Body").rotation;
+
+            fixture.Player.SetDriverSide(EquipmentSlotSide.Left);
+
+            Assert.That(
+                fixture.Avatar.CurrentNormalizedPhase,
+                Is.EqualTo(0.5f).Within(0.0001f));
+            Quaternion left =
+                fixture.Avatar.ResolveBodyPartWorld("Body").rotation;
+            Assert.That(
+                Quaternion.Angle(right, left),
+                Is.GreaterThan(20f));
+            AssertMountBound(fixture, fixture.Primary);
         }
 
         private static Fixture CreateFixture(
             bool includeSecondEquipment = false,
-            string primarySocketName = "Equip.Hand.Right.0",
-            EquipmentSlotSide primarySide = EquipmentSlotSide.Right,
-            string secondarySocketName = "Equip.Hand.Left.0",
-            EquipmentSlotSide secondarySide = EquipmentSlotSide.Left)
+            bool omitEquipmentDeath = false,
+            bool includePrimaryEquipment = true)
         {
             var fixture = new Fixture();
             fixture.Mesh = CreateMesh();
@@ -298,72 +360,74 @@ namespace VoxelStore.Preview.Editor.Tests
                 });
             fixture.EquipmentAnimation =
                 CreateEquipmentAnimation(
-                    fixture.EquipmentAssembly);
+                    fixture.EquipmentAssembly,
+                    omitEquipmentDeath);
+
+            fixture.WorldRoot = new GameObject("WorldRoot");
+            fixture.World =
+                fixture.WorldRoot.AddComponent<VoxelRenderWorld>();
+            fixture.World.Initialize();
 
             fixture.Unit = new GameObject("UnitRoot");
-            GameObject presentationObject =
+            fixture.Unit.transform.SetParent(
+                fixture.WorldRoot.transform,
+                false);
+            var presentation =
                 new GameObject("PresentationRoot");
-            presentationObject.transform.SetParent(
+            presentation.transform.SetParent(
                 fixture.Unit.transform,
                 false);
 
-            GameObject bodyRoot =
-                new GameObject("BodyModel");
-            bodyRoot.transform.SetParent(
-                presentationObject.transform,
+            var bodyObject = new GameObject("Body");
+            bodyObject.transform.SetParent(
+                presentation.transform,
                 false);
-            GameObject bodyPartObject =
-                new GameObject("Body");
-            bodyPartObject.transform.SetParent(
-                bodyRoot.transform,
-                false);
-            MeshFilter bodyFilter =
-                bodyPartObject.AddComponent<MeshFilter>();
-            bodyFilter.sharedMesh = fixture.Mesh;
-            fixture.BodyPart = bodyPartObject.transform;
-
-            VoxelAnimatedAssembly animatedBody =
-                bodyRoot.AddComponent<VoxelAnimatedAssembly>();
-            animatedBody.Configure(
-                bodyRoot.transform,
+            fixture.BodyModel =
+                bodyObject.AddComponent<VoxelRenderPresentation>();
+            fixture.BodyModel.Configure(
+                fixture.World,
+                bodyObject.transform,
                 fixture.BodyAssembly,
                 fixture.BodyAnimation,
-                new[] { bodyPartObject.transform });
-
-            fixture.Primary = CreateEquipment(
-                presentationObject.transform,
-                fixture,
-                primarySocketName,
-                primarySide,
-                "Primary",
-                out Transform primaryPart);
-            fixture.PrimaryPart = primaryPart;
+                externalLifecycle: true);
 
             EquipmentPresentation[] equipment;
-            if (includeSecondEquipment)
+            if (!includePrimaryEquipment)
             {
-                fixture.Secondary = CreateEquipment(
-                    presentationObject.transform,
-                    fixture,
-                    secondarySocketName,
-                    secondarySide,
-                    "Secondary",
-                    out _);
-                equipment =
-                    new[] { fixture.Primary, fixture.Secondary };
+                equipment = Array.Empty<EquipmentPresentation>();
             }
             else
             {
-                equipment = new[] { fixture.Primary };
+                fixture.Primary = CreateEquipment(
+                    presentation.transform,
+                    fixture,
+                    "Equip.Hand.Right.0",
+                    EquipmentSlotSide.Right,
+                    "Primary");
+
+                if (includeSecondEquipment)
+                {
+                    fixture.Secondary = CreateEquipment(
+                        presentation.transform,
+                        fixture,
+                        "Equip.Hand.Left.0",
+                        EquipmentSlotSide.Left,
+                        "Secondary");
+                    equipment =
+                        new[] { fixture.Primary, fixture.Secondary };
+                }
+                else
+                {
+                    equipment = new[] { fixture.Primary };
+                }
             }
 
             fixture.Avatar =
                 fixture.Unit.AddComponent<AvatarPresentation>();
             fixture.Avatar.Configure(
                 fixture.Unit.transform,
-                presentationObject.transform,
-                bodyFilter,
-                animatedBody,
+                presentation.transform,
+                fixture.BodyModel,
                 equipment);
 
             fixture.Player =
@@ -382,46 +446,65 @@ namespace VoxelStore.Preview.Editor.Tests
             Fixture fixture,
             string socketName,
             EquipmentSlotSide side,
-            string name,
-            out Transform partTransform)
+            string name)
         {
-            GameObject placement =
-                new GameObject(name + " Placement");
+            var placement =
+                new GameObject(name + " Equipment");
             placement.transform.SetParent(
                 presentationRoot,
                 false);
 
-            GameObject modelRoot =
-                new GameObject(name + " Model");
-            modelRoot.transform.SetParent(
+            VoxelRenderPresentation model =
+                placement.AddComponent<VoxelRenderPresentation>();
+            model.Configure(
+                fixture.World,
                 placement.transform,
-                false);
-            GameObject part =
-                new GameObject("Weapon");
-            part.transform.SetParent(
-                modelRoot.transform,
-                false);
-            MeshFilter filter =
-                part.AddComponent<MeshFilter>();
-            filter.sharedMesh = fixture.Mesh;
-            partTransform = part.transform;
-
-            VoxelAnimatedAssembly animated =
-                modelRoot.AddComponent<VoxelAnimatedAssembly>();
-            animated.Configure(
-                modelRoot.transform,
                 fixture.EquipmentAssembly,
                 fixture.EquipmentAnimation,
-                new[] { part.transform });
+                externalLifecycle: true);
 
             EquipmentPresentation equipment =
                 placement.AddComponent<EquipmentPresentation>();
             equipment.Configure(
-                placement.transform,
-                animated,
+                model,
                 socketName,
                 side);
             return equipment;
+        }
+
+        private static void AssertMountBound(
+            Fixture fixture,
+            EquipmentPresentation equipment)
+        {
+            Vector3 bodySocket =
+                fixture.Avatar
+                    .ResolveBodySocketWorld(equipment.SocketName)
+                    .MultiplyPoint3x4(Vector3.zero);
+            Vector3 mount =
+                SocketPosition(
+                    equipment.Model.Instance,
+                    "Mount");
+            Assert.That(
+                Vector3.Distance(bodySocket, mount),
+                Is.LessThan(0.0001f));
+        }
+
+        private static Vector3 SocketPosition(
+            VoxelRenderInstance instance,
+            string socketName)
+        {
+            int index = instance.RequireSocket(socketName);
+            return instance
+                .GetSocketWorldMatrix(index)
+                .MultiplyPoint3x4(Vector3.zero);
+        }
+
+        private static int RequireClip(
+            VoxelAnimationAsset animation,
+            string name)
+        {
+            Assert.IsTrue(animation.TryGetClipIndex(name, out int index));
+            return index;
         }
 
         private static VoxelAnimationAsset CreateBodyAnimation(
@@ -469,18 +552,41 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         private static VoxelAnimationAsset CreateEquipmentAnimation(
-            VoxelAssemblyAsset assembly)
+            VoxelAssemblyAsset assembly,
+            bool omitDeath)
         {
+            var clips = new System.Collections.Generic.List<VoxelAnimationClip>
+            {
+                RotationClip("Idle", true, Quaternion.identity, 1.1f),
+                RotationClip(
+                    "WalkForward",
+                    true,
+                    Quaternion.Euler(0f, 0f, 5f),
+                    0.9f),
+                RotationClip(
+                    "Attack",
+                    false,
+                    Quaternion.Euler(0f, 0f, 70f),
+                    1.2f),
+                RotationClip(
+                    "Hit",
+                    false,
+                    Quaternion.Euler(0f, 0f, 12f),
+                    0.8f)
+            };
+            if (!omitDeath)
+            {
+                clips.Add(
+                    RotationClip(
+                        "Death",
+                        false,
+                        Quaternion.Euler(0f, 0f, 82f),
+                        1.4f));
+            }
+
             return VoxelAnimationAsset.Create(
                 assembly,
-                new[]
-                {
-                    RotationClip("Idle", true, Quaternion.identity, 1.1f),
-                    RotationClip("WalkForward", true, Quaternion.Euler(0f, 0f, 5f), 0.9f),
-                    RotationClip("Attack", false, Quaternion.Euler(0f, 0f, 70f), 1.2f),
-                    RotationClip("Hit", false, Quaternion.Euler(0f, 0f, 12f), 0.8f),
-                    RotationClip("Death", false, Quaternion.Euler(0f, 0f, 82f), 1.4f)
-                });
+                clips.ToArray());
         }
 
         private static VoxelAnimationClip PositionClip(
@@ -559,23 +665,25 @@ namespace VoxelStore.Preview.Editor.Tests
 
         private sealed class Fixture : IDisposable
         {
+            public GameObject WorldRoot;
             public GameObject Unit;
+            public VoxelRenderWorld World;
             public Mesh Mesh;
             public VoxelAssemblyAsset BodyAssembly;
             public VoxelAnimationAsset BodyAnimation;
             public VoxelAssemblyAsset EquipmentAssembly;
             public VoxelAnimationAsset EquipmentAnimation;
+            public VoxelRenderPresentation BodyModel;
             public AvatarPresentation Avatar;
             public AvatarMotionPlayer Player;
             public EquipmentPresentation Primary;
             public EquipmentPresentation Secondary;
-            public Transform BodyPart;
-            public Transform PrimaryPart;
 
             public void Dispose()
             {
-                if (Unit != null)
-                    UnityEngine.Object.DestroyImmediate(Unit);
+                Avatar?.ReleaseProvider();
+                if (WorldRoot != null)
+                    UnityEngine.Object.DestroyImmediate(WorldRoot);
                 if (BodyAnimation != null)
                     UnityEngine.Object.DestroyImmediate(BodyAnimation);
                 if (EquipmentAnimation != null)

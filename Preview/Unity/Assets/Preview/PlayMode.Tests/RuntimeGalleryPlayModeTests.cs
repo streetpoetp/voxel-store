@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using Hero.Voxel.Render.Runtime.Unity;
+using Hero.Voxel.Runtime.Animation;
 using Hero.Voxel.Runtime.Assets;
 using NUnit.Framework;
 using UnityEngine;
@@ -11,7 +13,7 @@ namespace VoxelStore.Preview.PlayMode.Tests
     public sealed class RuntimeGalleryPlayModeTests
     {
         [UnityTest]
-        public IEnumerator LeftAndRightAttackProduceDifferentWholeBodyResponse()
+        public IEnumerator LeftAndRightAttackProduceDifferentProviderBodyResponse()
         {
             Fixture fixture = CreateFixture();
             try
@@ -20,17 +22,19 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     AvatarMotion.Attack,
                     0.5f,
                     EquipmentSlotSide.Left);
-                Quaternion left = fixture.BodyPart.localRotation;
+                Quaternion left =
+                    fixture.Avatar.ResolveBodyPartWorld("Body").rotation;
                 Vector3 leftMount =
-                    fixture.Equipment.PlacementRoot.localPosition;
+                    SocketPosition(fixture.Equipment.Model.Instance, "Mount");
 
                 fixture.Player.SampleMotion(
                     AvatarMotion.Attack,
                     0.5f,
                     EquipmentSlotSide.Right);
-                Quaternion right = fixture.BodyPart.localRotation;
+                Quaternion right =
+                    fixture.Avatar.ResolveBodyPartWorld("Body").rotation;
                 Vector3 rightMount =
-                    fixture.Equipment.PlacementRoot.localPosition;
+                    SocketPosition(fixture.Equipment.Model.Instance, "Mount");
 
                 Assert.That(
                     Quaternion.Angle(left, right),
@@ -47,33 +51,26 @@ namespace VoxelStore.Preview.PlayMode.Tests
         }
 
         [UnityTest]
-        public IEnumerator DifferentAuthoredDurationsStayOnSameNormalizedPhase()
+        public IEnumerator DifferentAuthoredDurationsStayOnSameProviderPhase()
         {
             Fixture fixture = CreateFixture();
             try
             {
-                Assert.That(
-                    fixture.Avatar.BodyAnimation.GetClipDuration(
-                        AvatarMotion.Attack,
-                        EquipmentSlotSide.Right),
-                    Is.EqualTo(0.4f).Within(0.0001f));
-                Assert.That(
-                    fixture.Equipment.AnimatedModel.GetClipDuration(
-                        AvatarMotion.Attack,
-                        EquipmentSlotSide.Right),
-                    Is.EqualTo(1.2f).Within(0.0001f));
-
                 fixture.Player.SampleMotion(
                     AvatarMotion.Attack,
                     0.5f,
                     EquipmentSlotSide.Right);
 
+                Quaternion equipment =
+                    fixture.Equipment.Model.Instance
+                        .GetPartWorldMatrix(0)
+                        .rotation;
                 Assert.That(
                     Quaternion.Angle(
                         Quaternion.identity,
-                        fixture.EquipmentPart.localRotation),
-                    Is.InRange(25f, 45f));
-                AssertMountLocked(fixture);
+                        equipment),
+                    Is.EqualTo(47.5f).Within(0.1f));
+                AssertMountBound(fixture);
                 yield return null;
             }
             finally
@@ -83,7 +80,7 @@ namespace VoxelStore.Preview.PlayMode.Tests
         }
 
         [UnityTest]
-        public IEnumerator AllSemanticMotionsUseAuthoredPoseAndReset()
+        public IEnumerator AllSemanticMotionsUseProviderAuthoredPoseAndReset()
         {
             Fixture fixture = CreateFixture();
             try
@@ -94,21 +91,25 @@ namespace VoxelStore.Preview.PlayMode.Tests
                         motion,
                         0.65f,
                         EquipmentSlotSide.Right);
-                    AssertMountLocked(fixture);
+                    AssertMountBound(fixture);
                 }
 
                 fixture.Player.ResetMotion();
                 Assert.That(
                     Quaternion.Angle(
                         Quaternion.identity,
-                        fixture.BodyPart.localRotation),
+                        fixture.Avatar
+                            .ResolveBodyPartWorld("Body")
+                            .rotation),
                     Is.LessThan(0.0001f));
                 Assert.That(
                     Quaternion.Angle(
                         Quaternion.identity,
-                        fixture.EquipmentPart.localRotation),
+                        fixture.Equipment.Model.Instance
+                            .GetPartWorldMatrix(0)
+                            .rotation),
                     Is.LessThan(0.0001f));
-                AssertMountLocked(fixture);
+                AssertMountBound(fixture);
                 yield return null;
             }
             finally
@@ -118,7 +119,7 @@ namespace VoxelStore.Preview.PlayMode.Tests
         }
 
         [UnityTest]
-        public IEnumerator SwitchDisableAndStopResetAuthoredPresentation()
+        public IEnumerator SwitchDisableAndStopResetProviderPresentation()
         {
             Fixture fixture = CreateFixture();
             try
@@ -131,7 +132,9 @@ namespace VoxelStore.Preview.PlayMode.Tests
                 Assert.That(
                     Quaternion.Angle(
                         Quaternion.identity,
-                        fixture.EquipmentPart.localRotation),
+                        fixture.Equipment.Model.Instance
+                            .GetPartWorldMatrix(0)
+                            .rotation),
                     Is.GreaterThan(1f));
 
                 fixture.Player.Play(
@@ -147,18 +150,22 @@ namespace VoxelStore.Preview.PlayMode.Tests
                 Assert.That(
                     Quaternion.Angle(
                         Quaternion.identity,
-                        fixture.BodyPart.localRotation),
+                        fixture.Avatar
+                            .ResolveBodyPartWorld("Body")
+                            .rotation),
                     Is.LessThan(0.0001f));
                 Assert.That(
                     Quaternion.Angle(
                         Quaternion.identity,
-                        fixture.EquipmentPart.localRotation),
+                        fixture.Equipment.Model.Instance
+                            .GetPartWorldMatrix(0)
+                            .rotation),
                     Is.LessThan(0.0001f));
 
                 fixture.Player.enabled = true;
                 yield return null;
                 fixture.Player.Stop();
-                AssertMountLocked(fixture);
+                AssertMountBound(fixture);
             }
             finally
             {
@@ -166,18 +173,62 @@ namespace VoxelStore.Preview.PlayMode.Tests
             }
         }
 
-        private static void AssertMountLocked(Fixture fixture)
+        [UnityTest]
+        public IEnumerator LoopOverrideWorksInBothDirectionsWithoutLocalClock()
         {
-            Matrix4x4 bodySocket =
-                fixture.Avatar.ResolveBodySocketInPresentation(
-                    "Equip.Hand.Right.0");
+            Fixture fixture = CreateFixture();
+            try
+            {
+                fixture.Avatar.StartMotion(
+                    AvatarMotion.Attack,
+                    EquipmentSlotSide.Right,
+                    shouldLoop: true);
+                float attackDuration = fixture.Avatar.CurrentDuration;
+                Assert.That(
+                    fixture.Avatar.Advance(attackDuration),
+                    Is.EqualTo(0f).Within(0.0001f));
+                Assert.IsTrue(fixture.Avatar.IsPlaying);
+
+                fixture.Avatar.ResetPose();
+                fixture.Avatar.StartMotion(
+                    AvatarMotion.Idle,
+                    EquipmentSlotSide.Right,
+                    shouldLoop: false);
+                float idleDuration = fixture.Avatar.CurrentDuration;
+                Assert.That(
+                    fixture.Avatar.Advance(idleDuration * 1.5f),
+                    Is.EqualTo(1f).Within(0.0001f));
+                Assert.IsFalse(fixture.Avatar.IsPlaying);
+                yield return null;
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        private static void AssertMountBound(Fixture fixture)
+        {
             Vector3 expected =
-                bodySocket.MultiplyPoint3x4(Vector3.zero);
+                fixture.Avatar
+                    .ResolveBodySocketWorld("Equip.Hand.Right.0")
+                    .MultiplyPoint3x4(Vector3.zero);
+            Vector3 actual =
+                SocketPosition(
+                    fixture.Equipment.Model.Instance,
+                    "Mount");
             Assert.That(
-                Vector3.Distance(
-                    expected,
-                    fixture.Equipment.PlacementRoot.localPosition),
+                Vector3.Distance(expected, actual),
                 Is.LessThan(0.0001f));
+        }
+
+        private static Vector3 SocketPosition(
+            VoxelRenderInstance instance,
+            string socketName)
+        {
+            return instance
+                .GetSocketWorldMatrix(instance.RequireSocket(socketName))
+                .MultiplyPoint3x4(Vector3.zero);
         }
 
         private static Fixture CreateFixture()
@@ -217,12 +268,36 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     new[]
                     {
                         PositionClip("Idle", true, Vector3.zero, 1f),
-                        PositionClip("WalkForward", true, new Vector3(0f, 0.2f, -0.2f), 0.6f),
-                        PositionClip("Attack", false, new Vector3(0f, 0f, -0.25f), 0.4f),
-                        RotationClip("Attack.Left", false, Quaternion.Euler(0f, 0f, -25f), 0.4f),
-                        RotationClip("Attack.Right", false, Quaternion.Euler(0f, 0f, 25f), 0.4f),
-                        PositionClip("Hit", false, new Vector3(0f, 0f, 0.2f), 0.3f),
-                        RotationClip("Death", false, Quaternion.Euler(0f, 0f, 80f), 0.7f)
+                        PositionClip(
+                            "WalkForward",
+                            true,
+                            new Vector3(0f, 0.2f, -0.2f),
+                            0.6f),
+                        PositionClip(
+                            "Attack",
+                            false,
+                            new Vector3(0f, 0f, -0.25f),
+                            0.4f),
+                        RotationClip(
+                            "Attack.Left",
+                            false,
+                            Quaternion.Euler(0f, 0f, -25f),
+                            0.4f),
+                        RotationClip(
+                            "Attack.Right",
+                            false,
+                            Quaternion.Euler(0f, 0f, 25f),
+                            0.4f),
+                        PositionClip(
+                            "Hit",
+                            false,
+                            new Vector3(0f, 0f, 0.2f),
+                            0.3f),
+                        RotationClip(
+                            "Death",
+                            false,
+                            Quaternion.Euler(0f, 0f, 80f),
+                            0.7f)
                     });
 
             fixture.EquipmentAssembly = VoxelAssemblyAsset.Create(
@@ -251,76 +326,77 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     fixture.EquipmentAssembly,
                     new[]
                     {
-                        RotationClip("Idle", true, Quaternion.identity, 1.1f),
-                        RotationClip("WalkForward", true, Quaternion.Euler(0f, 0f, 5f), 0.9f),
-                        RotationClip("Attack", false, Quaternion.Euler(0f, 0f, 70f), 1.2f),
-                        RotationClip("Hit", false, Quaternion.Euler(0f, 0f, 12f), 0.8f),
-                        RotationClip("Death", false, Quaternion.Euler(0f, 0f, 82f), 1.4f)
+                        RotationClip(
+                            "Idle",
+                            true,
+                            Quaternion.identity,
+                            1.1f),
+                        RotationClip(
+                            "WalkForward",
+                            true,
+                            Quaternion.Euler(0f, 0f, 5f),
+                            0.9f),
+                        RotationClip(
+                            "Attack",
+                            false,
+                            Quaternion.Euler(0f, 0f, 70f),
+                            1.2f),
+                        RotationClip(
+                            "Hit",
+                            false,
+                            Quaternion.Euler(0f, 0f, 12f),
+                            0.8f),
+                        RotationClip(
+                            "Death",
+                            false,
+                            Quaternion.Euler(0f, 0f, 82f),
+                            1.4f)
                     });
 
+            fixture.WorldRoot = new GameObject("WorldRoot");
+            fixture.World =
+                fixture.WorldRoot.AddComponent<VoxelRenderWorld>();
+            fixture.World.Initialize();
+
             fixture.Unit = new GameObject("UnitRoot");
-            GameObject presentation =
+            fixture.Unit.transform.SetParent(
+                fixture.WorldRoot.transform,
+                false);
+            var presentation =
                 new GameObject("PresentationRoot");
             presentation.transform.SetParent(
                 fixture.Unit.transform,
                 false);
 
-            GameObject bodyRoot =
-                new GameObject("BodyModel");
-            bodyRoot.transform.SetParent(
+            var bodyObject = new GameObject("Body");
+            bodyObject.transform.SetParent(
                 presentation.transform,
                 false);
-            GameObject bodyPart =
-                new GameObject("Body");
-            bodyPart.transform.SetParent(
-                bodyRoot.transform,
-                false);
-            MeshFilter bodyFilter =
-                bodyPart.AddComponent<MeshFilter>();
-            bodyFilter.sharedMesh = fixture.Mesh;
-            fixture.BodyPart = bodyPart.transform;
-
-            VoxelAnimatedAssembly animatedBody =
-                bodyRoot.AddComponent<VoxelAnimatedAssembly>();
-            animatedBody.Configure(
-                bodyRoot.transform,
+            fixture.BodyModel =
+                bodyObject.AddComponent<VoxelRenderPresentation>();
+            fixture.BodyModel.Configure(
+                fixture.World,
+                bodyObject.transform,
                 fixture.BodyAssembly,
                 fixture.BodyAnimation,
-                new[] { bodyPart.transform });
+                externalLifecycle: true);
 
-            GameObject placement =
-                new GameObject("Equipment");
-            placement.transform.SetParent(
+            var equipmentObject = new GameObject("Equipment");
+            equipmentObject.transform.SetParent(
                 presentation.transform,
                 false);
-            GameObject equipmentRoot =
-                new GameObject("Model");
-            equipmentRoot.transform.SetParent(
-                placement.transform,
-                false);
-            GameObject equipmentPart =
-                new GameObject("Weapon");
-            equipmentPart.transform.SetParent(
-                equipmentRoot.transform,
-                false);
-            equipmentPart.AddComponent<MeshFilter>().sharedMesh =
-                fixture.Mesh;
-            fixture.EquipmentPart =
-                equipmentPart.transform;
-
-            VoxelAnimatedAssembly animatedEquipment =
-                equipmentRoot.AddComponent<VoxelAnimatedAssembly>();
-            animatedEquipment.Configure(
-                equipmentRoot.transform,
+            VoxelRenderPresentation equipmentModel =
+                equipmentObject.AddComponent<VoxelRenderPresentation>();
+            equipmentModel.Configure(
+                fixture.World,
+                equipmentObject.transform,
                 fixture.EquipmentAssembly,
                 fixture.EquipmentAnimation,
-                new[] { equipmentPart.transform });
-
+                externalLifecycle: true);
             fixture.Equipment =
-                placement.AddComponent<EquipmentPresentation>();
+                equipmentObject.AddComponent<EquipmentPresentation>();
             fixture.Equipment.Configure(
-                placement.transform,
-                animatedEquipment,
+                equipmentModel,
                 "Equip.Hand.Right.0",
                 EquipmentSlotSide.Right);
 
@@ -329,8 +405,7 @@ namespace VoxelStore.Preview.PlayMode.Tests
             fixture.Avatar.Configure(
                 fixture.Unit.transform,
                 presentation.transform,
-                bodyFilter,
-                animatedBody,
+                fixture.BodyModel,
                 new[] { fixture.Equipment });
 
             fixture.Player =
@@ -412,22 +487,24 @@ namespace VoxelStore.Preview.PlayMode.Tests
 
         private sealed class Fixture : IDisposable
         {
+            public GameObject WorldRoot;
             public GameObject Unit;
+            public VoxelRenderWorld World;
             public Mesh Mesh;
             public VoxelAssemblyAsset BodyAssembly;
             public VoxelAnimationAsset BodyAnimation;
             public VoxelAssemblyAsset EquipmentAssembly;
             public VoxelAnimationAsset EquipmentAnimation;
+            public VoxelRenderPresentation BodyModel;
             public AvatarPresentation Avatar;
             public AvatarMotionPlayer Player;
             public EquipmentPresentation Equipment;
-            public Transform BodyPart;
-            public Transform EquipmentPart;
 
             public void Dispose()
             {
-                if (Unit != null)
-                    UnityEngine.Object.Destroy(Unit);
+                Avatar?.ReleaseProvider();
+                if (WorldRoot != null)
+                    UnityEngine.Object.Destroy(WorldRoot);
                 if (BodyAnimation != null)
                     UnityEngine.Object.Destroy(BodyAnimation);
                 if (EquipmentAnimation != null)

@@ -16,7 +16,6 @@ namespace VoxelStore.Preview.Runtime
         [SerializeField] private bool loop = true;
         [SerializeField, Min(0.05f)] private float speed = 1f;
 
-        private float elapsedSeconds;
         private bool playing;
 
         public AvatarPresentation Avatar => avatar;
@@ -27,7 +26,9 @@ namespace VoxelStore.Preview.Runtime
         public float Speed => speed;
         public bool IsPlaying =>
             Application.isPlaying &&
-            playing;
+            playing &&
+            avatar != null &&
+            avatar.IsPlaying;
 
         public void Configure(
             AvatarPresentation presentation,
@@ -44,7 +45,6 @@ namespace VoxelStore.Preview.Runtime
                 shouldLoop,
                 playbackSpeed);
             CurrentMotion = configuredMotion;
-            elapsedSeconds = 0f;
             playing = false;
             ResetPresentation();
         }
@@ -60,36 +60,35 @@ namespace VoxelStore.Preview.Runtime
             speed = playbackSpeed;
         }
 
-        public void SetDriverSide(
-            EquipmentSlotSide side)
+        public void SetDriverSide(EquipmentSlotSide side)
         {
-            driverSide = side;
-            if (avatar == null)
+            if (driverSide == side)
                 return;
 
-            if (playing)
+            float phase =
+                avatar != null
+                    ? avatar.CurrentNormalizedPhase
+                    : 0f;
+            driverSide = side;
+
+            if (playing && avatar != null)
             {
-                avatar.SampleMotion(
+                avatar.StartMotionAtPhase(
                     CurrentMotion,
                     driverSide,
-                    CurrentNormalizedTime());
+                    loop,
+                    phase);
             }
         }
 
         public void PlayConfigured()
         {
-            Play(
-                motion,
-                loop,
-                speed);
+            Play(motion, loop, speed);
         }
 
         public void Play(AvatarMotion configuredMotion)
         {
-            Play(
-                configuredMotion,
-                loop,
-                speed);
+            Play(configuredMotion, loop, speed);
         }
 
         public void Play(
@@ -104,18 +103,16 @@ namespace VoxelStore.Preview.Runtime
                 playbackSpeed);
 
             CurrentMotion = configuredMotion;
-            elapsedSeconds = 0f;
             playing = true;
-            avatar.SampleMotion(
+            avatar.StartMotion(
                 CurrentMotion,
                 driverSide,
-                0f);
+                loop);
         }
 
         public void Stop()
         {
             playing = false;
-            elapsedSeconds = 0f;
             ResetPresentation();
         }
 
@@ -143,13 +140,18 @@ namespace VoxelStore.Preview.Runtime
             RequireConfigured();
 
             playing = false;
-            elapsedSeconds = 0f;
             CurrentMotion = sampledMotion;
             driverSide = side;
             avatar.SampleMotion(
                 sampledMotion,
                 side,
                 normalizedTime);
+        }
+
+        public void SubmitNow()
+        {
+            RequireConfigured();
+            avatar.SubmitNow();
         }
 
         private void Update()
@@ -161,35 +163,9 @@ namespace VoxelStore.Preview.Runtime
                 return;
             }
 
-            float duration =
-                avatar.BodyAnimation.GetClipDuration(
-                    CurrentMotion,
-                    driverSide);
-            elapsedSeconds +=
-                Time.deltaTime *
-                speed;
-
-            float normalizedTime;
-            if (loop)
-            {
-                normalizedTime =
-                    Mathf.Repeat(
-                        elapsedSeconds / duration,
-                        1f);
-            }
-            else
-            {
-                normalizedTime =
-                    Mathf.Clamp01(
-                        elapsedSeconds / duration);
-                if (elapsedSeconds >= duration)
-                    playing = false;
-            }
-
-            avatar.SampleMotion(
-                CurrentMotion,
-                driverSide,
-                normalizedTime);
+            avatar.Advance(Time.deltaTime * speed);
+            if (!avatar.IsPlaying)
+                playing = false;
         }
 
         private void OnEnable()
@@ -206,29 +182,16 @@ namespace VoxelStore.Preview.Runtime
         private void OnDisable()
         {
             playing = false;
-            elapsedSeconds = 0f;
-            ResetPresentation();
+            if (avatar != null &&
+                avatar.IsProviderInitialized)
+            {
+                avatar.ResetPose();
+            }
         }
 
         private void OnDestroy()
         {
             playing = false;
-        }
-
-        private float CurrentNormalizedTime()
-        {
-            float duration =
-                avatar.BodyAnimation.GetClipDuration(
-                    CurrentMotion,
-                    driverSide);
-            if (duration <= 0f)
-                return 0f;
-
-            float value =
-                elapsedSeconds / duration;
-            return loop
-                ? Mathf.Repeat(value, 1f)
-                : Mathf.Clamp01(value);
         }
 
         private void ResetPresentation()
@@ -247,15 +210,15 @@ namespace VoxelStore.Preview.Runtime
                     "AvatarMotionPlayer is missing AvatarPresentation.");
             }
 
-            if (avatar.BodyAnimation == null)
+            if (!avatar.IsConfigured ||
+                avatar.BodyAnimation == null)
             {
                 throw new InvalidOperationException(
-                    "AvatarMotionPlayer requires authored Body animation.");
+                    "AvatarMotionPlayer requires a configured provider-backed Body.");
             }
         }
 
-        private static void ValidateSpeed(
-            float playbackSpeed)
+        private static void ValidateSpeed(float playbackSpeed)
         {
             if (playbackSpeed <= 0f ||
                 float.IsNaN(playbackSpeed) ||
@@ -267,8 +230,7 @@ namespace VoxelStore.Preview.Runtime
             }
         }
 
-        private static void ValidateNormalizedTime(
-            float normalizedTime)
+        private static void ValidateNormalizedTime(float normalizedTime)
         {
             if (float.IsNaN(normalizedTime) ||
                 float.IsInfinity(normalizedTime) ||

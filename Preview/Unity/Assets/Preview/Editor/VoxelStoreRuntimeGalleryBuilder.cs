@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Hero.Voxel.Render.Runtime.Unity;
 using Hero.Voxel.Runtime.Assets;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -35,6 +36,7 @@ namespace VoxelStore.Preview.Editor
         public Scene Scene;
         public GameObject Root;
         public Camera Camera;
+        public VoxelRenderWorld World;
         public Bounds[] WorldBounds = Array.Empty<Bounds>();
         public int PublishedModelCount;
         public int CatalogCount;
@@ -52,11 +54,6 @@ namespace VoxelStore.Preview.Editor
             "Assets/Preview/VoxelStoreRuntimeGallery.generated.unity";
         public const string RootName =
             "[Voxel Store Runtime Gallery]";
-        internal const string RuntimeGeneratedRoot =
-            "Assets/__VoxelStorePreview/Baked/RuntimeGallery";
-        internal const string RuntimeMaterialPath =
-            RuntimeGeneratedRoot + "/VoxelAssetPreview.mat";
-
 
         [MenuItem("Voxel Store/Refresh Runtime Gallery Scene")]
         public static void RefreshRuntimeGalleryScene()
@@ -116,23 +113,26 @@ namespace VoxelStore.Preview.Editor
                 NewSceneSetup.EmptyScene,
                 NewSceneMode.Single);
 
-            Material voxelMaterial = RequireRuntimeMaterial();
-
             var root = new GameObject(RootName);
-            var entries = new List<GameObject>(models.Length);
-            var initialBounds = new List<Bounds>(models.Length);
+            VoxelRenderWorld world =
+                root.AddComponent<VoxelRenderWorld>();
+            world.Initialize();
 
+            var entries =
+                new List<RuntimeGalleryEntry>(models.Length);
             int carriedEquipmentCount = 0;
+
             for (int i = 0; i < avatarModels.Length; i++)
             {
                 RuntimeGalleryModel avatarModel = avatarModels[i];
-
                 var unitRoot = new GameObject(
                     "Avatars | " + avatarModel.Name);
                 unitRoot.transform.SetParent(root.transform, false);
 
                 var presentation = new GameObject("PresentationRoot");
-                presentation.transform.SetParent(unitRoot.transform, false);
+                presentation.transform.SetParent(
+                    unitRoot.transform,
+                    false);
 
                 VoxelAssemblyAsset avatarAssembly =
                     RuntimeGalleryCatalogDiscovery.LoadAssembly(
@@ -140,18 +140,19 @@ namespace VoxelStore.Preview.Editor
                 VoxelAnimationAsset avatarAnimation =
                     RuntimeGalleryCatalogDiscovery.LoadAnimation(
                         avatarModel);
-                AssemblyVisual body = CreateAssemblyVisual(
+                RequirePart(
                     avatarAssembly,
-                    avatarAnimation,
-                    presentation.transform,
-                    voxelMaterial,
-                    "Body");
-                if (body.BodyMeshFilter == null)
-                {
-                    throw new InvalidOperationException(
-                        "Avatar catalog model must contain a Body part: " +
-                        avatarModel.AssetPath);
-                }
+                    "Body",
+                    avatarModel.AssetPath);
+
+                VoxelRenderPresentation body =
+                    CreateRenderPresentation(
+                        world,
+                        avatarAssembly,
+                        avatarAnimation,
+                        presentation.transform,
+                        "Body",
+                        externalLifecycle: true);
 
                 var equipmentPresentations =
                     new List<EquipmentPresentation>(2);
@@ -174,12 +175,12 @@ namespace VoxelStore.Preview.Editor
                         equipmentModels[primaryIndex];
                     equipmentPresentations.Add(
                         CreateCarriedEquipment(
+                            world,
                             RuntimeGalleryCatalogDiscovery.LoadAssembly(
                                 primary),
                             RuntimeGalleryCatalogDiscovery.LoadAnimation(
                                 primary),
                             presentation.transform,
-                            voxelMaterial,
                             primary.Name,
                             "Equip.Hand.Right.0",
                             EquipmentSlotSide.Right));
@@ -191,12 +192,12 @@ namespace VoxelStore.Preview.Editor
                             equipmentModels[secondaryIndex];
                         equipmentPresentations.Add(
                             CreateCarriedEquipment(
+                                world,
                                 RuntimeGalleryCatalogDiscovery.LoadAssembly(
                                     secondary),
                                 RuntimeGalleryCatalogDiscovery.LoadAnimation(
                                     secondary),
                                 presentation.transform,
-                                voxelMaterial,
                                 secondary.Name,
                                 "Equip.Hand.Left.0",
                                 EquipmentSlotSide.Left));
@@ -204,25 +205,26 @@ namespace VoxelStore.Preview.Editor
                     }
                 }
 
-                AvatarPresentation avatarPresentation =
+                AvatarPresentation avatar =
                     unitRoot.AddComponent<AvatarPresentation>();
-                avatarPresentation.Configure(
+                avatar.Configure(
                     unitRoot.transform,
                     presentation.transform,
-                    body.BodyMeshFilter,
-                    body.Animated,
+                    body,
                     equipmentPresentations);
 
                 AvatarMotionPlayer motionPlayer =
                     unitRoot.AddComponent<AvatarMotionPlayer>();
                 motionPlayer.Configure(
-                    avatarPresentation,
+                    avatar,
                     AvatarMotionPreviewPreferences.Motion,
                     AvatarMotionPreviewPreferences.Loop,
                     AvatarMotionPreviewPreferences.Speed);
 
-                entries.Add(unitRoot);
-                initialBounds.Add(MeasureRenderBounds(unitRoot));
+                entries.Add(new RuntimeGalleryEntry(
+                    unitRoot,
+                    avatar,
+                    null));
             }
 
             foreach (RuntimeGalleryModel model in models)
@@ -239,37 +241,49 @@ namespace VoxelStore.Preview.Editor
                 unitRoot.transform.SetParent(root.transform, false);
 
                 var presentation = new GameObject("PresentationRoot");
-                presentation.transform.SetParent(unitRoot.transform, false);
-                CreateAssemblyVisual(
-                    RuntimeGalleryCatalogDiscovery.LoadAssembly(
-                        model),
-                    RuntimeGalleryCatalogDiscovery.LoadAnimation(
-                        model),
-                    presentation.transform,
-                    voxelMaterial,
-                    "Model");
+                presentation.transform.SetParent(
+                    unitRoot.transform,
+                    false);
 
-                entries.Add(unitRoot);
-                initialBounds.Add(MeasureRenderBounds(unitRoot));
+                VoxelRenderPresentation renderPresentation =
+                    CreateRenderPresentation(
+                        world,
+                        RuntimeGalleryCatalogDiscovery.LoadAssembly(
+                            model),
+                        RuntimeGalleryCatalogDiscovery.LoadAnimation(
+                            model),
+                        presentation.transform,
+                        "Model",
+                        externalLifecycle: false);
+                renderPresentation.EnsureInstance();
+
+                entries.Add(new RuntimeGalleryEntry(
+                    unitRoot,
+                    null,
+                    renderPresentation));
             }
 
+            Bounds[] initialBounds =
+                entries.Select(x => x.GetBounds()).ToArray();
             Vector3[] offsets = PreviewGridLayout.Calculate(
                 initialBounds,
                 margin: 1.75f);
             for (int i = 0; i < entries.Count; i++)
-                entries[i].transform.position = offsets[i];
+                entries[i].Root.transform.position = offsets[i];
 
-            var worldBounds = entries
-                .Select(MeasureRenderBounds)
-                .ToArray();
+            Bounds[] worldBounds =
+                entries.Select(x => x.GetBounds()).ToArray();
             if (PreviewGridLayout.CountXZOverlaps(worldBounds) != 0)
+            {
                 throw new InvalidOperationException(
                     "Runtime gallery grid contains overlapping model bounds.");
+            }
 
             Bounds galleryBounds = Combine(worldBounds);
             Camera camera = CreateCamera(galleryBounds);
             CreateDirectionalLight();
 
+            world.SubmitNow();
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -279,6 +293,7 @@ namespace VoxelStore.Preview.Editor
                 Scene = scene,
                 Root = root,
                 Camera = camera,
+                World = world,
                 WorldBounds = worldBounds,
                 PublishedModelCount = models.Length,
                 CatalogCount = models
@@ -296,61 +311,71 @@ namespace VoxelStore.Preview.Editor
             };
         }
 
-        private static Material RequireRuntimeMaterial()
-        {
-            string absoluteDirectory = Path.Combine(
-                VoxelStorePreviewPaths.ProjectRoot,
-                RuntimeGeneratedRoot.Replace(
-                    '/',
-                    Path.DirectorySeparatorChar));
-            Directory.CreateDirectory(absoluteDirectory);
-            AssetDatabase.Refresh();
-
-            Material existing =
-                AssetDatabase.LoadAssetAtPath<Material>(
-                    RuntimeMaterialPath);
-            Shader shader = Shader.Find(
-                "Hidden/Hero/VoxelAssetPreview");
-            if (shader == null)
-            {
-                throw new InvalidOperationException(
-                    "Hero.Voxel URP preview shader is unavailable: " +
-                    "Hidden/Hero/VoxelAssetPreview");
-            }
-
-            if (existing != null)
-            {
-                if (existing.shader != shader)
-                {
-                    existing.shader = shader;
-                    EditorUtility.SetDirty(existing);
-                }
-                return existing;
-            }
-
-            var material = new Material(shader)
-            {
-                name = "Voxel Store Runtime Gallery Material",
-                enableInstancing = true
-            };
-            AssetDatabase.CreateAsset(
-                material,
-                RuntimeMaterialPath);
-            return material;
-        }
-
-        private static AssemblyVisual CreateAssemblyVisual(
+        private static VoxelRenderPresentation CreateRenderPresentation(
+            VoxelRenderWorld world,
             VoxelAssemblyAsset assembly,
             VoxelAnimationAsset animation,
             Transform parent,
-            Material material,
-            string objectName)
+            string objectName,
+            bool externalLifecycle)
+        {
+            ValidateAssemblyAndAnimation(assembly, animation);
+
+            var modelRoot = new GameObject(objectName);
+            modelRoot.transform.SetParent(parent, false);
+            VoxelRenderPresentation presentation =
+                modelRoot.AddComponent<VoxelRenderPresentation>();
+            presentation.Configure(
+                world,
+                modelRoot.transform,
+                assembly,
+                animation,
+                externalLifecycle);
+            return presentation;
+        }
+
+        private static EquipmentPresentation CreateCarriedEquipment(
+            VoxelRenderWorld world,
+            VoxelAssemblyAsset assembly,
+            VoxelAnimationAsset animation,
+            Transform presentationRoot,
+            string equipmentId,
+            string socketName,
+            EquipmentSlotSide side)
+        {
+            var placementObject = new GameObject(
+                "Equipment | " + ShortName(equipmentId));
+            placementObject.transform.SetParent(
+                presentationRoot,
+                false);
+
+            VoxelRenderPresentation model =
+                placementObject.AddComponent<VoxelRenderPresentation>();
+            model.Configure(
+                world,
+                placementObject.transform,
+                assembly,
+                animation,
+                externalLifecycle: true);
+
+            EquipmentPresentation presentation =
+                placementObject.AddComponent<EquipmentPresentation>();
+            presentation.Configure(
+                model,
+                socketName,
+                side);
+            return presentation;
+        }
+
+        private static void ValidateAssemblyAndAnimation(
+            VoxelAssemblyAsset assembly,
+            VoxelAnimationAsset animation)
         {
             if (assembly == null)
                 throw new ArgumentNullException(nameof(assembly));
             if (animation == null)
                 throw new ArgumentNullException(nameof(animation));
-            if (animation.Assembly != assembly)
+            if (!ReferenceEquals(animation.Assembly, assembly))
             {
                 throw new InvalidOperationException(
                     "Runtime gallery animation targets a different assembly: " +
@@ -363,125 +388,37 @@ namespace VoxelStore.Preview.Editor
                     AssemblyLabel(assembly));
             }
 
-            var modelRoot = new GameObject(objectName);
-            modelRoot.transform.SetParent(parent, false);
-
-            var partObjects = new GameObject[assembly.PartCount];
-            var filters = new MeshFilter[assembly.PartCount];
-            MeshFilter bodyFilter = null;
-
             for (int i = 0; i < assembly.PartCount; i++)
             {
-                VoxelAssemblyPart part = assembly.GetPart(i);
-                if (part.Mesh == null)
+                if (assembly.GetPart(i).Mesh == null)
                 {
                     throw new InvalidOperationException(
                         "Runtime gallery part is missing its mesh: " +
-                        AssemblyLabel(assembly) +
-                        "/" +
-                        part.Name);
-                }
-
-                var partObject = new GameObject(part.Name);
-                partObjects[i] = partObject;
-
-                MeshFilter filter =
-                    partObject.AddComponent<MeshFilter>();
-                filter.sharedMesh = part.Mesh;
-                filters[i] = filter;
-
-                MeshRenderer renderer =
-                    partObject.AddComponent<MeshRenderer>();
-                renderer.sharedMaterial = material;
-                renderer.shadowCastingMode =
-                    UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-                renderer.lightProbeUsage =
-                    UnityEngine.Rendering.LightProbeUsage.Off;
-                renderer.reflectionProbeUsage =
-                    UnityEngine.Rendering.ReflectionProbeUsage.Off;
-
-                if (string.Equals(
-                        part.Name,
-                        "Body",
-                        StringComparison.Ordinal))
-                {
-                    bodyFilter = filter;
+                        AssemblyLabel(assembly) + "/" +
+                        assembly.GetPart(i).Name);
                 }
             }
-
-            for (int i = 0; i < assembly.PartCount; i++)
-            {
-                VoxelAssemblyPart part = assembly.GetPart(i);
-                if (part.ParentIndex < -1 ||
-                    part.ParentIndex >= assembly.PartCount ||
-                    part.ParentIndex == i)
-                {
-                    throw new InvalidOperationException(
-                        "Runtime gallery part has an invalid parent index: " +
-                        AssemblyLabel(assembly) +
-                        "/" +
-                        part.Name);
-                }
-
-                Transform partParent =
-                    part.ParentIndex >= 0
-                        ? partObjects[part.ParentIndex].transform
-                        : modelRoot.transform;
-                Transform partTransform = partObjects[i].transform;
-                partTransform.SetParent(partParent, false);
-                partTransform.localPosition = part.BindLocalPosition;
-                partTransform.localRotation = part.BindLocalRotation;
-                partTransform.localScale = part.BindLocalScale;
-            }
-
-            VoxelAnimatedAssembly animated =
-                modelRoot.AddComponent<VoxelAnimatedAssembly>();
-            animated.Configure(
-                modelRoot.transform,
-                assembly,
-                animation,
-                partObjects.Select(x => x.transform).ToArray());
-
-            return new AssemblyVisual
-            {
-                Root = modelRoot,
-                MeshFilter = filters[0],
-                BodyMeshFilter = bodyFilter,
-                Animated = animated
-            };
         }
 
-        private static EquipmentPresentation CreateCarriedEquipment(
+        private static void RequirePart(
             VoxelAssemblyAsset assembly,
-            VoxelAnimationAsset animation,
-            Transform presentationRoot,
-            Material material,
-            string equipmentId,
-            string socketName,
-            EquipmentSlotSide side)
+            string partName,
+            string assetPath)
         {
-            var placementObject = new GameObject(
-                "Equipment | " + ShortName(equipmentId));
-            placementObject.transform.SetParent(
-                presentationRoot,
-                false);
+            for (int i = 0; i < assembly.PartCount; i++)
+            {
+                if (string.Equals(
+                        assembly.GetPart(i).Name,
+                        partName,
+                        StringComparison.Ordinal))
+                {
+                    return;
+                }
+            }
 
-            AssemblyVisual visual = CreateAssemblyVisual(
-                assembly,
-                animation,
-                placementObject.transform,
-                material,
-                "Model");
-
-            EquipmentPresentation presentation =
-                placementObject.AddComponent<EquipmentPresentation>();
-            presentation.Configure(
-                placementObject.transform,
-                visual.Animated,
-                socketName,
-                side);
-            return presentation;
+            throw new InvalidOperationException(
+                "Avatar catalog model must contain part '" +
+                partName + "': " + assetPath);
         }
 
         private static Camera CreateCamera(Bounds bounds)
@@ -491,7 +428,8 @@ namespace VoxelStore.Preview.Editor
             Camera camera = cameraObject.AddComponent<Camera>();
             camera.orthographic = true;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.08f, 0.10f, 0.12f, 1f);
+            camera.backgroundColor =
+                new Color(0.08f, 0.10f, 0.12f, 1f);
             camera.nearClipPlane = 0.01f;
             camera.farClipPlane =
                 Math.Max(100f, bounds.extents.magnitude * 8f);
@@ -543,12 +481,11 @@ namespace VoxelStore.Preview.Editor
                 "VoxelStorePreview");
             Directory.CreateDirectory(reportDir);
 
-            string screenshotPath = Path.Combine(
+            string legacyDiagnosticScreenshot = Path.Combine(
                 reportDir,
                 "runtime-gallery.png");
-            CaptureCamera(
-                result.Camera,
-                screenshotPath);
+            if (File.Exists(legacyDiagnosticScreenshot))
+                File.Delete(legacyDiagnosticScreenshot);
 
             var report = new RuntimeGalleryReport
             {
@@ -568,7 +505,7 @@ namespace VoxelStore.Preview.Editor
                 Motion = AvatarMotionPreviewPreferences.Motion.ToString(),
                 Loop = AvatarMotionPreviewPreferences.Loop,
                 Speed = AvatarMotionPreviewPreferences.Speed,
-                Screenshot = "runtime-gallery.png"
+                Screenshot = string.Empty
             };
             File.WriteAllText(
                 Path.Combine(
@@ -577,68 +514,14 @@ namespace VoxelStore.Preview.Editor
                 JsonUtility.ToJson(report, true));
         }
 
-        internal static void CaptureCamera(
-            Camera camera,
-            string outputPath)
-        {
-            const int width = 1600;
-            const int height = 900;
-            var target = new RenderTexture(
-                width,
-                height,
-                24,
-                RenderTextureFormat.ARGB32);
-            RenderTexture previousActive = RenderTexture.active;
-            RenderTexture previousTarget = camera.targetTexture;
-            var texture = new Texture2D(
-                width,
-                height,
-                TextureFormat.RGB24,
-                false);
-            try
-            {
-                camera.targetTexture = target;
-                RenderTexture.active = target;
-                camera.Render();
-                texture.ReadPixels(
-                    new Rect(0, 0, width, height),
-                    0,
-                    0);
-                texture.Apply(false, false);
-                File.WriteAllBytes(
-                    outputPath,
-                    texture.EncodeToPNG());
-            }
-            finally
-            {
-                camera.targetTexture = previousTarget;
-                RenderTexture.active = previousActive;
-                UnityEngine.Object.DestroyImmediate(texture);
-                target.Release();
-                UnityEngine.Object.DestroyImmediate(target);
-            }
-        }
-
-        private static Bounds MeasureRenderBounds(GameObject root)
-        {
-            Renderer[] renderers =
-                root.GetComponentsInChildren<Renderer>(true);
-            if (renderers.Length == 0)
-                throw new InvalidOperationException(
-                    "Runtime gallery entry contains no renderer: " +
-                    root.name);
-
-            Bounds bounds = renderers[0].bounds;
-            for (int i = 1; i < renderers.Length; i++)
-                bounds.Encapsulate(renderers[i].bounds);
-            return bounds;
-        }
-
-        private static Bounds Combine(IReadOnlyList<Bounds> values)
+        private static Bounds Combine(
+            IReadOnlyList<Bounds> values)
         {
             if (values == null || values.Count == 0)
+            {
                 throw new InvalidOperationException(
                     "Runtime gallery contains no model bounds.");
+            }
 
             Bounds result = values[0];
             for (int i = 1; i < values.Count; i++)
@@ -666,13 +549,31 @@ namespace VoxelStore.Preview.Editor
                 : id;
         }
 
-
-        private sealed class AssemblyVisual
+        private sealed class RuntimeGalleryEntry
         {
-            public GameObject Root;
-            public MeshFilter MeshFilter;
-            public MeshFilter BodyMeshFilter;
-            public VoxelAnimatedAssembly Animated;
+            public RuntimeGalleryEntry(
+                GameObject root,
+                AvatarPresentation avatar,
+                VoxelRenderPresentation model)
+            {
+                Root = root;
+                Avatar = avatar;
+                Model = model;
+            }
+
+            public GameObject Root { get; }
+            public AvatarPresentation Avatar { get; }
+            public VoxelRenderPresentation Model { get; }
+
+            public Bounds GetBounds()
+            {
+                if (Avatar != null)
+                    return Avatar.GetWorldBounds();
+                if (Model != null)
+                    return Model.GetWorldBounds();
+                throw new InvalidOperationException(
+                    "Runtime gallery entry has no provider presentation.");
+            }
         }
     }
 }
