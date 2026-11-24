@@ -134,9 +134,25 @@ namespace VoxelStore.Preview.Runtime
             EquipmentSlotSide driverSide,
             bool shouldLoop)
         {
+            StartMotion(
+                motion,
+                driverSide,
+                shouldLoop,
+                string.Empty);
+        }
+
+        public void StartMotion(
+            AvatarMotion motion,
+            EquipmentSlotSide driverSide,
+            bool shouldLoop,
+            string rootVariant)
+        {
             InitializeProvider();
             body.SyncWorldMatrix();
-            currentPlan = BuildPlan(motion, driverSide);
+            currentPlan = BuildPlan(
+                motion,
+                driverSide,
+                rootVariant);
             actor.Start(currentPlan, shouldLoop);
         }
 
@@ -146,8 +162,27 @@ namespace VoxelStore.Preview.Runtime
             bool shouldLoop,
             float normalizedPhase)
         {
+            StartMotionAtPhase(
+                motion,
+                driverSide,
+                shouldLoop,
+                normalizedPhase,
+                string.Empty);
+        }
+
+        public void StartMotionAtPhase(
+            AvatarMotion motion,
+            EquipmentSlotSide driverSide,
+            bool shouldLoop,
+            float normalizedPhase,
+            string rootVariant)
+        {
             ValidateNormalizedTime(normalizedPhase);
-            StartMotion(motion, driverSide, shouldLoop);
+            StartMotion(
+                motion,
+                driverSide,
+                shouldLoop,
+                rootVariant);
             if (normalizedPhase > 0f)
                 actor.Advance(currentPlan.Duration * normalizedPhase);
         }
@@ -170,11 +205,27 @@ namespace VoxelStore.Preview.Runtime
             EquipmentSlotSide driverSide,
             float normalizedTime)
         {
+            SampleMotion(
+                motion,
+                driverSide,
+                normalizedTime,
+                string.Empty);
+        }
+
+        public void SampleMotion(
+            AvatarMotion motion,
+            EquipmentSlotSide driverSide,
+            float normalizedTime,
+            string rootVariant)
+        {
             ValidateNormalizedTime(normalizedTime);
             InitializeProvider();
             actor.Reset();
             body.SyncWorldMatrix();
-            currentPlan = BuildPlan(motion, driverSide);
+            currentPlan = BuildPlan(
+                motion,
+                driverSide,
+                rootVariant);
             actor.SampleNormalized(currentPlan, normalizedTime);
         }
 
@@ -249,7 +300,8 @@ namespace VoxelStore.Preview.Runtime
 
         private VoxelActorAnimationPlan BuildPlan(
             AvatarMotion motion,
-            EquipmentSlotSide driverSide)
+            EquipmentSlotSide driverSide,
+            string rootVariant)
         {
             var requests =
                 new VoxelActorAttachmentClipRequest[equipment.Length];
@@ -258,11 +310,17 @@ namespace VoxelStore.Preview.Runtime
                 EquipmentPresentation item = equipment[i];
                 requests[i] = new VoxelActorAttachmentClipRequest(
                     item.BindingId,
-                    ClipCandidates(motion, item.Side));
+                    AvatarMotionClipCandidates.Build(
+                        motion,
+                        item.Side,
+                        item.Variant));
             }
 
             return actor.CreatePlan(
-                ClipCandidates(motion, driverSide),
+                AvatarMotionClipCandidates.Build(
+                    motion,
+                    driverSide,
+                    rootVariant),
                 requests);
         }
 
@@ -333,18 +391,6 @@ namespace VoxelStore.Preview.Runtime
                 throw new InvalidOperationException(
                     "AvatarPresentation Body is not configured.");
             }
-        }
-
-        private static string[] ClipCandidates(
-            AvatarMotion motion,
-            EquipmentSlotSide side)
-        {
-            string baseName = motion.ToString();
-            return new[]
-            {
-                baseName + "." + side,
-                baseName
-            };
         }
 
         private static void ValidateNormalizedTime(float normalizedTime)

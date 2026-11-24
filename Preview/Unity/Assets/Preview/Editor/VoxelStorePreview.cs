@@ -87,16 +87,78 @@ namespace VoxelStore.Preview.Editor
         }
 
 
-        internal static string SafeUnitDirectory(PreviewUnitContract unit)
+        internal static string BakedModelDirectory(
+            PreviewUnitContract unit)
         {
-            string kind = string.Equals(unit.Kind, "avatar", StringComparison.Ordinal)
-                ? "Avatars"
-                : string.Equals(unit.Kind, "equipment", StringComparison.Ordinal)
-                    ? "Equipment"
-                    : throw new InvalidDataException("Unsupported preview unit kind: " + unit.Kind);
-            string safeId = new string(unit.Id.Select(c =>
-                char.IsLetterOrDigit(c) || c == '.' || c == '-' || c == '_' ? c : '_').ToArray());
-            return BakedRoot + "/" + kind + "/" + safeId;
+            if (unit == null)
+                throw new ArgumentNullException(nameof(unit));
+
+            string expectedCatalog =
+                string.Equals(
+                    unit.Kind,
+                    "avatar",
+                    StringComparison.Ordinal)
+                    ? "Avatars"
+                    : string.Equals(
+                        unit.Kind,
+                        "equipment",
+                        StringComparison.Ordinal)
+                        ? "Equipment"
+                        : throw new InvalidDataException(
+                            "Unsupported preview unit kind: " +
+                            unit.Kind);
+
+            if (string.IsNullOrWhiteSpace(unit.SourceBase))
+            {
+                throw new InvalidDataException(
+                    "Preview unit SourceBase is required.");
+            }
+
+            string normalized = unit.SourceBase
+                .Replace('\\', '/')
+                .Trim('/');
+            string[] segments = normalized.Split(
+                new[] { '/' },
+                StringSplitOptions.RemoveEmptyEntries);
+
+            if (segments.Length != 5 ||
+                !string.Equals(
+                    segments[0],
+                    "Assets",
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    segments[1],
+                    expectedCatalog,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    segments[3],
+                    "Source",
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidDataException(
+                    "Preview SourceBase must match " +
+                    $"Assets/{expectedCatalog}/<Model>/Source/<Model>: " +
+                    unit.SourceBase);
+            }
+
+            string modelName = segments[4];
+            string modelDirectory = segments[2];
+            if (!string.Equals(
+                    modelName,
+                    modelDirectory,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidDataException(
+                    "Preview SourceBase model folder and source name " +
+                    "must match: " +
+                    unit.SourceBase);
+            }
+
+            return BakedRoot +
+                   "/" +
+                   expectedCatalog +
+                   "/" +
+                   modelName;
         }
 
         internal static string ToAbsoluteStorePath(string relative, string storeRoot = null)
@@ -216,8 +278,13 @@ namespace VoxelStore.Preview.Editor
             PreviewUnitContract unit,
             string storeRoot)
         {
-            string output = VoxelStorePreviewPaths.SafeUnitDirectory(unit);
-            string safeId = Path.GetFileName(output);            return new PreviewBakePaths
+            string output =
+                VoxelStorePreviewPaths.BakedModelDirectory(unit);
+            string modelName = Path.GetFileName(
+                unit.SourceBase
+                    .Replace('\\', '/')
+                    .TrimEnd('/'));
+            return new PreviewBakePaths
             {
                 SourceVox = VoxelStorePreviewPaths.ToAbsoluteStorePath(
                     unit.GeneratedVox, storeRoot),
@@ -226,8 +293,10 @@ namespace VoxelStore.Preview.Editor
                     : VoxelStorePreviewPaths.ToAbsoluteStorePath(
                         unit.GeneratedAnimation, storeRoot),
                 OutputDirectory = output,
-                AssemblyAsset = output + "/" + safeId + ".assembly.asset",
-                AnimationAsset = output + "/" + safeId + ".animation.asset"
+                AssemblyAsset =
+                    output + "/" + modelName + ".assembly.asset",
+                AnimationAsset =
+                    output + "/" + modelName + ".animation.asset"
             };
         }
 
@@ -309,7 +378,7 @@ namespace VoxelStore.Preview.Editor
             IEnumerable<string> existingDirectories)
         {
             var desired = new HashSet<string>(
-                plan.Units.Select(VoxelStorePreviewPaths.SafeUnitDirectory),
+                plan.Units.Select(VoxelStorePreviewPaths.BakedModelDirectory),
                 StringComparer.Ordinal);
             return existingDirectories
                 .Select(VoxelStorePreviewPaths.RequireDerivedAssetPath)
@@ -335,34 +404,34 @@ namespace VoxelStore.Preview.Editor
                 .Length > 0;
         }
 
-        internal static void CleanupStale(PreviewPlanContract plan)
+        internal static void CleanupStale(
+            PreviewPlanContract plan)
         {
-            var existing = new List<string>();
-            foreach (string kindRoot in new[]
-                     {
-                         VoxelStorePreviewPaths.BakedRoot + "/Avatars",
-                         VoxelStorePreviewPaths.BakedRoot + "/Equipment"
-                     })
+            string absoluteBakedRoot = Path.Combine(
+                VoxelStorePreviewPaths.ProjectRoot,
+                VoxelStorePreviewPaths.BakedRoot.Replace(
+                    '/',
+                    Path.DirectorySeparatorChar));
+            if (!Directory.Exists(absoluteBakedRoot))
+                return;
+
+            string[] existing = Directory
+                .GetDirectories(
+                    absoluteBakedRoot,
+                    "*",
+                    SearchOption.AllDirectories)
+                .Where(LooksLikeGeneratedUnitDirectory)
+                .Select(directory =>
+                    "Assets/" + Path.GetRelativePath(
+                        Application.dataPath,
+                        directory).Replace('\\', '/'))
+                .ToArray();
+
+            foreach (string stale in
+                     PlanStaleDirectories(plan, existing))
             {
-                string absoluteKindRoot = Path.Combine(
-                    VoxelStorePreviewPaths.ProjectRoot,
-                    kindRoot.Replace('/', Path.DirectorySeparatorChar));
-                if (!Directory.Exists(absoluteKindRoot))
-                    continue;
-
-                foreach (string directory in Directory.GetDirectories(absoluteKindRoot))
-                {
-                    if (!LooksLikeGeneratedUnitDirectory(directory))
-                        continue;
-
-                    existing.Add(
-                        "Assets/" + Path.GetRelativePath(
-                            Application.dataPath,
-                            directory).Replace('\\', '/'));
-                }
-            }
-            foreach (string stale in PlanStaleDirectories(plan, existing))
                 AssetDatabase.DeleteAsset(stale);
+            }
         }
     }
 

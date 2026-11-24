@@ -58,6 +58,7 @@ public sealed class AssetHealth
     public List<string> SlotInstances { get; } = new();
     public Dictionary<string, int> SlotCounts { get; } = new(StringComparer.Ordinal);
     public List<string> SemanticMotions { get; } = new();
+    public List<SemanticMotionCoverage> SemanticMotionCoverage { get; } = new();
     public bool BasePublished { get; set; }
     public bool Published { get; set; }
     public string? FailedGate { get; set; }
@@ -101,13 +102,7 @@ public sealed class StoreEngine
         "implementationNeutral"
     };
     private static readonly string[] RequiredSemanticMotions =
-    {
-        "Idle",
-        "WalkForward",
-        "Attack",
-        "Hit",
-        "Death"
-    };
+        SemanticAnimationClipName.RequiredMotions;
     private static readonly HashSet<string> AttachmentCapabilities =
         new(StringComparer.Ordinal) { "Hand", "Back", "Head", "Hip", "Chest" };
     private static readonly HashSet<string> AttachmentSides =
@@ -1409,12 +1404,19 @@ public sealed class StoreEngine
         health.SlotInstances.Clear();
         health.SlotCounts.Clear();
         health.SemanticMotions.Clear();
+        health.SemanticMotionCoverage.Clear();
 
-        foreach (CompiledAnimationClip clip in compilation.Animations
-                     .OrderBy(x => x.Name, StringComparer.Ordinal))
-        {
-            health.SemanticMotions.Add(clip.Name);
-        }
+        string[] clipNames = compilation.Animations
+            .Select(x => x.Name)
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToArray();
+
+        // Preserve the legacy flat clip-name projection during migration.
+        health.SemanticMotions.AddRange(clipNames);
+
+        IReadOnlyList<SemanticMotionCoverage> coverage =
+            SemanticAnimationClipName.BuildCoverage(clipNames);
+        health.SemanticMotionCoverage.AddRange(coverage);
 
         if (health.Kind != "avatar")
             return;
@@ -1522,23 +1524,28 @@ public sealed class StoreEngine
         VoxelCompilation compilation,
         bool requireSideAttackVariants)
     {
+        foreach (CompiledAnimationClip clip in compilation.Animations)
+        {
+            SemanticAnimationClipIdentity identity =
+                SemanticAnimationClipName.Parse(clip.Name);
+            bool shouldLoop =
+                SemanticAnimationClipName.ShouldLoop(identity.Motion);
+            if (clip.Loop != shouldLoop)
+            {
+                throw new InvalidDataException(
+                    $"Semantic animation clip '{clip.Name}' loop setting is invalid.");
+            }
+        }
+
         foreach (string motion in RequiredSemanticMotions)
         {
-            CompiledAnimationClip clip =
-                compilation.Animations.SingleOrDefault(
+            _ = compilation.Animations.SingleOrDefault(
                     x => string.Equals(
                         x.Name,
                         motion,
                         StringComparison.Ordinal))
                 ?? throw new InvalidDataException(
                     $"Required semantic animation clip '{motion}' is missing.");
-            bool shouldLoop =
-                motion is "Idle" or "WalkForward";
-            if (clip.Loop != shouldLoop)
-            {
-                throw new InvalidDataException(
-                    $"Semantic animation clip '{motion}' loop setting is invalid.");
-            }
         }
 
         if (!requireSideAttackVariants)
@@ -1547,42 +1554,38 @@ public sealed class StoreEngine
         foreach (string side in new[] { "Left", "Right" })
         {
             string name = "Attack." + side;
-            CompiledAnimationClip clip =
-                compilation.Animations.SingleOrDefault(
+            _ = compilation.Animations.SingleOrDefault(
                     x => string.Equals(
                         x.Name,
                         name,
                         StringComparison.Ordinal))
                 ?? throw new InvalidDataException(
                     $"Side-reactive avatar animation clip '{name}' is missing.");
-            if (clip.Loop)
-                throw new InvalidDataException(
-                    $"Side-reactive avatar animation clip '{name}' must be non-looping.");
         }
     }
 
-    private static string ResolveSemanticClipName(
+    internal static string ResolveSemanticClipName(
         VoxelCompilation compilation,
         string motion,
-        string side)
+        string? side,
+        string? variant = null)
     {
-        string sideName = motion + "." + side;
-        if (compilation.Animations.Any(
-                x => string.Equals(
-                    x.Name,
-                    sideName,
-                    StringComparison.Ordinal)))
+        foreach (string candidate in
+                 SemanticAnimationClipName.BuildCandidates(
+                     motion,
+                     side,
+                     variant))
         {
-            return sideName;
+            if (compilation.Animations.Any(
+                    x => string.Equals(
+                        x.Name,
+                        candidate,
+                        StringComparison.Ordinal)))
+            {
+                return candidate;
+            }
         }
-        if (compilation.Animations.Any(
-                x => string.Equals(
-                    x.Name,
-                    motion,
-                    StringComparison.Ordinal)))
-        {
-            return motion;
-        }
+
         throw new InvalidDataException(
             $"Semantic animation clip '{motion}' is unavailable.");
     }
@@ -1860,7 +1863,8 @@ public sealed class StoreEngine
                     : null,
                 slotInstances = x.Kind == "avatar" ? x.SlotInstances : null,
                 slotCounts = x.Kind == "avatar" ? x.SlotCounts : null,
-                semanticMotions = x.SemanticMotions
+                semanticMotions = x.SemanticMotions,
+                semanticMotionCoverage = x.SemanticMotionCoverage
             }).OrderBy(x => x.Id).ToArray()
         }, JsonOptions));
         File.WriteAllText(

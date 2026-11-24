@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using Hero.Voxel.Render.Runtime.Unity;
+using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using VoxelStore.Preview.Runtime;
 
 namespace VoxelStore.Preview.Editor.Tests
 {
@@ -14,6 +18,69 @@ namespace VoxelStore.Preview.Editor.Tests
             "\"SourceBase\":\"Assets/A/Source/A\",\"Palette\":\"Assets/A/Source/A.palette.yaml\"," +
             "\"GeneratedVox\":\"Assets/A/Source/A.generated.vox\"," +
             "\"GeneratedAnimation\":\"Assets/A/Source/A.animation.generated.yaml\"}";
+
+        [Test]
+        public void MotionVariantCandidatesPreserveSpecificityAndBaseFallback()
+        {
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "Attack.Left.V2",
+                    "Attack.V2",
+                    "Attack.Left",
+                    "Attack"
+                },
+                AvatarMotionClipCandidates.Build(
+                    AvatarMotion.Attack,
+                    EquipmentSlotSide.Left,
+                    "V2"));
+            CollectionAssert.AreEqual(
+                new[] { "WalkForward.V2", "WalkForward" },
+                AvatarMotionClipCandidates.Build(
+                    AvatarMotion.WalkForward,
+                    null,
+                    "V2"));
+            CollectionAssert.AreEqual(
+                new[] { "Attack.Right", "Attack" },
+                AvatarMotionClipCandidates.Build(
+                    AvatarMotion.Attack,
+                    EquipmentSlotSide.Right,
+                    string.Empty));
+        }
+
+        [Test]
+        public void MotionVariantStateIsOptionalCanonicalAndModelLocal()
+        {
+            Assert.AreEqual(
+                string.Empty,
+                AvatarMotionClipCandidates.NormalizeVariant(null));
+            Assert.Throws<ArgumentException>(
+                () => AvatarMotionClipCandidates.NormalizeVariant("V0"));
+            Assert.Throws<ArgumentException>(
+                () => AvatarMotionClipCandidates.NormalizeVariant("Heavy"));
+
+            var firstObject = new GameObject("equipment-v1");
+            var secondObject = new GameObject("equipment-v2");
+            try
+            {
+                EquipmentPresentation first =
+                    firstObject.AddComponent<EquipmentPresentation>();
+                EquipmentPresentation second =
+                    secondObject.AddComponent<EquipmentPresentation>();
+                Assert.IsTrue(first.SetVariant("V1"));
+                Assert.IsTrue(second.SetVariant("V2"));
+                Assert.AreEqual("V1", first.Variant);
+                Assert.AreEqual("V2", second.Variant);
+                Assert.IsTrue(first.SetVariant(string.Empty));
+                Assert.AreEqual(string.Empty, first.Variant);
+                Assert.AreEqual("V2", second.Variant);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(firstObject);
+                UnityEngine.Object.DestroyImmediate(secondObject);
+            }
+        }
 
         [Test]
         public void ParsePlanAcceptsValidAndEmptyPlans()
@@ -54,24 +121,38 @@ namespace VoxelStore.Preview.Editor.Tests
                 Id = "fixture.avatar",
                 Kind = "avatar",
                 UnitRef = "fixture/avatar",
-                SourceBase = "Assets/Fixture/Source/Fixture",
-                Palette = "Assets/Fixture/Source/Fixture.palette.yaml",
-                GeneratedVox = "Assets/Fixture/Source/Fixture.generated.vox",
-                GeneratedAnimation = "Assets/Fixture/Source/Fixture.animation.generated.yaml"
+                SourceBase = "Assets/Avatars/Fixture/Source/Fixture",
+                Palette = "Assets/Avatars/Fixture/Source/Fixture.palette.yaml",
+                GeneratedVox = "Assets/Avatars/Fixture/Source/Fixture.generated.vox",
+                GeneratedAnimation = "Assets/Avatars/Fixture/Source/Fixture.animation.generated.yaml"
             };
             PreviewBakePaths paths =
                 PreviewBake.CreatePaths(unit, VoxelStorePreviewPaths.StoreRoot);
             StringAssert.EndsWith(
-                Path.Combine("Assets", "Fixture", "Source", "Fixture.generated.vox"),
+                Path.Combine(
+                    "Assets",
+                    "Avatars",
+                    "Fixture",
+                    "Source",
+                    "Fixture.generated.vox"),
                 paths.SourceVox);
             StringAssert.EndsWith(
-                Path.Combine("Assets", "Fixture", "Source", "Fixture.animation.generated.yaml"),
+                Path.Combine(
+                    "Assets",
+                    "Avatars",
+                    "Fixture",
+                    "Source",
+                    "Fixture.animation.generated.yaml"),
                 paths.AnimationManifest);
             Assert.AreEqual(
-                "Assets/__VoxelStorePreview/Baked/Avatars/fixture.avatar",
+                "Assets/__VoxelStorePreview/Baked/Avatars/Fixture",
                 paths.OutputDirectory);
-            StringAssert.EndsWith("fixture.avatar.assembly.asset", paths.AssemblyAsset);
-            StringAssert.EndsWith("fixture.avatar.animation.asset", paths.AnimationAsset);
+            StringAssert.EndsWith(
+                "Fixture.assembly.asset",
+                paths.AssemblyAsset);
+            StringAssert.EndsWith(
+                "Fixture.animation.asset",
+                paths.AnimationAsset);
         }
 
         [Test]
@@ -95,20 +176,37 @@ namespace VoxelStore.Preview.Editor.Tests
             {
                 Units = new[]
                 {
-                    new PreviewUnitContract { Id = "a", Kind = "avatar" },
-                    new PreviewUnitContract { Id = "b", Kind = "equipment" }
+                    new PreviewUnitContract
+                    {
+                        Id = "dungeon.avatar.a",
+                        Kind = "avatar",
+                        SourceBase =
+                            "Assets/Avatars/A/Source/A"
+                    },
+                    new PreviewUnitContract
+                    {
+                        Id = "foundation.equipment.b",
+                        Kind = "equipment",
+                        SourceBase =
+                            "Assets/Equipment/B/Source/B"
+                    }
                 }
             };
             string[] stale = PreviewBake.PlanStaleDirectories(
                 plan,
                 new[]
                 {
-                    "Assets/__VoxelStorePreview/Baked/Avatars/a",
-                    "Assets/__VoxelStorePreview/Baked/Avatars/stale",
-                    "Assets/__VoxelStorePreview/Baked/Equipment/b"
+                    "Assets/__VoxelStorePreview/Baked/Avatars/A",
+                    "Assets/__VoxelStorePreview/Baked/Avatars/dungeon.avatar.a",
+                    "Assets/__VoxelStorePreview/Baked/Avatars/Stale",
+                    "Assets/__VoxelStorePreview/Baked/Equipment/B"
                 });
             CollectionAssert.AreEqual(
-                new[] { "Assets/__VoxelStorePreview/Baked/Avatars/stale" },
+                new[]
+                {
+                    "Assets/__VoxelStorePreview/Baked/Avatars/Stale",
+                    "Assets/__VoxelStorePreview/Baked/Avatars/dungeon.avatar.a"
+                },
                 stale);
             Assert.Throws<InvalidOperationException>(() =>
                 PreviewBake.PlanStaleDirectories(
@@ -158,6 +256,65 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
+        public void RuntimeGallerySavedSceneRestoresEditModeProviderInstances()
+        {
+            Assert.IsFalse(
+                EditorApplication.isPlaying,
+                "regression must prove the manual Edit Mode scene path");
+
+            try
+            {
+                RuntimeGalleryBuildResult built =
+                    VoxelStoreRuntimeGalleryBuilder.BuildAndSave();
+                Assert.That(
+                    built.World.InstanceCount,
+                    Is.GreaterThan(0),
+                    "fresh gallery build must create provider instances");
+
+                UnityEngine.SceneManagement.Scene reopened =
+                    EditorSceneManager.OpenScene(
+                        VoxelStoreRuntimeGalleryBuilder.ScenePath,
+                        OpenSceneMode.Single);
+
+                VoxelStoreRuntimeGalleryEditModeRestorer.Restore(
+                    reopened);
+
+                GameObject root = reopened.GetRootGameObjects()
+                    .Single(x =>
+                        x.name ==
+                        VoxelStoreRuntimeGalleryBuilder.RootName);
+                VoxelRenderWorld world =
+                    root.GetComponent<VoxelRenderWorld>();
+                VoxelRenderPresentation[] presentations =
+                    root.GetComponentsInChildren<VoxelRenderPresentation>(
+                        true);
+                AvatarPresentation[] avatars =
+                    root.GetComponentsInChildren<AvatarPresentation>(
+                        true);
+
+                Assert.That(presentations.Length, Is.GreaterThan(0));
+                Assert.AreEqual(
+                    presentations.Length,
+                    world.InstanceCount,
+                    "save/reopen must restore every serialized voxel presentation into the transient render world");
+                Assert.That(
+                    world.SubmittedPartCount,
+                    Is.GreaterThan(0),
+                    "restored Edit Mode gallery must submit visible voxel parts");
+                Assert.That(
+                    avatars.All(x => x.IsProviderInitialized),
+                    Is.True,
+                    "reopened avatar presentations must restore their actor-owned provider instances");
+            }
+            finally
+            {
+                EditorSceneManager.NewScene(
+                    NewSceneSetup.EmptyScene,
+                    NewSceneMode.Single);
+            }
+        }
+
+        [Test]
         public void RuntimeGalleryCatalogComesFromImportedFolderStructure()
         {
             Assert.IsTrue(
@@ -189,14 +346,14 @@ namespace VoxelStore.Preview.Editor.Tests
             Assert.IsTrue(
                 RuntimeGalleryCatalogDiscovery.TryDescribeProviderAssetPath(
                     "Assets/__VoxelStorePreview/Baked",
-                    "Assets/__VoxelStorePreview/Baked/Avatars/fixture.avatar/fixture.avatar.assembly.asset",
+                    "Assets/__VoxelStorePreview/Baked/Avatars/ZombieBrute01/ZombieBrute01.assembly.asset",
                     out string catalog,
                     out string modelName,
                     out string animationAssetPath));
             Assert.AreEqual("Avatars", catalog);
-            Assert.AreEqual("fixture.avatar", modelName);
+            Assert.AreEqual("ZombieBrute01", modelName);
             Assert.AreEqual(
-                "Assets/__VoxelStorePreview/Baked/Avatars/fixture.avatar/fixture.avatar.animation.asset",
+                "Assets/__VoxelStorePreview/Baked/Avatars/ZombieBrute01/ZombieBrute01.animation.asset",
                 animationAssetPath);
 
             Assert.IsFalse(
@@ -303,22 +460,37 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
-        public void SafeUnitDirectorySeparatesKinds()
+        public void BakedModelDirectoryMirrorsCanonicalModelPath()
         {
             Assert.AreEqual(
-                "Assets/__VoxelStorePreview/Baked/Avatars/a",
-                VoxelStorePreviewPaths.SafeUnitDirectory(new PreviewUnitContract
-                {
-                    Id = "a",
-                    Kind = "avatar"
-                }));
+                "Assets/__VoxelStorePreview/Baked/Avatars/ZombieBrute01",
+                VoxelStorePreviewPaths.BakedModelDirectory(
+                    new PreviewUnitContract
+                    {
+                        Id = "dungeon.avatar.zombie-brute-01",
+                        Kind = "avatar",
+                        SourceBase =
+                            "Assets/Avatars/ZombieBrute01/Source/ZombieBrute01"
+                    }));
             Assert.AreEqual(
-                "Assets/__VoxelStorePreview/Baked/Equipment/b",
-                VoxelStorePreviewPaths.SafeUnitDirectory(new PreviewUnitContract
-                {
-                    Id = "b",
-                    Kind = "equipment"
-                }));
+                "Assets/__VoxelStorePreview/Baked/Equipment/WarPick01",
+                VoxelStorePreviewPaths.BakedModelDirectory(
+                    new PreviewUnitContract
+                    {
+                        Id = "foundation.equipment.war-pick.01",
+                        Kind = "equipment",
+                        SourceBase =
+                            "Assets/Equipment/WarPick01/Source/WarPick01"
+                    }));
+            Assert.Throws<InvalidDataException>(
+                () => VoxelStorePreviewPaths.BakedModelDirectory(
+                    new PreviewUnitContract
+                    {
+                        Id = "bad",
+                        Kind = "avatar",
+                        SourceBase =
+                            "Assets/Avatars/Wrong/Source/Other"
+                    }));
         }
     }
 }

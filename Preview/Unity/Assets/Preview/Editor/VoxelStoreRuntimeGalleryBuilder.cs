@@ -26,6 +26,8 @@ namespace VoxelStore.Preview.Editor
         public int StandaloneEquipmentCount;
         public int GridOverlapCount;
         public string Motion;
+        public string RootVariant;
+        public string EquipmentVariant;
         public bool Loop;
         public float Speed;
         public string Screenshot;
@@ -58,10 +60,15 @@ namespace VoxelStore.Preview.Editor
         [MenuItem("Voxel Store/Refresh Runtime Gallery Scene")]
         public static void RefreshRuntimeGalleryScene()
         {
+            // Manual refresh owns the complete derived-preview refresh.
+            VoxelStorePreviewCommand.BakeAllForBatch();
             RuntimeGalleryBuildResult result = BuildAndSave();
             WriteReportAndCapture(result);
 
+            VoxelStoreRuntimeGalleryEditModeRestorer.Restore(
+                result.Scene);
             Selection.activeGameObject = result.Root;
+            FrameSceneView(result.WorldBounds);
             SceneView.RepaintAll();
             Debug.Log(
                 $"Voxel Store runtime gallery ready: " +
@@ -219,7 +226,10 @@ namespace VoxelStore.Preview.Editor
                     avatar,
                     AvatarMotionPreviewPreferences.Motion,
                     AvatarMotionPreviewPreferences.Loop,
-                    AvatarMotionPreviewPreferences.Speed);
+                    AvatarMotionPreviewPreferences.Speed,
+                    AvatarMotionPreviewPreferences.RootVariant);
+                motionPlayer.SetEquipmentVariant(
+                    AvatarMotionPreviewPreferences.EquipmentVariant);
 
                 entries.Add(new RuntimeGalleryEntry(
                     unitRoot,
@@ -309,6 +319,30 @@ namespace VoxelStore.Preview.Editor
                 CarriedEquipmentCount = carriedEquipmentCount,
                 StandaloneEquipmentCount = equipmentModels.Length
             };
+        }
+
+        private static void FrameSceneView(
+            IReadOnlyList<Bounds> worldBounds)
+        {
+            if (worldBounds == null || worldBounds.Count == 0)
+                return;
+
+            Bounds combined = worldBounds[0];
+            for (int i = 1; i < worldBounds.Count; i++)
+                combined.Encapsulate(worldBounds[i]);
+
+            SceneView view = SceneView.lastActiveSceneView;
+            if (view == null)
+                return;
+
+            float size = Mathf.Max(
+                1f,
+                combined.extents.magnitude * 1.35f);
+            view.LookAt(
+                combined.center,
+                Quaternion.Euler(30f, -135f, 0f),
+                size);
+            view.Repaint();
         }
 
         private static VoxelRenderPresentation CreateRenderPresentation(
@@ -503,6 +537,9 @@ namespace VoxelStore.Preview.Editor
                     PreviewGridLayout.CountXZOverlaps(
                         result.WorldBounds),
                 Motion = AvatarMotionPreviewPreferences.Motion.ToString(),
+                RootVariant = AvatarMotionPreviewPreferences.RootVariant,
+                EquipmentVariant =
+                    AvatarMotionPreviewPreferences.EquipmentVariant,
                 Loop = AvatarMotionPreviewPreferences.Loop,
                 Speed = AvatarMotionPreviewPreferences.Speed,
                 Screenshot = string.Empty

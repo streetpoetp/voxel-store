@@ -37,7 +37,12 @@ namespace VoxelStore.Preview.Capture.Editor
             new CapturePoint(AvatarMotion.Hit, "hit-recoil", 0.28f, EquipmentSlotSide.Right),
             new CapturePoint(AvatarMotion.Hit, "hit-recover", 0.78f, EquipmentSlotSide.Right),
             new CapturePoint(AvatarMotion.Death, "death-fall", 0.55f, EquipmentSlotSide.Right),
-            new CapturePoint(AvatarMotion.Death, "death-fallen", 0.88f, EquipmentSlotSide.Right)
+            new CapturePoint(AvatarMotion.Death, "death-fallen", 0.88f, EquipmentSlotSide.Right),
+            new CapturePoint(AvatarMotion.Idle, "idle-v1-breathe", 0.50f, EquipmentSlotSide.Right, "V1", "V1"),
+            new CapturePoint(AvatarMotion.WalkForward, "walk-v1-apex", 0.45f, EquipmentSlotSide.Right, "V1", "V1"),
+            new CapturePoint(AvatarMotion.Attack, "attack-left-v1-contact", 0.50f, EquipmentSlotSide.Left, "V1", "V1"),
+            new CapturePoint(AvatarMotion.Hit, "hit-v1-recoil", 0.45f, EquipmentSlotSide.Right, "V1", "V1"),
+            new CapturePoint(AvatarMotion.Death, "death-v1-fallen", 0.88f, EquipmentSlotSide.Right, "V1", "V1")
         };
 
         static AvatarMotionCaptureRunner()
@@ -143,6 +148,7 @@ namespace VoxelStore.Preview.Capture.Editor
                 {
                     foreach (AvatarMotionPlayer player in players)
                     {
+                        ApplyVariants(player, point);
                         player.SampleMotion(
                             point.Motion,
                             point.NormalizedTime,
@@ -205,6 +211,7 @@ namespace VoxelStore.Preview.Capture.Editor
                 {
                     foreach (AvatarMotionPlayer player in players)
                     {
+                        ApplyVariants(player, point);
                         player.SampleMotion(
                             point.Motion,
                             point.NormalizedTime,
@@ -279,6 +286,14 @@ namespace VoxelStore.Preview.Capture.Editor
 
             float aspect = Mathf.Max(0.01f, camera.aspect);
             return Mathf.Max(maxY, maxX / aspect);
+        }
+
+        private static void ApplyVariants(
+            AvatarMotionPlayer player,
+            CapturePoint point)
+        {
+            player.SetVariant(point.RootVariant);
+            player.SetEquipmentVariant(point.EquipmentVariant);
         }
 
         private static void ValidateAttachmentGrip(
@@ -418,18 +433,28 @@ namespace VoxelStore.Preview.Capture.Editor
                 AvatarMotion motion,
                 string checkpoint,
                 float normalizedTime,
-                EquipmentSlotSide side)
+                EquipmentSlotSide side,
+                string rootVariant = "",
+                string equipmentVariant = "")
             {
                 Motion = motion;
                 Checkpoint = checkpoint;
                 NormalizedTime = normalizedTime;
                 Side = side;
+                RootVariant =
+                    AvatarMotionClipCandidates.NormalizeVariant(
+                        rootVariant);
+                EquipmentVariant =
+                    AvatarMotionClipCandidates.NormalizeVariant(
+                        equipmentVariant);
             }
 
             public AvatarMotion Motion { get; }
             public string Checkpoint { get; }
             public float NormalizedTime { get; }
             public EquipmentSlotSide Side { get; }
+            public string RootVariant { get; }
+            public string EquipmentVariant { get; }
         }
     }
 }

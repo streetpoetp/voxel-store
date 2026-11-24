@@ -13,6 +13,7 @@ namespace VoxelStore.Preview.Runtime
             AvatarMotion.Idle;
         [SerializeField] private EquipmentSlotSide driverSide =
             EquipmentSlotSide.Right;
+        [SerializeField] private string variant = string.Empty;
         [SerializeField] private bool loop = true;
         [SerializeField, Min(0.05f)] private float speed = 1f;
 
@@ -22,6 +23,8 @@ namespace VoxelStore.Preview.Runtime
         public AvatarMotion CurrentMotion { get; private set; }
         public AvatarMotion Motion => motion;
         public EquipmentSlotSide DriverSide => driverSide;
+        public string Variant =>
+            AvatarMotionClipCandidates.NormalizeVariant(variant);
         public bool Loop => loop;
         public float Speed => speed;
         public bool IsPlaying =>
@@ -36,6 +39,21 @@ namespace VoxelStore.Preview.Runtime
             bool shouldLoop,
             float playbackSpeed)
         {
+            Configure(
+                presentation,
+                configuredMotion,
+                shouldLoop,
+                playbackSpeed,
+                string.Empty);
+        }
+
+        public void Configure(
+            AvatarPresentation presentation,
+            AvatarMotion configuredMotion,
+            bool shouldLoop,
+            float playbackSpeed,
+            string configuredVariant)
+        {
             avatar = presentation != null
                 ? presentation
                 : throw new ArgumentNullException(nameof(presentation));
@@ -43,7 +61,8 @@ namespace VoxelStore.Preview.Runtime
             SetMotionSettings(
                 configuredMotion,
                 shouldLoop,
-                playbackSpeed);
+                playbackSpeed,
+                configuredVariant);
             CurrentMotion = configuredMotion;
             playing = false;
             ResetPresentation();
@@ -58,6 +77,72 @@ namespace VoxelStore.Preview.Runtime
             motion = configuredMotion;
             loop = shouldLoop;
             speed = playbackSpeed;
+        }
+
+        public void SetMotionSettings(
+            AvatarMotion configuredMotion,
+            bool shouldLoop,
+            float playbackSpeed,
+            string configuredVariant)
+        {
+            SetMotionSettings(
+                configuredMotion,
+                shouldLoop,
+                playbackSpeed);
+            variant =
+                AvatarMotionClipCandidates.NormalizeVariant(
+                    configuredVariant);
+        }
+
+        public void SetVariant(string configuredVariant)
+        {
+            string normalized =
+                AvatarMotionClipCandidates.NormalizeVariant(
+                    configuredVariant);
+            if (string.Equals(
+                    variant,
+                    normalized,
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            float phase =
+                avatar != null
+                    ? avatar.CurrentNormalizedPhase
+                    : 0f;
+            variant = normalized;
+
+            if (playing && avatar != null)
+            {
+                avatar.StartMotionAtPhase(
+                    CurrentMotion,
+                    driverSide,
+                    loop,
+                    phase,
+                    variant);
+            }
+        }
+
+        public void SetEquipmentVariant(string configuredVariant)
+        {
+            if (avatar == null)
+                return;
+
+            bool changed = false;
+            foreach (EquipmentPresentation item in avatar.Equipment)
+                changed |= item.SetVariant(configuredVariant);
+
+            if (!changed || !playing)
+                return;
+
+            float phase = avatar.CurrentNormalizedPhase;
+            avatar.StartMotionAtPhase(
+                CurrentMotion,
+                driverSide,
+                loop,
+                phase,
+                variant);
         }
 
         public void SetDriverSide(EquipmentSlotSide side)
@@ -77,7 +162,8 @@ namespace VoxelStore.Preview.Runtime
                     CurrentMotion,
                     driverSide,
                     loop,
-                    phase);
+                    phase,
+                    variant);
             }
         }
 
@@ -107,7 +193,8 @@ namespace VoxelStore.Preview.Runtime
             avatar.StartMotion(
                 CurrentMotion,
                 driverSide,
-                loop);
+                loop,
+                variant);
         }
 
         public void Stop()
@@ -145,7 +232,8 @@ namespace VoxelStore.Preview.Runtime
             avatar.SampleMotion(
                 sampledMotion,
                 side,
-                normalizedTime);
+                normalizedTime,
+                variant);
         }
 
         public void SubmitNow()

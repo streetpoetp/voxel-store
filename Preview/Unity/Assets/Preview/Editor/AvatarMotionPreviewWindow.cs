@@ -15,6 +15,9 @@ namespace VoxelStore.Preview.Editor
         }
 
         private AvatarMotion motion;
+        private string rootVariant;
+        private string equipmentVariant;
+        private string variantError;
         private bool loop;
         private float speed;
         private TargetScope scope;
@@ -31,6 +34,9 @@ namespace VoxelStore.Preview.Editor
         private void OnEnable()
         {
             motion = AvatarMotionPreviewPreferences.Motion;
+            rootVariant = AvatarMotionPreviewPreferences.RootVariant;
+            equipmentVariant =
+                AvatarMotionPreviewPreferences.EquipmentVariant;
             loop = AvatarMotionPreviewPreferences.Loop;
             speed = AvatarMotionPreviewPreferences.Speed;
         }
@@ -50,6 +56,12 @@ namespace VoxelStore.Preview.Editor
             motion = (AvatarMotion)EditorGUILayout.EnumPopup(
                 "Motion",
                 motion);
+            rootVariant = EditorGUILayout.DelayedTextField(
+                "Body Variant",
+                rootVariant);
+            equipmentVariant = EditorGUILayout.DelayedTextField(
+                "Equipment Variant",
+                equipmentVariant);
             loop = EditorGUILayout.Toggle(
                 "Loop",
                 loop);
@@ -66,12 +78,33 @@ namespace VoxelStore.Preview.Editor
 
             if (selectionChanged)
             {
-                SavePreferences();
+                try
+                {
+                    rootVariant =
+                        AvatarMotionClipCandidates.NormalizeVariant(
+                            rootVariant);
+                    equipmentVariant =
+                        AvatarMotionClipCandidates.NormalizeVariant(
+                            equipmentVariant);
+                    variantError = string.Empty;
+                    SavePreferences();
 
-                if (EditorApplication.isPlaying)
-                    PlayTargets();
-                else
-                    ApplyDefaultsToScene();
+                    if (EditorApplication.isPlaying)
+                        PlayTargets();
+                    else
+                        ApplyDefaultsToScene();
+                }
+                catch (ArgumentException exception)
+                {
+                    variantError = exception.Message;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(variantError))
+            {
+                EditorGUILayout.HelpBox(
+                    variantError,
+                    MessageType.Error);
             }
 
             EditorGUILayout.Space();
@@ -93,6 +126,9 @@ namespace VoxelStore.Preview.Editor
         private void SavePreferences()
         {
             AvatarMotionPreviewPreferences.Motion = motion;
+            AvatarMotionPreviewPreferences.RootVariant = rootVariant;
+            AvatarMotionPreviewPreferences.EquipmentVariant =
+                equipmentVariant;
             AvatarMotionPreviewPreferences.Loop = loop;
             AvatarMotionPreviewPreferences.Speed = speed;
         }
@@ -108,7 +144,9 @@ namespace VoxelStore.Preview.Editor
                 target.SetMotionSettings(
                     motion,
                     loop,
-                    speed);
+                    speed,
+                    rootVariant);
+                target.SetEquipmentVariant(equipmentVariant);
                 EditorUtility.SetDirty(target);
             }
         }
@@ -126,6 +164,12 @@ namespace VoxelStore.Preview.Editor
 
             foreach (AvatarMotionPlayer target in targets)
             {
+                target.SetMotionSettings(
+                    motion,
+                    loop,
+                    speed,
+                    rootVariant);
+                target.SetEquipmentVariant(equipmentVariant);
                 target.Play(
                     motion,
                     loop,

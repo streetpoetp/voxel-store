@@ -3182,7 +3182,8 @@ var engine = new StoreEngine(repositoryRoot);
 
 static IReadOnlyList<Hero.Voxel.Tool.CompiledAnimationClip> RequiredSemanticClips(
     string partName,
-    bool includeSideAttack = false)
+    bool includeSideAttack = false,
+    params (string Name, bool Loop)[] extraClips)
 {
     Hero.Voxel.Tool.CompiledAnimationVectorChannel rotation = new(
         Hero.Voxel.Tool.CompiledAnimationInterpolation.Linear,
@@ -3218,8 +3219,76 @@ static IReadOnlyList<Hero.Voxel.Tool.CompiledAnimationClip> RequiredSemanticClip
         clips.Add(Clip("Attack.Left", false));
         clips.Add(Clip("Attack.Right", false));
     }
+    foreach ((string name, bool loop) in extraClips)
+        clips.Add(Clip(name, loop));
     return clips;
 }
+
+SemanticAnimationClipIdentity parsedVariant =
+    SemanticAnimationClipName.Parse("Attack.Left.V2");
+Require(
+    parsedVariant.Motion == "Attack" &&
+    parsedVariant.Side == "Left" &&
+    parsedVariant.Variant == "V2",
+    "animation clip parser must preserve semantic motion, physical side, and authored variant");
+Require(
+    SemanticAnimationClipName.Format("Death", variant: "V3") == "Death.V3",
+    "animation clip formatter must produce canonical model-local variants");
+Require(
+    SemanticAnimationClipName.BuildCandidates("Attack", "Left", "V2")
+        .SequenceEqual(
+            new[]
+            {
+                "Attack.Left.V2",
+                "Attack.V2",
+                "Attack.Left",
+                "Attack"
+            },
+            StringComparer.Ordinal),
+    "variant-aware candidate order must prefer side+variant, generic variant, side, then base");
+Require(
+    SemanticAnimationClipName.BuildCandidates("WalkForward", variant: "V2")
+        .SequenceEqual(
+            new[] { "WalkForward.V2", "WalkForward" },
+            StringComparer.Ordinal),
+    "variant-only candidate order must omit absent side context");
+
+foreach (string invalidName in new[]
+         {
+             "Attack.V0",
+             "Attack.V01",
+             "Attack.V-1",
+             "Attack.Left.Heavy",
+             "Attack.V2.Left",
+             "Attack.Up.V1",
+             "Attack.Left.V1.Extra",
+             "Unknown.V1"
+         })
+{
+    ExpectFailure(
+        () => SemanticAnimationClipName.Parse(invalidName),
+        "Semantic animation clip");
+}
+
+IReadOnlyList<SemanticMotionCoverage> projectedCoverage =
+    SemanticAnimationClipName.BuildCoverage(
+        new[]
+        {
+            "Attack",
+            "Attack.Left",
+            "Attack.V2",
+            "Attack.Left.V2"
+        });
+SemanticMotionCoverage projectedAttack = projectedCoverage.Single();
+Require(
+    projectedAttack.Motion == "Attack" &&
+    projectedAttack.Base &&
+    projectedAttack.Sides.SequenceEqual(new[] { "Left" }, StringComparer.Ordinal) &&
+    projectedAttack.Variants.SequenceEqual(new[] { "V2" }, StringComparer.Ordinal) &&
+    projectedAttack.SideVariants["Left"].SequenceEqual(
+        new[] { "V2" },
+        StringComparer.Ordinal),
+    "structured animation coverage must keep one semantic motion and distinguish side/variant qualifiers");
 
 static AssetManifest EquipmentManifest(
     string capability = "Hand",
@@ -3343,6 +3412,72 @@ ExpectFailure(
         EquipmentManifest().Attachment!),
     "loop setting");
 
+var variantEquipment = highDensityEquipment with
+{
+    Animations = RequiredSemanticClips(
+        "Staff",
+        extraClips: new[]
+        {
+            ("Idle.V1", true),
+            ("WalkForward.V2", true),
+            ("Attack.V1", false),
+            ("Attack.V2", false),
+            ("Attack.Left", false),
+            ("Hit.V1", false),
+            ("Death.V3", false),
+            ("Attack.Left.V2", false)
+        })
+};
+StoreEngine.ValidateEquipmentCompositionFrame(
+    variantEquipment,
+    EquipmentManifest().Attachment!);
+Require(
+    StoreEngine.ResolveSemanticClipName(
+        variantEquipment,
+        "Attack",
+        "Left",
+        "V2") == "Attack.Left.V2",
+    "fully qualified side+variant clip must resolve first");
+Require(
+    StoreEngine.ResolveSemanticClipName(
+        variantEquipment with
+        {
+            Animations = variantEquipment.Animations
+                .Where(x => x.Name != "Attack.Left.V2")
+                .ToArray()
+        },
+        "Attack",
+        "Left",
+        "V2") == "Attack.V2",
+    "generic requested variant must resolve before side-only fallback");
+Require(
+    StoreEngine.ResolveSemanticClipName(
+        highDensityEquipment,
+        "Attack",
+        "Left",
+        "V2") == "Attack",
+    "missing requested variant and side clip must fall back to the required base clip");
+ExpectFailure(
+    () => StoreEngine.ValidateEquipmentCompositionFrame(
+        highDensityEquipment with
+        {
+            Animations = RequiredSemanticClips(
+                "Staff",
+                extraClips: new[] { ("Death.V2", true) })
+        },
+        EquipmentManifest().Attachment!),
+    "Death.V2");
+ExpectFailure(
+    () => StoreEngine.ValidateEquipmentCompositionFrame(
+        highDensityEquipment with
+        {
+            Animations = RequiredSemanticClips(
+                "Staff",
+                extraClips: new[] { ("Attack.Heavy", false) })
+        },
+        EquipmentManifest().Attachment!),
+    "variant must match");
+
 var translatedEquipmentClips =
     RequiredSemanticClips("Staff").ToArray();
 var translatedAttack =
@@ -3417,6 +3552,39 @@ var rigidBody = new Hero.Voxel.Tool.VoxelCompilation(
     AssemblyOrigin = new Hero.Voxel.Tool.CompiledAssemblyOrigin("Body")
 };
 StoreEngine.ValidateRigidBodyAvatar(rigidBody);
+
+var variantBody = rigidBody with
+{
+    Animations = RequiredSemanticClips(
+        "Body",
+        includeSideAttack: true,
+        extraClips: new[]
+        {
+            ("Attack.Left.V2", false),
+            ("Death.V2", false)
+        })
+};
+StoreEngine.ValidateRigidBodyAvatar(variantBody);
+string bodyRequestedVariant = StoreEngine.ResolveSemanticClipName(
+    variantBody,
+    "Attack",
+    "Left",
+    "V2");
+string equipmentRequestedVariant = StoreEngine.ResolveSemanticClipName(
+    variantEquipment,
+    "Attack",
+    "Left",
+    "V1");
+string equipmentSideFallback = StoreEngine.ResolveSemanticClipName(
+    variantEquipment,
+    "Attack",
+    "Left",
+    "V3");
+Require(
+    bodyRequestedVariant == "Attack.Left.V2" &&
+    equipmentRequestedVariant == "Attack.V1" &&
+    equipmentSideFallback == "Attack.Left",
+    "body and equipment must resolve independent model-local variants and side fallback at one caller-owned semantic phase");
 
 ExpectFailure(
     () => StoreEngine.ValidateRigidBodyAvatar(

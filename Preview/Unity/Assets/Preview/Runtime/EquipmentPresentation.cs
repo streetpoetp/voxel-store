@@ -17,6 +17,7 @@ namespace VoxelStore.Preview.Runtime
         [SerializeField] private VoxelRenderPresentation model;
         [SerializeField] private string socketName;
         [SerializeField] private EquipmentSlotSide side;
+        [SerializeField] private string variant = string.Empty;
 
         private VoxelActorBindingId bindingId;
 
@@ -24,6 +25,8 @@ namespace VoxelStore.Preview.Runtime
         public VoxelRenderPresentation Model => model;
         public string SocketName => socketName;
         public EquipmentSlotSide Side => side;
+        public string Variant =>
+            AvatarMotionClipCandidates.NormalizeVariant(variant);
         public VoxelActorBindingId BindingId => bindingId;
         public Vector3 LocalRight => CanonicalLocalRight;
         public Vector3 LocalUp => CanonicalLocalUp;
@@ -48,6 +51,22 @@ namespace VoxelStore.Preview.Runtime
             socketName = avatarSocketName;
             side = slotSide;
             bindingId = default;
+        }
+
+        public bool SetVariant(string value)
+        {
+            string normalized =
+                AvatarMotionClipCandidates.NormalizeVariant(value);
+            if (string.Equals(
+                    variant,
+                    normalized,
+                    StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            variant = normalized;
+            return true;
         }
 
         internal void SetBinding(VoxelActorBindingId id)

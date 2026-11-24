@@ -12,6 +12,10 @@ namespace VoxelStore.Preview.Editor
             Prefix + "Loop";
         private const string SpeedKey =
             Prefix + "Speed";
+        private const string RootVariantKey =
+            Prefix + "RootVariant";
+        private const string EquipmentVariantKey =
+            Prefix + "EquipmentVariant";
 
         public static AvatarMotion Motion
         {
@@ -41,6 +45,26 @@ namespace VoxelStore.Preview.Editor
             set => UnityEditor.EditorPrefs.SetFloat(
                 SpeedKey,
                 value);
+        }
+
+        public static string RootVariant
+        {
+            get => UnityEditor.EditorPrefs.GetString(
+                RootVariantKey,
+                string.Empty);
+            set => UnityEditor.EditorPrefs.SetString(
+                RootVariantKey,
+                value ?? string.Empty);
+        }
+
+        public static string EquipmentVariant
+        {
+            get => UnityEditor.EditorPrefs.GetString(
+                EquipmentVariantKey,
+                string.Empty);
+            set => UnityEditor.EditorPrefs.SetString(
+                EquipmentVariantKey,
+                value ?? string.Empty);
         }
     }
 }
