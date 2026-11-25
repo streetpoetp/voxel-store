@@ -6,8 +6,8 @@ Defines how the voxel asset store continuously derives asset health and selected
 
 ## Requirements
 
-### Requirement: Store state is derived by scanning authoritative inputs
-The maintenance workflow SHALL scan authoritative Assets, Styles, Profiles, Collections, Store policy/history, source/reference files, generated artifacts, and verification evidence to derive current asset health, compatibility health, publication state, and selected-collection coverage gaps. It SHALL NOT trust generated Catalog outputs as authoritative inputs to those decisions.
+### Requirement: Store state is derived by scanning current authoritative inputs
+The maintenance workflow SHALL scan authoritative Assets, Styles, Collections, Store policy/history, source/reference files, generated artifacts, and verification evidence to derive current asset health, compatibility health, publication state, and selected-collection coverage gaps. It SHALL NOT require a separate retired compatibility-authority root and SHALL NOT trust generated Catalog outputs as authoritative inputs to those decisions.
 
 #### Scenario: Store scan runs with stale generated outputs
 - **WHEN** generated catalog or health files are missing or stale but authoritative repository inputs are valid
@@ -17,25 +17,25 @@ The maintenance workflow SHALL scan authoritative Assets, Styles, Profiles, Coll
 Published reusable assets SHALL be discovered from the repository's asset root independently of the currently selected collection. Collections SHALL express desired coverage over reusable asset properties and SHALL NOT own the asset filesystem identity or require assets to live under a collection-specific directory.
 
 #### Scenario: Combat collection selects reusable equipment
-- **WHEN** `combat-foundation.v1` requires a sword and a healthy reusable sword asset exists under the asset root with matching profile/capability/form
+- **WHEN** `combat-foundation.v1` requires a sword and a healthy reusable sword asset exists under the asset root with matching physical form
 - **THEN** that asset satisfies the collection requirement without being stored beneath a CombatFoundation directory
 
 #### Scenario: Collection is replaced
 - **WHEN** the store selects a different collection while existing assets remain valid reusable content
 - **THEN** those assets retain their ids, UnitRefs, source/proof authority, and publication identity; only derived collection coverage changes
 
-### Requirement: Store domain roots have single responsibilities
-The active repository layout SHALL separate reusable Assets, Styles, Profiles, Collections, Store policy/history, and derived Catalog outputs. Product asset discovery SHALL be restricted to Assets.
+### Requirement: Store domain roots reflect current authority
+The active repository layout SHALL separate reusable Assets, Styles, Collections, Store policy/history, and derived Catalog outputs. Product asset discovery SHALL be restricted to Assets. Reusable physical compatibility SHALL be derived from model-owned sockets/Mount data and current asset metadata rather than from a separate profile root.
 
-#### Scenario: Compatibility profile changes
-- **WHEN** a profile under `Profiles/**` changes
-- **THEN** compatibility/health evaluation uses that profile as reusable physical contract authority independently of collection policy
+#### Scenario: Model-owned compatibility metadata changes
+- **WHEN** an avatar socket contract or equipment attachment metadata changes
+- **THEN** compatibility/health evaluation derives the new physical result from those current model-owned inputs independently of collection policy
 
 ### Requirement: New production models are target-first and template-independent
-New production asset authoring SHALL begin from the selected collection requirement or explicit user-requested form, current reusable style authority, applicable compatibility profile, and a new asset-specific design intent. It SHALL acquire and accept a new Product Target before construction, density, VoxelSpec, proof, compatibility, or publication, and SHALL NOT depend on another asset as visual/model authority.
+New production asset authoring SHALL begin from the selected collection requirement or explicit user-requested form, current reusable style authority, applicable model-owned compatibility contract, and a new asset-specific design intent. It SHALL acquire and accept a new Product Target before construction, density, VoxelSpec, proof, compatibility, or publication, and SHALL NOT depend on another asset as visual/model authority.
 
 #### Scenario: Agent is asked to create a new weapon
-- **WHEN** the requested physical form and applicable style/profile authority are known
+- **WHEN** the requested physical form, style authority, and intended attachment capability are known
 - **THEN** the agent establishes a distinct asset identity and acquires/accepts a new Product Target before authoring VoxelSpec source
 
 #### Scenario: Existing asset could be copied as a shortcut
@@ -58,14 +58,14 @@ The maintenance workflow SHALL rank unhealthy or regressed published reusable as
 - **THEN** the next maintenance selection targets the failed published asset before generating a new asset for the optional slot
 
 ### Requirement: Selected collection drives autonomous expansion
-The selected Collection SHALL declare desired reusable asset coverage independently from current generated Catalog state and MAY distinguish equipment requirements by gameplay-neutral physical form. A maintenance scan SHALL derive uncovered required slots from the Collection and current healthy published assets using every declared requirement discriminator rather than from a manually maintained TODO list.
+The selected Collection SHALL declare desired reusable asset coverage independently from current generated Catalog state and MAY distinguish equipment requirements by gameplay-neutral physical form. A maintenance scan SHALL derive uncovered required slots from the Collection and current healthy published assets using every discriminator actually declared by the active Collection schema.
 
 #### Scenario: Required equipment coverage is missing
-- **WHEN** the selected collection requires equipment for a compatibility profile, logical mount capability, and physical form and no healthy published asset matches all declared discriminators
+- **WHEN** the selected collection requires an equipment physical form and no healthy published equipment asset matches that declared form
 - **THEN** the scan reports that exact coverage gap as eligible for autonomous asset design after higher-priority repairs are resolved
 
 #### Scenario: Different form does not satisfy requirement
-- **WHEN** a healthy published equipment asset matches the required profile and mount capability but declares a different physical form
+- **WHEN** a healthy published equipment asset declares a different physical form than the selected requirement
 - **THEN** that asset does not satisfy the form-specific coverage requirement
 
 ### Requirement: One maintenance run owns one bounded asset job
@@ -113,15 +113,15 @@ Running maintenance against unchanged authoritative inputs with all required cov
 - **THEN** the maintenance workflow reports the store as healthy, regenerates derived outputs only when needed, and performs no asset design or repair mutation
 
 ### Requirement: Derived outputs explain health and next work
-Generated health and catalog outputs SHALL identify each asset's current publication state and failed gate when unhealthy, and SHALL expose uncovered selected-collection requirements or the next eligible maintenance target with every active requirement discriminator in machine-readable form.
+Generated health and catalog outputs SHALL identify each asset's current publication state and failed gate when unhealthy, and SHALL expose uncovered selected-collection requirements or the next eligible maintenance target using the discriminators actually present in active authority.
 
 #### Scenario: Asset compatibility gate fails
-- **WHEN** a scan detects an equipment/avatar compatibility failure
-- **THEN** generated health data identifies the affected assets/profile and the compatibility gate as the reason the store is unhealthy
+- **WHEN** a scan detects an equipment/avatar socket/Mount compatibility failure
+- **THEN** generated health data identifies the affected assets and compatibility gate as the reason the store is unhealthy
 
 #### Scenario: Physical-form coverage is missing
 - **WHEN** a coverage requirement is unmet because its required physical form has no healthy published match
-- **THEN** generated health data identifies that form together with the relevant compatibility profile and logical mount capability
+- **THEN** generated health data identifies that form without inventing retired discriminators not present in the Collection contract
 
 ### Requirement: Tool dependency resolution is explicit and portable
 Maintenance SHALL resolve the Hero.Voxel authoring/tool contract from the repository-owned `Dependencies/hero-studio` Git submodule, pinned to the exact revision declared by repository dependency state and aligned with `toolchain/hero-voxel.lock.yaml`. Production maintenance SHALL NOT require a developer-local Hero Studio checkout or `HERO_STUDIO_ROOT`.
@@ -188,15 +188,15 @@ Before reference generation/repair, maintenance SHALL resolve the applicable sty
 - **WHEN** an equipment migration/repair finds that existing VoxelSpec or proof output materially disagrees with the newly accepted Product Target/construction package
 - **THEN** maintenance repairs downstream density/source/proof to match visual authority rather than simplifying the Product Target or construction sheets to preserve the existing model
 
-### Requirement: Intentional collection baseline replacement updates active requirements atomically
-An approved collection-baseline migration SHALL update collection requirements, compatibility-profile selection, and active asset inventory as one coherent authority change so retired requirements do not remain as autonomous repair targets.
+### Requirement: Intentional collection baseline replacement updates current authority atomically
+An approved collection-baseline migration SHALL update collection requirements and active asset inventory as one coherent authority change so retired requirements do not remain as autonomous repair targets.
 
-#### Scenario: Three equipment slots are replaced by one bow slot
-- **WHEN** an approved migration retires side-specific equipment identity/coverage, activates the new neutral compatibility profile, and introduces the ten required general forms
-- **THEN** maintenance evaluates coverage only against the new collection requirement set and does not plan recreation of retired side-specific identities or requirement slots
+#### Scenario: General reusable equipment baseline replaces side-specific coverage
+- **WHEN** an approved migration retires side-specific equipment identity/coverage and introduces a general reusable form set
+- **THEN** maintenance evaluates coverage only against the new collection requirement set and does not plan recreation of retired side-specific identities or slots
 
 #### Scenario: Retired equipment files are removed before collection authority changes
-- **WHEN** the selected collection still requires a removed equipment slot
+- **WHEN** the selected collection still requires a removed equipment form
 - **THEN** the store reports a required coverage gap until the approved migration updates the collection authority
 
 ### Requirement: Baseline replacement converges to a healthy no-op state
@@ -214,7 +214,7 @@ After an intentional baseline migration, maintenance SHALL converge when replace
 `combat-foundation.v1` SHALL require ten independently published equipment forms through its Collection manifest. Each required form SHALL remain a reusable physical classification without assigning side-specific consumer behavior.
 
 #### Scenario: General catalog is complete
-- **WHEN** one healthy published equipment asset satisfies each of the ten required physical forms under the active compatibility profile
+- **WHEN** one healthy published equipment asset satisfies each of the ten required physical forms
 - **THEN** the selected collection reports no general catalog coverage gap
 
 #### Scenario: One required form is missing

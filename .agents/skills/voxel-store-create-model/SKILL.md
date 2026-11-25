@@ -11,7 +11,7 @@ Use this skill only for creating one new production asset in `voxel-store`.
 
 - Create exactly one asset per invocation.
 - Do not use another asset as a design template. Existing assets may be inspected only for repository conventions, never as palette, geometry, proportion, or motif authority.
-- Shared visual authority comes from `Styles/**`; physical compatibility comes from `Profiles/**`; demand/form comes from `Collections/**` or the explicit user request.
+- Shared visual authority comes from `Styles/**`; physical compatibility comes from model-owned avatar sockets plus equipment capability/side/`Mount` metadata; demand/form comes from `Collections/**` or the explicit user request.
 - The new asset's Product Target is its first asset-specific visual authority. Never model first and invent/adjust the target afterward to match an easier model.
 - Do not add gameplay semantics such as damage, rarity, class, progression, economy, AI, or balance.
 - Do not publish an asset while any required gate is unresolved.

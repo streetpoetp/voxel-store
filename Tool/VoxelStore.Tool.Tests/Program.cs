@@ -1870,6 +1870,61 @@ static void RunReferenceSealVersionTests(string sourceRoot)
     }
 }
 
+static void RunEvidenceHashPortabilityTests()
+{
+    string root = TempRoot();
+    try
+    {
+        string textPath = Path.Combine(root, "evidence.yaml");
+        const string logicalText = "version: 1\nname: portable\n";
+        File.WriteAllText(textPath, logicalText);
+        string lfHash = EvidenceHash.HashFile(textPath);
+
+        File.WriteAllText(
+            textPath,
+            logicalText.Replace("\n", "\r\n", StringComparison.Ordinal));
+        string crlfHash = EvidenceHash.HashFile(textPath);
+        Require(
+            string.Equals(lfHash, crlfHash, StringComparison.Ordinal),
+            "repository text evidence hash must be invariant to LF/CRLF checkout representation");
+        Require(
+            EvidenceHash.TextFileEquals(textPath, logicalText),
+            "generated text comparison must accept CRLF checkout representation for canonical LF output");
+
+        File.WriteAllText(
+            textPath,
+            logicalText.Replace("\n", "\r", StringComparison.Ordinal));
+        string crHash = EvidenceHash.HashFile(textPath);
+        Require(
+            string.Equals(lfHash, crHash, StringComparison.Ordinal),
+            "repository text evidence hash must normalize lone CR line endings to LF");
+
+        File.WriteAllText(textPath, "version: 2\nname: portable\n");
+        Require(
+            !string.Equals(
+                lfHash,
+                EvidenceHash.HashFile(textPath),
+                StringComparison.Ordinal),
+            "substantive repository text changes must change evidence hash");
+        Require(
+            !EvidenceHash.TextFileEquals(textPath, logicalText),
+            "generated text comparison must reject substantive text changes");
+
+        string binaryPath = Path.Combine(root, "evidence.png");
+        File.WriteAllBytes(binaryPath, new byte[] { 1, 13, 10, 2 });
+        string binaryCrLf = EvidenceHash.HashFile(binaryPath);
+        File.WriteAllBytes(binaryPath, new byte[] { 1, 10, 2 });
+        string binaryLf = EvidenceHash.HashFile(binaryPath);
+        Require(
+            !string.Equals(binaryCrLf, binaryLf, StringComparison.Ordinal),
+            "binary evidence must remain byte-exact and must not normalize CRLF");
+    }
+    finally
+    {
+        DeleteTree(root);
+    }
+}
+
 
 static void RunReferenceV3PublicationTests(string sourceRoot)
 {
@@ -3184,6 +3239,12 @@ if (args.Contains("--reference-seal-only", StringComparer.Ordinal))
     Console.WriteLine("PASS: v2/v3 reference sealing and deterministic audit tests");
     return;
 }
+if (args.Contains("--evidence-hash-only", StringComparer.Ordinal))
+{
+    RunEvidenceHashPortabilityTests();
+    Console.WriteLine("PASS: checkout-portable evidence hashing tests");
+    return;
+}
 if (args.Contains("--target-fidelity-only", StringComparer.Ordinal))
 {
     RunTargetFidelityTests(repositoryRoot);
@@ -3208,6 +3269,7 @@ if (args.Contains("--target-style-only", StringComparer.Ordinal))
     Console.WriteLine("PASS: target-style v2 compatibility and v3 target authority tests");
     return;
 }
+RunEvidenceHashPortabilityTests();
 RunReferenceDensitySelectorTests();
 RunReferenceDensityEvidenceTests(repositoryRoot);
 if (args.Contains("--reference-density-only", StringComparer.Ordinal))

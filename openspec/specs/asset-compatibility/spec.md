@@ -17,27 +17,12 @@ An avatar participating in reusable equipment composition SHALL expose exactly o
 - **WHEN** an avatar relies on additional articulated parts to satisfy reusable equipment composition
 - **THEN** compatibility validation fails for the rigid-body contract instead of treating those parts as attachment authority
 
-### Requirement: Reusable models share one canonical Unity model frame
-All published reusable avatar and equipment models SHALL resolve through Hero.Voxel into the same canonical Unity local orientation: Right `+X`, Up `+Y`, Forward `-Z`. Model category SHALL NOT introduce another forward axis or require attachment-time orientation compensation.
-
-#### Scenario: Avatar and equipment are composed
-- **WHEN** a conforming avatar and conforming equipment asset are baked and composed at a Body-ratio position
-- **THEN** both models expose the same canonical local Right, Up, and Forward axes and the equipment placement rotation remains identity
-
-#### Scenario: Equipment source faces another direction
-- **WHEN** an equipment source would bake with a forward direction different from canonical Unity `-Z`
-- **THEN** the owning voxel source and pivot are corrected before publication rather than persisting a preview, avatar-specific, equipment-specific, or runtime corrective rotation
-
-#### Scenario: Provider coordinate conversion is applied
-- **WHEN** Hero.Voxel maps source coordinates into Unity coordinates
-- **THEN** coordinate conversion and authored facing remain separate concerns and the resulting published model still satisfies the global canonical Unity model frame
-
 ### Requirement: Reusable models share one semantic canonical Unity model frame
 All published reusable avatar and equipment models SHALL resolve through Hero.Voxel into one canonical Unity local frame: Right `+X`, Up `+Y`, Forward `-Z`. Under the provider source-to-Unity mapping, semantic Forward is authored toward source `-Y`. Forward SHALL represent semantic facing/action rather than a coordinate-conversion label or geometrically inferred axis.
 
 #### Scenario: Avatar and equipment are composed
-- **WHEN** a conforming avatar and conforming equipment asset are baked and composed at a Body-ratio position
-- **THEN** both models expose the same canonical local Right, Up, and Forward axes and the equipment placement rotation remains identity
+- **WHEN** a conforming avatar socket and conforming equipment Mount are composed
+- **THEN** both models expose the same canonical local Right, Up, and Forward axes and attachment requires no pair-specific corrective rotation
 
 #### Scenario: Equipment semantic front is audited
 - **WHEN** equipment is normalized for publication

@@ -407,7 +407,7 @@ public sealed class StoreEngine
             if (!File.Exists(rulerPath))
                 throw new InvalidDataException("Shared VPU ruler is missing.");
             ruler = ReferenceDensitySelector.LoadRuler(rulerPath);
-            rulerSha256 = HeroVoxelProvider.HashFile(rulerPath);
+            rulerSha256 = EvidenceHash.HashFile(rulerPath);
         }
 
         IReadOnlyList<int> sequence = ReferenceDensitySelector.BuildCandidateSequence(input, ruler);
@@ -434,8 +434,8 @@ public sealed class StoreEngine
                 throw new InvalidDataException(
                     $"Density candidate VPU {vpu} is missing source or preview evidence.");
 
-            string sourceHash = HeroVoxelProvider.HashFile(sourcePath);
-            string previewHash = HeroVoxelProvider.HashFile(previewPath);
+            string sourceHash = EvidenceHash.HashFile(sourcePath);
+            string previewHash = EvidenceHash.HashFile(previewPath);
             if (!string.Equals(sourceHash, audit.SourceSha256, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException(
                     $"Density candidate VPU {vpu} source evidence is stale.");
@@ -447,7 +447,7 @@ public sealed class StoreEngine
                 input,
                 audit,
                 policy.Budget,
-                HeroVoxelProvider.HashFile(auditPath)));
+                EvidenceHash.HashFile(auditPath)));
         }
 
         int? selected = ReferenceDensitySelector.SelectLowestSufficient(sequence, candidates);
@@ -455,8 +455,8 @@ public sealed class StoreEngine
         return new ReferenceDensityEvidence
         {
             Version = input.Version,
-            ReferenceAuditSha256 = HeroVoxelProvider.HashFile(referenceAuditPath),
-            DensityInputSha256 = HeroVoxelProvider.HashFile(inputPath),
+            ReferenceAuditSha256 = EvidenceHash.HashFile(referenceAuditPath),
+            DensityInputSha256 = EvidenceHash.HashFile(inputPath),
             RulerVersion = ruler?.Version,
             RulerSha256 = rulerSha256,
             TargetWorldLongAxis = input.TargetWorldLongAxis,
@@ -546,8 +546,9 @@ public sealed class StoreEngine
             if (compiled.GeneratedAnimationPath != null)
             {
                 string expectedAnimation = GeneratedAnimationManifestWriter.Serialize(compiled.Compilation);
-                if (!File.Exists(compiled.GeneratedAnimationPath) ||
-                    File.ReadAllText(compiled.GeneratedAnimationPath) != expectedAnimation)
+                if (!EvidenceHash.TextFileEquals(
+                        compiled.GeneratedAnimationPath,
+                        expectedAnimation))
                     throw new InvalidDataException("Generated animation manifest is stale or missing.");
             }
             return compiled.GeneratedVoxPath;
@@ -742,7 +743,7 @@ public sealed class StoreEngine
                 "Product Target provenance must use version 1, 2, or 3.");
         if (!IsSha256(provenance.TargetSha256))
             throw new InvalidDataException("Product Target provenance targetSha256 is invalid.");
-        string targetHash = HeroVoxelProvider.HashFile(targetPath);
+        string targetHash = EvidenceHash.HashFile(targetPath);
         if (!string.Equals(
                 targetHash,
                 provenance.TargetSha256,
@@ -818,7 +819,7 @@ public sealed class StoreEngine
                 if (!File.Exists(requestPath))
                     throw new InvalidDataException(
                         "Product Target generation request is missing.");
-                string requestHash = HeroVoxelProvider.HashFile(requestPath);
+                string requestHash = EvidenceHash.HashFile(requestPath);
                 if (!string.Equals(
                         requestHash,
                         generator.Request.Sha256,
@@ -902,7 +903,7 @@ public sealed class StoreEngine
             "Product Target imported source");
         if (!File.Exists(sourcePath))
             throw new InvalidDataException("Product Target imported source is missing.");
-        string sourceHash = HeroVoxelProvider.HashFile(sourcePath);
+        string sourceHash = EvidenceHash.HashFile(sourcePath);
         if (!string.Equals(
                 sourceHash,
                 provenance.Source.Sha256,
@@ -947,7 +948,7 @@ public sealed class StoreEngine
             contract.Target.Image,
             "Product Target");
         if (!string.Equals(
-                HeroVoxelProvider.HashFile(targetPath),
+                EvidenceHash.HashFile(targetPath),
                 audit.Target.Sha256,
                 StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException(
@@ -980,7 +981,7 @@ public sealed class StoreEngine
                 relative,
                 "Target fidelity audited sheet");
             if (!string.Equals(
-                    HeroVoxelProvider.HashFile(path),
+                    EvidenceHash.HashFile(path),
                     evidence.Sha256,
                     StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException(
@@ -2101,11 +2102,11 @@ public sealed class StoreEngine
             if (!File.Exists(file))
                 throw new FileNotFoundException("Cannot seal missing reference evidence.", file);
             audit.Sha256[Path.GetRelativePath(asset.ReferenceDirectory, file).Replace('\\', '/')] =
-                HeroVoxelProvider.HashFile(file);
+                EvidenceHash.HashFile(file);
         }
         foreach (string file in EnumerateApplicableStyleReferences(style))
             audit.StyleSha256![Path.GetRelativePath(_root, file).Replace('\\', '/')] =
-                HeroVoxelProvider.HashFile(file);
+                EvidenceHash.HashFile(file);
         Directory.CreateDirectory(asset.ReferenceDirectory);
         File.WriteAllText(
             Path.Combine(asset.ReferenceDirectory, "audit.generated.json"),
@@ -2120,7 +2121,7 @@ public sealed class StoreEngine
             if (!File.Exists(file))
                 throw new FileNotFoundException("Cannot seal missing proof input.", file);
             audit.Sha256[Path.GetRelativePath(asset.RootDirectory, file).Replace('\\', '/')] =
-                HeroVoxelProvider.HashFile(file);
+                EvidenceHash.HashFile(file);
         }
         Directory.CreateDirectory(asset.ProofDirectory);
         File.WriteAllText(
@@ -2176,7 +2177,7 @@ public sealed class StoreEngine
             string path = Path.Combine(baseDirectory, relative.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path))
                 throw new InvalidDataException($"Audited file is missing: {relative}");
-            string actual = HeroVoxelProvider.HashFile(path);
+            string actual = EvidenceHash.HashFile(path);
             if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"Audit evidence is stale for '{relative}'.");
         }
@@ -2222,7 +2223,7 @@ public sealed class StoreEngine
         var hashes = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (string file in EnumerateApplicableStyleReferences(style))
             hashes[Path.GetRelativePath(_root, file).Replace('\\', '/')] =
-                HeroVoxelProvider.HashFile(file);
+                EvidenceHash.HashFile(file);
         return hashes;
     }
 
@@ -2238,13 +2239,13 @@ public sealed class StoreEngine
         {
             string relative = Path.GetRelativePath(manifestDirectory, file).Replace('\\', '/');
             builder.Append("common=").Append(relative).Append('|')
-                .Append(HeroVoxelProvider.HashFile(file)).Append('\n');
+                .Append(EvidenceHash.HashFile(file)).Append('\n');
         }
         foreach (string file in style.KindReferencePaths)
         {
             string relative = Path.GetRelativePath(manifestDirectory, file).Replace('\\', '/');
             builder.Append("kindref=").Append(relative).Append('|')
-                .Append(HeroVoxelProvider.HashFile(file)).Append('\n');
+                .Append(EvidenceHash.HashFile(file)).Append('\n');
         }
         byte[] bytes = Encoding.UTF8.GetBytes(builder.ToString());
         return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
