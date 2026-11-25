@@ -27,9 +27,9 @@
 
 ## 5. Store-Wide Integration Proof
 
-- [ ] 5.1 Regenerate catalog/health state for the fully migrated store, run Tool tests plus `scan --write` and `verify`, and verify the published baseline reports 25/25 models complete with no required-V1 or alias failures.
+- [x] 5.1 Regenerate catalog/health state for the fully migrated store, run Tool tests plus `scan --write` and `verify`, and verify the published baseline reports 25/25 models complete with no required-V1 or alias failures.
 - [x] 5.2 Run the full Unity preview/EditMode test suite and verify Inspector discovery, variant parsing, runtime-gallery composition, socket/Mount compatibility, and baked-coverage checks all pass without manual Editor clicks.
-- [ ] 5.3 Run `tools/capture-game-view.ps1 -Scenario avatar-motion-gallery`, verify current provider attestation, and visually inspect the bounded V1 checkpoints for distinct authored presentation, side-aware attachment lock, shared normalized phase, and correct loop/non-loop behavior.
+- [x] 5.3 Run `tools/capture-game-view.ps1 -Scenario avatar-motion-gallery`, verify current provider attestation, and visually inspect the bounded V1 checkpoints for distinct authored presentation, side-aware attachment lock, shared normalized phase, and correct loop/non-loop behavior.
 - [x] 5.4 Run `openspec validate author-multi-animation-variants-across-all-models --strict` and `git diff --check`; verify the unrelated dirty worktree remains preserved and no Player/APK artifact was produced.
 
 ## Workflow follow-up
