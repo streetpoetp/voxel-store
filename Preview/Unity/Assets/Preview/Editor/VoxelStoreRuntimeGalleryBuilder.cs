@@ -292,6 +292,12 @@ namespace VoxelStore.Preview.Editor
             }
 
             Bounds galleryBounds = Combine(worldBounds);
+            CreateMutableStreamedActorDemo(
+                world,
+                root.transform,
+                avatarModels,
+                equipmentModels,
+                galleryBounds);
             Camera camera = CreateCamera(galleryBounds);
             CreateDirectionalLight();
 
@@ -321,6 +327,52 @@ namespace VoxelStore.Preview.Editor
                 CarriedEquipmentCount = carriedEquipmentCount,
                 StandaloneEquipmentCount = equipmentModels.Length
             };
+        }
+
+        private static void CreateMutableStreamedActorDemo(
+            VoxelRenderWorld world,
+            Transform galleryRoot,
+            IReadOnlyList<RuntimeGalleryModel> avatarModels,
+            IReadOnlyList<RuntimeGalleryModel> equipmentModels,
+            Bounds galleryBounds)
+        {
+            if (avatarModels == null ||
+                equipmentModels == null ||
+                avatarModels.Count == 0 ||
+                equipmentModels.Count < 3)
+            {
+                return;
+            }
+
+            RuntimeGalleryModel avatar = avatarModels
+                .OrderBy(x => x.Name, StringComparer.Ordinal)
+                .First();
+            RuntimeGalleryModel[] equipment = equipmentModels
+                .OrderBy(x => x.Name, StringComparer.Ordinal)
+                .Take(3)
+                .ToArray();
+
+            var demoObject = new GameObject(
+                MutableStreamedActorPreview.ObjectName);
+            demoObject.transform.SetParent(galleryRoot, false);
+            demoObject.transform.position = new Vector3(
+                galleryBounds.max.x +
+                    Mathf.Max(4f, galleryBounds.extents.x * 0.35f),
+                0f,
+                galleryBounds.center.z);
+
+            MutableStreamedActorPreview demo =
+                demoObject.AddComponent<MutableStreamedActorPreview>();
+            demo.Configure(
+                world,
+                RuntimeGalleryCatalogDiscovery.LoadAssembly(avatar),
+                RuntimeGalleryCatalogDiscovery.LoadAnimation(avatar),
+                RuntimeGalleryCatalogDiscovery.LoadAssembly(equipment[0]),
+                RuntimeGalleryCatalogDiscovery.LoadAnimation(equipment[0]),
+                RuntimeGalleryCatalogDiscovery.LoadAssembly(equipment[1]),
+                RuntimeGalleryCatalogDiscovery.LoadAnimation(equipment[1]),
+                RuntimeGalleryCatalogDiscovery.LoadAssembly(equipment[2]),
+                RuntimeGalleryCatalogDiscovery.LoadAnimation(equipment[2]));
         }
 
         private static void FrameSceneView(

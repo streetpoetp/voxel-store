@@ -201,6 +201,14 @@ Canonical animation proof is command-driven from the repository root:
 powershell -ExecutionPolicy Bypass -File tools\capture-game-view.ps1 -Scenario avatar-motion-gallery
 ```
 
+The pinned streamed-actor provider is also exercised by one bounded preview-only consumer proof:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\capture-game-view.ps1 -Scenario mutable-streamed-actor-gallery
+```
+
+The generated runtime gallery serializes one `Mutable Streamed Actor Proof` configuration from the sorted baked catalogs but does not initialize it during ordinary gallery playback/capture. The dedicated scenario acquires a root-only streamed avatar through `VoxelStreamingService -> VoxelPresenterPool -> VoxelActorPresenterPool`, attaches two equipment instances by opaque handles, detaches one, transactionally replaces the other while retaining the handle, rebuilds handle-addressed animation plans after topology mutation, releases/reacquires the warm actor to prove the prior loadout is absent, and reattaches equipment. Every composed checkpoint validates the current avatar socket against the child `Mount` before provider-attested Game View capture. This remains preview/evidence infrastructure and does not define a production loadout API or gameplay semantics.
+
 The command bootstraps/verifies the pinned Hero Studio package, resolves `Preview/Unity`, performs the bake-only provider refresh so current assembly/animation assets exist, builds only `[Voxel Store Runtime Gallery]`, resolves the schema-v2 capture registry, launches one owned **graphical** Unity Editor, invokes the registered `Capture.Editor` runner internally, survives Play Mode/domain reload through `SessionState`, samples deterministic authored baseline plus representative `V1` checkpoints for `Idle`, `WalkForward`, side-aware `Attack`, `Hit`, and `Death`, and captures composed runtime pixels through `Hero.Consumer.Editor.GameViewCapture`. Before capture, the runner rejects any live renderer outside `[Voxel Store Runtime Gallery]` and validates renderer/mesh/material/shader integrity, preventing the legacy debug grid from contaminating proof pixels. Accepted output lives under `Preview/Unity/Library/Capture/AvatarMotionGallery/` and must include current `game-view-capture.json` provider attestation.
 
 `CAPTURE_ATTESTED` proves acquisition integrity only. Inspect the attested PNGs to verify the actual authored presentation: baseline and selected V1 takes must be visibly distinguishable where authored, Left- and Right-driven Attack must preserve side-aware body response, equipment must show its independently resolved authored motion, and its Mount must remain visually attached to the selected socket. Idle/Walk looping poses plus Hit/Death non-looping presentation must remain semantically readable.

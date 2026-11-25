@@ -394,6 +394,9 @@ namespace VoxelStore.Preview.Editor.Tests
                 AvatarPresentation[] avatars =
                     root.GetComponentsInChildren<AvatarPresentation>(
                         true);
+                MutableStreamedActorPreview[] mutableDemos =
+                    root.GetComponentsInChildren<MutableStreamedActorPreview>(
+                        true);
 
                 Assert.That(presentations.Length, Is.GreaterThan(0));
                 Assert.AreEqual(
@@ -408,6 +411,23 @@ namespace VoxelStore.Preview.Editor.Tests
                     avatars.All(x => x.IsProviderInitialized),
                     Is.True,
                     "reopened avatar presentations must restore their actor-owned provider instances");
+                Assert.AreEqual(
+                    1,
+                    mutableDemos.Length,
+                    "runtime gallery should serialize exactly one bounded mutable streamed actor proof surface");
+                Assert.IsTrue(mutableDemos[0].IsConfigured);
+                Assert.IsFalse(
+                    mutableDemos[0].IsInitialized,
+                    "ordinary Edit Mode gallery restore must not start the dedicated streamed proof");
+                Assert.AreNotEqual(
+                    mutableDemos[0].RootUnitId,
+                    mutableDemos[0].PrimaryUnitId);
+                Assert.AreNotEqual(
+                    mutableDemos[0].PrimaryUnitId,
+                    mutableDemos[0].SecondaryUnitId);
+                Assert.AreNotEqual(
+                    mutableDemos[0].SecondaryUnitId,
+                    mutableDemos[0].ReplacementUnitId);
             }
             finally
             {
@@ -415,6 +435,27 @@ namespace VoxelStore.Preview.Editor.Tests
                     NewSceneSetup.EmptyScene,
                     NewSceneMode.Single);
             }
+        }
+
+        [Test]
+        public void CaptureRegistryDeclaresMutableStreamedActorScenario()
+        {
+            string registryPath = Path.Combine(
+                VoxelStorePreviewPaths.ProjectRoot,
+                "Assets",
+                "Preview",
+                "Capture",
+                "CaptureRegistry.json");
+            string json = File.ReadAllText(registryPath);
+            StringAssert.Contains(
+                "\"name\": \"mutable-streamed-actor-gallery\"",
+                json);
+            StringAssert.Contains(
+                "MutableStreamedActorCaptureRunner.RunFromCommandLine",
+                json);
+            StringAssert.Contains(
+                "Library/Capture/MutableStreamedActorGallery",
+                json);
         }
 
         [Test]
