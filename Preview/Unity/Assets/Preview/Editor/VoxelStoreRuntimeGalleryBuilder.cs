@@ -25,9 +25,7 @@ namespace VoxelStore.Preview.Editor
         public int CarriedEquipmentCount;
         public int StandaloneEquipmentCount;
         public int GridOverlapCount;
-        public string Motion;
-        public string RootVariant;
-        public string EquipmentVariant;
+        public string PlaybackModel;
         public bool Loop;
         public float Speed;
         public string Screenshot;
@@ -222,16 +220,27 @@ namespace VoxelStore.Preview.Editor
                     body,
                     equipmentPresentations);
 
-                AvatarMotionPlayer motionPlayer =
-                    unitRoot.AddComponent<AvatarMotionPlayer>();
-                motionPlayer.Configure(
+                VoxelModelMotionPlayer bodyPlayer =
+                    body.gameObject.AddComponent<VoxelModelMotionPlayer>();
+                bodyPlayer.Configure(
+                    body,
                     avatar,
-                    AvatarMotionPreviewPreferences.Motion,
-                    AvatarMotionPreviewPreferences.Loop,
-                    AvatarMotionPreviewPreferences.Speed,
-                    AvatarMotionPreviewPreferences.RootVariant);
-                motionPlayer.SetEquipmentVariant(
-                    AvatarMotionPreviewPreferences.EquipmentVariant);
+                    ResolveInitialClip(body.Animation),
+                    VoxelModelMotionPreviewPreferences.Loop,
+                    VoxelModelMotionPreviewPreferences.Speed);
+                foreach (EquipmentPresentation item in
+                         equipmentPresentations)
+                {
+                    VoxelModelMotionPlayer equipmentPlayer =
+                        item.Model.gameObject
+                            .AddComponent<VoxelModelMotionPlayer>();
+                    equipmentPlayer.Configure(
+                        item.Model,
+                        avatar,
+                        ResolveInitialClip(item.Model.Animation),
+                        VoxelModelMotionPreviewPreferences.Loop,
+                        VoxelModelMotionPreviewPreferences.Speed);
+                }
 
                 entries.Add(new RuntimeGalleryEntry(
                     unitRoot,
@@ -268,6 +277,15 @@ namespace VoxelStore.Preview.Editor
                         "Model",
                         externalLifecycle: false);
                 renderPresentation.EnsureInstance();
+                VoxelModelMotionPlayer standalonePlayer =
+                    renderPresentation.gameObject
+                        .AddComponent<VoxelModelMotionPlayer>();
+                standalonePlayer.Configure(
+                    renderPresentation,
+                    null,
+                    ResolveInitialClip(renderPresentation.Animation),
+                    VoxelModelMotionPreviewPreferences.Loop,
+                    VoxelModelMotionPreviewPreferences.Speed);
 
                 entries.Add(new RuntimeGalleryEntry(
                     unitRoot,
@@ -322,7 +340,7 @@ namespace VoxelStore.Preview.Editor
                 AvatarCount = avatarModels.Length,
                 EquipmentCount = equipmentModels.Length,
                 AnimatedAvatarCount =
-                    root.GetComponentsInChildren<AvatarMotionPlayer>(true)
+                    root.GetComponentsInChildren<AvatarPresentation>(true)
                         .Length,
                 CarriedEquipmentCount = carriedEquipmentCount,
                 StandaloneEquipmentCount = equipmentModels.Length
@@ -590,12 +608,9 @@ namespace VoxelStore.Preview.Editor
                 GridOverlapCount =
                     PreviewGridLayout.CountXZOverlaps(
                         result.WorldBounds),
-                Motion = AvatarMotionPreviewPreferences.Motion.ToString(),
-                RootVariant = AvatarMotionPreviewPreferences.RootVariant,
-                EquipmentVariant =
-                    AvatarMotionPreviewPreferences.EquipmentVariant,
-                Loop = AvatarMotionPreviewPreferences.Loop,
-                Speed = AvatarMotionPreviewPreferences.Speed,
+                PlaybackModel = "IndependentExactClips",
+                Loop = VoxelModelMotionPreviewPreferences.Loop,
+                Speed = VoxelModelMotionPreviewPreferences.Speed,
                 Screenshot = string.Empty
             };
             File.WriteAllText(
@@ -603,6 +618,20 @@ namespace VoxelStore.Preview.Editor
                     reportDir,
                     "runtime-gallery-report.json"),
                 JsonUtility.ToJson(report, true));
+        }
+
+        private static string ResolveInitialClip(
+            VoxelAnimationAsset animation)
+        {
+            if (animation == null || animation.ClipCount == 0)
+            {
+                throw new InvalidOperationException(
+                    "Runtime gallery model has no baked animation clips.");
+            }
+
+            if (animation.TryGetClipIndex("Idle", out int idleIndex))
+                return animation.GetClip(idleIndex).Name;
+            return animation.GetClip(0).Name;
         }
 
         private static Bounds Combine(

@@ -1,4 +1,5 @@
 using System;
+using Hero.Voxel.Actor.Runtime.Unity;
 using Hero.Voxel.Render.Runtime.Unity;
 using Hero.Voxel.Runtime.Assets;
 using UnityEngine;
@@ -15,6 +16,7 @@ namespace VoxelStore.Preview.Runtime
         [SerializeField] private bool externallyOwnedLifecycle;
 
         private VoxelRenderInstance instance;
+        private VoxelModelAnimationTrack animationTrack;
 
         public VoxelRenderWorld World => world;
         public Transform ModelRoot => modelRoot;
@@ -22,6 +24,8 @@ namespace VoxelStore.Preview.Runtime
         public VoxelAnimationAsset Animation => animationAsset;
         public VoxelRenderInstance Instance =>
             instance != null && instance.IsValid ? instance : null;
+        public VoxelModelAnimationTrack AnimationTrack =>
+            Instance != null ? animationTrack : null;
         public bool IsInitialized => Instance != null;
         public bool ExternallyOwnedLifecycle => externallyOwnedLifecycle;
 
@@ -74,10 +78,19 @@ namespace VoxelStore.Preview.Runtime
         {
             RequireConfigured();
             if (instance == null || !instance.IsValid)
+            {
                 instance = world.Spawn(assembly, animationAsset);
+                animationTrack = new VoxelModelAnimationTrack(instance);
+            }
 
             SyncWorldMatrix();
             return instance;
+        }
+
+        public VoxelModelAnimationTrack EnsureAnimationTrack()
+        {
+            EnsureInstance();
+            return animationTrack;
         }
 
         public void SyncWorldMatrix()
@@ -99,6 +112,7 @@ namespace VoxelStore.Preview.Runtime
             if (instance == null)
                 return;
 
+            animationTrack = null;
             instance.Dispose();
             instance = null;
         }

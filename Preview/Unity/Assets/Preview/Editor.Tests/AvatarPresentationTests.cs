@@ -56,37 +56,47 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
-        public void LeftAndRightAttackSelectDifferentWholeBodyClips()
+        public void BodyAndWeaponPlaybackAreIndependent()
         {
             using Fixture fixture = CreateFixture();
 
-            fixture.Player.SampleMotion(
-                AvatarMotion.Attack,
-                0.5f,
-                EquipmentSlotSide.Left);
-            Quaternion left =
+            fixture.BodyPlayer.SampleExact(
+                "Attack.Left",
+                0.5f);
+            fixture.PrimaryPlayer.SampleExact(
+                "Idle",
+                0.25f);
+            Quaternion bodyBeforeWeaponAttack =
                 fixture.Avatar.ResolveBodyPartWorld("Body").rotation;
+            float bodyPhase =
+                fixture.BodyPlayer.CurrentNormalizedPhase;
 
-            fixture.Player.SampleMotion(
-                AvatarMotion.Attack,
-                0.5f,
-                EquipmentSlotSide.Right);
-            Quaternion right =
+            fixture.PrimaryPlayer.SampleExact(
+                "Attack",
+                0.75f);
+            Quaternion bodyAfterWeaponAttack =
                 fixture.Avatar.ResolveBodyPartWorld("Body").rotation;
+            Quaternion weapon =
+                fixture.Primary.Model.Instance
+                    .GetPartWorldMatrix(0)
+                    .rotation;
 
             Assert.That(
-                Quaternion.Angle(Quaternion.identity, left),
-                Is.GreaterThan(10f));
+                Quaternion.Angle(
+                    bodyBeforeWeaponAttack,
+                    bodyAfterWeaponAttack),
+                Is.LessThan(0.0001f));
             Assert.That(
-                Quaternion.Angle(Quaternion.identity, right),
-                Is.GreaterThan(10f));
+                fixture.BodyPlayer.CurrentNormalizedPhase,
+                Is.EqualTo(bodyPhase).Within(0.0001f));
             Assert.That(
-                Quaternion.Angle(left, right),
+                Quaternion.Angle(Quaternion.identity, weapon),
                 Is.GreaterThan(20f));
+            AssertMountBound(fixture, fixture.Primary);
         }
 
         [Test]
-        public void DifferentAuthoredDurationsUseSameNormalizedPhase()
+        public void DifferentAuthoredDurationsUseIndependentNormalizedPhases()
         {
             using Fixture fixture = CreateFixture();
 
@@ -99,20 +109,19 @@ namespace VoxelStore.Preview.Editor.Tests
                     RequireClip(fixture.EquipmentAnimation, "Attack")).Duration,
                 Is.EqualTo(1.2f).Within(0.0001f));
 
-            fixture.Player.SampleMotion(
-                AvatarMotion.Attack,
-                0.5f,
-                EquipmentSlotSide.Right);
+            fixture.BodyPlayer.SampleExact(
+                "Attack.Right",
+                0.25f);
+            fixture.PrimaryPlayer.SampleExact(
+                "Attack",
+                0.75f);
 
-            Quaternion equipment =
-                fixture.Primary.Model.Instance
-                    .GetPartWorldMatrix(0)
-                    .rotation;
             Assert.That(
-                Quaternion.Angle(
-                    Quaternion.identity,
-                    equipment),
-                Is.EqualTo(47.5f).Within(0.1f));
+                fixture.BodyPlayer.CurrentNormalizedPhase,
+                Is.EqualTo(0.25f).Within(0.0001f));
+            Assert.That(
+                fixture.PrimaryPlayer.CurrentNormalizedPhase,
+                Is.EqualTo(0.75f).Within(0.0001f));
             AssertMountBound(fixture, fixture.Primary);
         }
 
@@ -121,10 +130,12 @@ namespace VoxelStore.Preview.Editor.Tests
         {
             using Fixture fixture = CreateFixture();
 
-            fixture.Player.SampleMotion(
-                AvatarMotion.Attack,
-                0.5f,
-                EquipmentSlotSide.Right);
+            fixture.BodyPlayer.SampleExact(
+                "Idle",
+                0.5f);
+            fixture.PrimaryPlayer.SampleExact(
+                "Attack",
+                0.5f);
 
             Quaternion weapon =
                 fixture.Primary.Model.Instance
@@ -149,11 +160,15 @@ namespace VoxelStore.Preview.Editor.Tests
 
             for (int i = 0; i < 3; i++)
             {
-                fixture.Player.SampleMotion(
-                    AvatarMotion.Attack,
-                    0.5f,
-                    EquipmentSlotSide.Right);
-                fixture.Player.ResetMotion();
+                fixture.BodyPlayer.SampleExact(
+                    "Attack.Right",
+                    0.5f);
+                fixture.PrimaryPlayer.SampleExact(
+                    "Attack",
+                    0.7f);
+                fixture.BodyPlayer.ResetMotion();
+                fixture.PrimaryPlayer.ResetMotion();
+                fixture.Avatar.RefreshBindings();
 
                 Assert.That(
                     Vector3.Distance(
@@ -180,16 +195,24 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
-        public void MissingSemanticClipFailsClosed()
+        public void MissingWeaponDeathFailsOnlyWeaponTrack()
         {
             using Fixture fixture =
                 CreateFixture(omitEquipmentDeath: true);
 
+            fixture.BodyPlayer.SampleExact(
+                "Death",
+                0.5f);
             Assert.Throws<InvalidOperationException>(() =>
-                fixture.Player.SampleMotion(
-                    AvatarMotion.Death,
-                    0.5f,
-                    EquipmentSlotSide.Right));
+                fixture.PrimaryPlayer.SampleExact(
+                    "Death",
+                    0.5f));
+            Assert.AreEqual(
+                "Death",
+                fixture.BodyPlayer.CurrentClipName);
+            Assert.That(
+                fixture.BodyPlayer.CurrentNormalizedPhase,
+                Is.EqualTo(0.5f).Within(0.0001f));
         }
 
         [Test]
@@ -221,30 +244,45 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
-        public void ExplicitLoopPolicyUsesProviderClock()
+        public void LoopPolicyIsModelLocal()
         {
             using Fixture fixture = CreateFixture();
 
-            fixture.Avatar.StartMotion(
-                AvatarMotion.Attack,
-                EquipmentSlotSide.Right,
-                shouldLoop: true);
-            float attackDuration = fixture.Avatar.CurrentDuration;
+            fixture.BodyPlayer.PlayExact(
+                "Attack.Right",
+                shouldLoop: true,
+                playbackSpeed: 1f);
+            fixture.PrimaryPlayer.SampleExact(
+                "Idle",
+                0.6f);
+            float equipmentPhase =
+                fixture.PrimaryPlayer.CurrentNormalizedPhase;
+            float attackDuration =
+                fixture.BodyPlayer.CurrentDuration;
             Assert.That(
-                fixture.Avatar.Advance(attackDuration),
+                fixture.BodyModel
+                    .EnsureAnimationTrack()
+                    .Advance(attackDuration),
                 Is.EqualTo(0f).Within(0.0001f));
-            Assert.IsTrue(fixture.Avatar.IsPlaying);
-
-            fixture.Avatar.ResetPose();
-            fixture.Avatar.StartMotion(
-                AvatarMotion.Idle,
-                EquipmentSlotSide.Right,
-                shouldLoop: false);
-            float idleDuration = fixture.Avatar.CurrentDuration;
+            Assert.IsTrue(
+                fixture.BodyModel.AnimationTrack.IsPlaying);
             Assert.That(
-                fixture.Avatar.Advance(idleDuration * 1.5f),
+                fixture.PrimaryPlayer.CurrentNormalizedPhase,
+                Is.EqualTo(equipmentPhase).Within(0.0001f));
+
+            fixture.BodyPlayer.PlayExact(
+                "Idle",
+                shouldLoop: false,
+                playbackSpeed: 1f);
+            float idleDuration =
+                fixture.BodyPlayer.CurrentDuration;
+            Assert.That(
+                fixture.BodyModel
+                    .EnsureAnimationTrack()
+                    .Advance(idleDuration * 1.5f),
                 Is.EqualTo(1f).Within(0.0001f));
-            Assert.IsFalse(fixture.Avatar.IsPlaying);
+            Assert.IsFalse(
+                fixture.BodyModel.AnimationTrack.IsPlaying);
         }
 
         [Test]
@@ -256,42 +294,44 @@ namespace VoxelStore.Preview.Editor.Tests
             Assert.AreEqual(0, fixture.Avatar.Equipment.Count);
             Assert.AreEqual(1, fixture.World.InstanceCount);
 
-            fixture.Player.SampleMotion(
-                AvatarMotion.Idle,
-                0.5f,
-                EquipmentSlotSide.Right);
+            fixture.BodyPlayer.SampleExact(
+                "Idle",
+                0.5f);
 
             Assert.IsTrue(fixture.Avatar.IsProviderInitialized);
             Assert.AreEqual(1, fixture.World.InstanceCount);
         }
 
         [Test]
-        public void DriverSideChangeRebuildsPlanAtCurrentProviderPhase()
+        public void WeaponClipChangeDoesNotChangeBodyPhaseOrPose()
         {
             using Fixture fixture = CreateFixture();
 
-            fixture.Player.Play(
-                AvatarMotion.Attack,
-                true,
-                1f);
-            float duration = fixture.Avatar.CurrentDuration;
-            fixture.Avatar.Advance(duration * 0.5f);
-            Assert.That(
-                fixture.Avatar.CurrentNormalizedPhase,
-                Is.EqualTo(0.5f).Within(0.0001f));
-            Quaternion right =
+            fixture.BodyPlayer.SampleExact(
+                "Attack.Right",
+                0.5f);
+            Quaternion bodyBefore =
                 fixture.Avatar.ResolveBodyPartWorld("Body").rotation;
+            float bodyPhase =
+                fixture.BodyPlayer.CurrentNormalizedPhase;
 
-            fixture.Player.SetDriverSide(EquipmentSlotSide.Left);
+            fixture.PrimaryPlayer.SampleExact(
+                "Attack",
+                0.2f);
+            fixture.PrimaryPlayer.SampleExact(
+                "Hit",
+                0.8f);
 
             Assert.That(
-                fixture.Avatar.CurrentNormalizedPhase,
-                Is.EqualTo(0.5f).Within(0.0001f));
-            Quaternion left =
-                fixture.Avatar.ResolveBodyPartWorld("Body").rotation;
+                fixture.BodyPlayer.CurrentNormalizedPhase,
+                Is.EqualTo(bodyPhase).Within(0.0001f));
             Assert.That(
-                Quaternion.Angle(right, left),
-                Is.GreaterThan(20f));
+                Quaternion.Angle(
+                    bodyBefore,
+                    fixture.Avatar
+                        .ResolveBodyPartWorld("Body")
+                        .rotation),
+                Is.LessThan(0.0001f));
             AssertMountBound(fixture, fixture.Primary);
         }
 
@@ -430,13 +470,41 @@ namespace VoxelStore.Preview.Editor.Tests
                 fixture.BodyModel,
                 equipment);
 
-            fixture.Player =
-                fixture.Unit.AddComponent<AvatarMotionPlayer>();
-            fixture.Player.Configure(
+            fixture.BodyPlayer =
+                fixture.BodyModel.gameObject
+                    .AddComponent<VoxelModelMotionPlayer>();
+            fixture.BodyPlayer.Configure(
+                fixture.BodyModel,
                 fixture.Avatar,
-                AvatarMotion.Idle,
+                "Idle",
                 false,
                 1f);
+
+            if (fixture.Primary != null)
+            {
+                fixture.PrimaryPlayer =
+                    fixture.Primary.Model.gameObject
+                        .AddComponent<VoxelModelMotionPlayer>();
+                fixture.PrimaryPlayer.Configure(
+                    fixture.Primary.Model,
+                    fixture.Avatar,
+                    "Idle",
+                    false,
+                    1f);
+            }
+
+            if (fixture.Secondary != null)
+            {
+                fixture.SecondaryPlayer =
+                    fixture.Secondary.Model.gameObject
+                        .AddComponent<VoxelModelMotionPlayer>();
+                fixture.SecondaryPlayer.Configure(
+                    fixture.Secondary.Model,
+                    fixture.Avatar,
+                    "Idle",
+                    false,
+                    1f);
+            }
 
             return fixture;
         }
@@ -675,7 +743,9 @@ namespace VoxelStore.Preview.Editor.Tests
             public VoxelAnimationAsset EquipmentAnimation;
             public VoxelRenderPresentation BodyModel;
             public AvatarPresentation Avatar;
-            public AvatarMotionPlayer Player;
+            public VoxelModelMotionPlayer BodyPlayer;
+            public VoxelModelMotionPlayer PrimaryPlayer;
+            public VoxelModelMotionPlayer SecondaryPlayer;
             public EquipmentPresentation Primary;
             public EquipmentPresentation Secondary;
 

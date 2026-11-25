@@ -97,53 +97,23 @@ A reusable avatar SHALL support multiple equipment instances, including repeated
 - **WHEN** a body exposes `Equip.Hand.Left.0` and `Equip.Hand.Right.0`
 - **THEN** compatibility preserves their distinct side semantics and never treats them as interchangeable anonymous `Hand.0`/`Hand.1` instances
 
-### Requirement: Driver slot side selects authored motion variant
-A semantic equipped action SHALL carry one driver binding whose physical slot side selects the preferred side-specific body/equipment clip variant before falling back to the base semantic clip.
-
-#### Scenario: Left-hand attack drives body response
-- **WHEN** semantic `Attack` is driven by equipment bound to `Equip.Hand.Left.0`
-- **THEN** body playback resolves `Attack.Left` before `Attack`, and the driver equipment resolves `Attack.Left` before `Attack`
-
-#### Scenario: Right-hand attack drives body response
-- **WHEN** semantic `Attack` is driven by equipment bound to `Equip.Hand.Right.0`
-- **THEN** body playback resolves `Attack.Right` before `Attack`, producing a body response distinct from the left-hand variant when both are authored
-
-#### Scenario: Side-specific equipment clip is absent
-- **WHEN** a side-reusable equipment asset does not author a side-specific variant for the selected driver side
-- **THEN** equipment playback uses its base semantic clip while the body may still use its side-specific body variant
-
-### Requirement: Authored body and equipment animation share one semantic phase
-Equipped presentation SHALL sample the selected body semantic clip and every attached equipment clip at the same normalized phase.
-
-#### Scenario: Attack is sampled
-- **WHEN** equipped presentation evaluates `Attack` at normalized phase `p`
-- **THEN** the body `Attack` clip and each equipment `Attack` clip are sampled at exactly `p`
-
-#### Scenario: Authored clip durations differ
-- **WHEN** body and equipment semantic clips have different authored duration metadata
-- **THEN** equipped playback uses the body clip as wall-clock phase authority and samples equipment by normalized body phase without independent clock drift
-
-#### Scenario: Multiple equipment items are animated
-- **WHEN** multiple equipment instances are attached during one semantic motion
-- **THEN** every item samples its resolved semantic clip at the same body-owned normalized phase while the declared driver binding alone determines the body side variant
-
 ### Requirement: Animated attachment uses current body socket and equipment bind Mount
-Equipment attachment SHALL solve the equipment root from the current animated body socket and the equipment's bind Mount frame, then sample equipment animation relative to that root.
+Equipment attachment SHALL solve the equipment root from the current animated body socket and the equipment's bind Mount frame. Body and equipment animation SHALL be sampled independently around that physical attachment relationship.
 
 #### Scenario: Body socket moves during animation
-- **WHEN** the single `Body` part changes pose and therefore moves a left/right equipment socket
-- **THEN** the equipment attachment root follows that current socket frame at the same semantic phase
+- **WHEN** the Body animation changes pose and therefore moves an equipment socket
+- **THEN** the equipment attachment root follows the current evaluated socket frame regardless of the equipment animation's independent phase or playing state
 
 #### Scenario: Single-part weapon rotates during animation
-- **WHEN** a current one-part equipment clip rotates its Mount-bearing part around a pivot colocated with Mount
-- **THEN** the weapon visibly rotates around the grip while the attachment root remains bound to the body socket
+- **WHEN** an equipment clip independently rotates its Mount-bearing part around a pivot colocated with Mount
+- **THEN** the weapon visibly rotates around the grip while its attachment root remains bound to the current body socket
 
 #### Scenario: Runtime tries to solve against evaluated animated Mount
 - **WHEN** composition would use the evaluated animated Mount matrix as the inverse root-solving input for a one-part weapon
 - **THEN** compatibility rejects that method because it cancels the weapon's authored part transform
 
 #### Scenario: Single-part weapon translates its Mount-bearing part
-- **WHEN** equipped semantic animation contains a position track on the current one-part Mount-bearing part
+- **WHEN** an equipment animation contains a position track on the current one-part Mount-bearing part
 - **THEN** compatibility fails because the grip would translate away from the body socket
 
 ### Requirement: Socket and animation compatibility remain density-independent
@@ -154,30 +124,30 @@ Different positive avatar/equipment authoring densities SHALL remain compatible 
 - **THEN** compatibility evaluates baked world-space socket/animation frames and does not reject the pair solely for density difference
 
 ### Requirement: Socket and animation contracts remain gameplay-neutral
-Attachment capabilities and semantic visual motions SHALL describe reusable physical/presentation behavior only and SHALL NOT encode damage, attack result, inventory occupancy, AI, balance, progression, or consuming-game combat class.
+Attachment capabilities and model-local visual motions SHALL describe reusable physical/presentation behavior only and SHALL NOT encode damage, attack result, inventory occupancy, AI, balance, progression, consuming-game combat class, or cross-model reaction rules.
 
 #### Scenario: Game gives a weapon gameplay meaning
 - **WHEN** a consumer interprets an equipment asset as a primary weapon, secondary weapon, tool, or cosmetic
-- **THEN** that meaning does not alter its store attachment capability, Mount frame, or semantic animation contract
+- **THEN** that meaning does not alter its store attachment capability, Mount frame, or model-local animation contract
 
 #### Scenario: Consumer chooses active left or right equipment
-- **WHEN** a game chooses which equipped instance drives an action
-- **THEN** that runtime choice supplies the driver binding/side context without changing the reusable asset's catalog identity
+- **WHEN** a game chooses one left/right equipment instance as active and wants a body reaction to accompany that weapon action
+- **THEN** the game explicitly commands the body animation rather than relying on attachment side, weapon state, or shared actor inference
 
 ### Requirement: Consumer animation requests may select a model-local variant
-A semantic animation request MAY include an optional model-local variant key for the root model and independently for each attached model. Variant selection SHALL remain explicit caller context and SHALL NOT be chosen randomly or inferred from gameplay state by voxel-store compatibility.
+An animation request SHALL target one model instance and MAY include that model's optional side/variant candidates. Variant or side selection for one model SHALL NOT imply any animation request for the body or another attachment.
 
 #### Scenario: Consumer selects a body Death take
-- **WHEN** a consumer requests semantic `Death` with root variant `V2`
-- **THEN** compatibility resolves the root model using V2-aware candidates while preserving semantic `Death`
+- **WHEN** a consumer requests semantic `Death` with body variant `V2`
+- **THEN** only the body resolves its V2-aware Death candidates
 
 #### Scenario: Body and equipment select different takes
-- **WHEN** a consumer requests `Attack` with body variant `V2` and one attached equipment variant `V1`
-- **THEN** compatibility allows each model instance to resolve its own requested take while all resolved clips remain on the same semantic phase
+- **WHEN** the consumer requests body `Idle.V2` and weapon `Attack.V1`
+- **THEN** each model independently resolves its own candidate chain and playback state
 
 #### Scenario: Consumer supplies no variant
-- **WHEN** a semantic animation request omits the variant for a model instance
-- **THEN** compatibility follows the existing side/base resolution behavior for that instance without selecting an optional take on its behalf
+- **WHEN** a model-local request omits a variant
+- **THEN** resolution follows the side/base candidate behavior for that model without selecting an optional take on its behalf
 
 ### Requirement: Variant-aware clip resolution uses deterministic ordered fallback
 For a model instance with semantic motion `M`, physical side `S`, and requested variant `V`, compatibility SHALL resolve candidates in the order `M.S.V`, `M.V`, `M.S`, `M`, omitting qualifiers that are absent from the request.
@@ -199,15 +169,15 @@ For a model instance with semantic motion `M`, physical side `S`, and requested 
 - **THEN** compatibility selects `Attack`
 
 ### Requirement: Variant fallback remains model-local across composed actors
-A composed actor SHALL resolve the candidate chain independently against each model instance's own animation catalog. A variant identifier shared by two models SHALL NOT require either model to author equivalent choreography or the same qualified clips.
+A composed actor SHALL resolve each model instance's candidate chain independently against that model's own animation catalog. Shared variant identifiers SHALL NOT imply shared choreography, timing, phase, semantic request, or playback state across models.
 
 #### Scenario: Attachment lacks the root take
-- **WHEN** the body resolves `Attack.Left.V2` but attached equipment has no V2 clip and does have `Attack.Left`
-- **THEN** the equipment resolves `Attack.Left` while the body keeps `Attack.Left.V2`
+- **WHEN** the body independently resolves `Attack.Left.V2` while an attachment is commanded with `Idle`
+- **THEN** the attachment remains on its own Idle candidate chain and does not inherit the body's Attack take
 
 #### Scenario: Different attachments expose different variant coverage
-- **WHEN** two attached models receive the same requested variant but only one publishes that take
-- **THEN** each attachment resolves its own ordered fallback independently and both remain sampled at the shared body-owned normalized phase
+- **WHEN** two attachments are independently requested to play the same semantic motion and variant but only one publishes that take
+- **THEN** each attachment resolves its own ordered fallback independently and advances on its own playback clock
 
 ### Requirement: Variant selection remains presentation-only
 Animation variant choice SHALL describe only which authored visual take is sampled and SHALL NOT encode damage, attack result, AI state, inventory rules, balance, progression, or other consuming-game semantics.
@@ -219,3 +189,52 @@ Animation variant choice SHALL describe only which authored visual take is sampl
 #### Scenario: Game randomizes presentation externally
 - **WHEN** a consumer chooses among available Idle variants using its own deterministic or nondeterministic policy
 - **THEN** voxel-store compatibility resolves the explicitly supplied variant and does not perform the random selection itself
+
+### Requirement: Each composed model instance owns independent animation playback
+The body and every attached model SHALL own independent animation selection and playback state. No model SHALL inherit another model's clip, semantic motion, phase, duration, loop state, speed, or playing/stopped state.
+
+#### Scenario: Weapon attacks while body idles
+- **WHEN** the consumer plays `Idle` on the body and `Attack` on one attached weapon
+- **THEN** the body continues its own Idle playback while that weapon advances its own Attack playback
+
+#### Scenario: Two weapons use different playback state
+- **WHEN** two attached weapons are commanded with different clips, phases, speeds, or loop settings
+- **THEN** each weapon advances and samples only its own playback state
+
+#### Scenario: Weapon command does not create body reaction
+- **WHEN** the consumer starts, stops, samples, or changes a weapon animation
+- **THEN** body playback remains unchanged unless the consumer separately commands the body
+
+### Requirement: Consumer coordination uses ordinary per-model animation commands
+Coordination across body and attachments SHALL remain consumer-owned and SHALL use the same ordinary per-model animation operations as uncoordinated playback. The shared actor contract SHALL NOT introduce semantic coordination commands for Death, Attack, or other gameplay/presentation events.
+
+#### Scenario: Consumer presents unit death
+- **WHEN** a consumer wants the body and weapon to present Death together
+- **THEN** it separately commands `Death` on the body and `Death` on the weapon using ordinary model animation operations
+
+#### Scenario: Weapon lacks a Death clip
+- **WHEN** a consumer handles unit death and one attachment has no desired Death take
+- **THEN** the consumer decides whether to stop, freeze, reset, detach, or otherwise command that attachment without a shared actor fallback
+
+#### Scenario: No hard-coded death API exists
+- **WHEN** the shared actor animation surface is inspected
+- **THEN** it exposes no required `Die`, `PlayDeath`, synchronization-group, weapon-drives-body, or equivalent event-specific coordination operation
+
+### Requirement: Attachment topology changes preserve unrelated playback
+Adding, removing, rebinding, or replacing one attachment SHALL NOT reset or restart body animation or playback owned by unaffected attachments.
+
+#### Scenario: Weapon is attached during body playback
+- **WHEN** a new weapon is attached while the body animation is already playing
+- **THEN** body clip, phase, elapsed time, loop state, speed, and playing state continue unchanged
+
+#### Scenario: One weapon is removed
+- **WHEN** one attachment is removed while the body and another weapon are playing
+- **THEN** only the removed attachment's playback is discarded and all unaffected model tracks continue
+
+#### Scenario: Attachment is rebound
+- **WHEN** an existing attachment is rebound to another compatible body socket
+- **THEN** its physical placement target changes without implicitly restarting body or unrelated attachment playback
+
+#### Scenario: Attachment model is replaced
+- **WHEN** a binding is replaced with a different model whose animation catalog may differ
+- **THEN** the replacement receives model-local playback state chosen for that model while body and unrelated attachment playback remain unchanged

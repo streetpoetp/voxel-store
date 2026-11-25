@@ -25,7 +25,6 @@ namespace VoxelStore.Preview.Runtime
             Array.Empty<EquipmentPresentation>();
 
         private VoxelActorInstance actor;
-        private VoxelActorAnimationPlan currentPlan;
 
         public Transform UnitRoot => unitRoot;
         public Transform PresentationRoot => presentationRoot;
@@ -44,12 +43,6 @@ namespace VoxelStore.Preview.Runtime
             actor != null &&
             body != null &&
             body.IsInitialized;
-        public bool IsPlaying =>
-            actor != null && actor.IsPlaying;
-        public float CurrentNormalizedPhase =>
-            actor != null ? actor.CurrentNormalizedPhase : 0f;
-        public float CurrentDuration =>
-            currentPlan != null ? currentPlan.Duration : 0f;
         public VoxelRenderWorld World =>
             body != null ? body.World : null;
 
@@ -124,109 +117,8 @@ namespace VoxelStore.Preview.Runtime
                 item.SetBinding(binding);
             }
 
-            currentPlan = null;
             body.SyncWorldMatrix();
             actor.Reset();
-        }
-
-        public void StartMotion(
-            AvatarMotion motion,
-            EquipmentSlotSide driverSide,
-            bool shouldLoop)
-        {
-            StartMotion(
-                motion,
-                driverSide,
-                shouldLoop,
-                string.Empty);
-        }
-
-        public void StartMotion(
-            AvatarMotion motion,
-            EquipmentSlotSide driverSide,
-            bool shouldLoop,
-            string rootVariant)
-        {
-            InitializeProvider();
-            body.SyncWorldMatrix();
-            currentPlan = BuildPlan(
-                motion,
-                driverSide,
-                rootVariant);
-            actor.Start(currentPlan, shouldLoop);
-        }
-
-        public void StartMotionAtPhase(
-            AvatarMotion motion,
-            EquipmentSlotSide driverSide,
-            bool shouldLoop,
-            float normalizedPhase)
-        {
-            StartMotionAtPhase(
-                motion,
-                driverSide,
-                shouldLoop,
-                normalizedPhase,
-                string.Empty);
-        }
-
-        public void StartMotionAtPhase(
-            AvatarMotion motion,
-            EquipmentSlotSide driverSide,
-            bool shouldLoop,
-            float normalizedPhase,
-            string rootVariant)
-        {
-            ValidateNormalizedTime(normalizedPhase);
-            StartMotion(
-                motion,
-                driverSide,
-                shouldLoop,
-                rootVariant);
-            if (normalizedPhase > 0f)
-                actor.Advance(currentPlan.Duration * normalizedPhase);
-        }
-
-        public float Advance(float deltaSeconds)
-        {
-            InitializeProvider();
-            if (currentPlan == null)
-            {
-                throw new InvalidOperationException(
-                    "Avatar presentation has no started animation plan.");
-            }
-
-            body.SyncWorldMatrix();
-            return actor.Advance(deltaSeconds);
-        }
-
-        public void SampleMotion(
-            AvatarMotion motion,
-            EquipmentSlotSide driverSide,
-            float normalizedTime)
-        {
-            SampleMotion(
-                motion,
-                driverSide,
-                normalizedTime,
-                string.Empty);
-        }
-
-        public void SampleMotion(
-            AvatarMotion motion,
-            EquipmentSlotSide driverSide,
-            float normalizedTime,
-            string rootVariant)
-        {
-            ValidateNormalizedTime(normalizedTime);
-            InitializeProvider();
-            actor.Reset();
-            body.SyncWorldMatrix();
-            currentPlan = BuildPlan(
-                motion,
-                driverSide,
-                rootVariant);
-            actor.SampleNormalized(currentPlan, normalizedTime);
         }
 
         public void ResetPose()
@@ -235,9 +127,32 @@ namespace VoxelStore.Preview.Runtime
                 return;
 
             InitializeProvider();
+            body.EnsureAnimationTrack().Reset();
+            foreach (EquipmentPresentation item in equipment)
+                item.Model.EnsureAnimationTrack().Reset();
             body.SyncWorldMatrix();
             actor.Reset();
-            currentPlan = null;
+        }
+
+        public void RefreshBindings()
+        {
+            InitializeProvider();
+            body.SyncWorldMatrix();
+            actor.RefreshBindings();
+        }
+
+        public bool IsBodyModel(VoxelRenderPresentation model)
+        {
+            return model != null && ReferenceEquals(body, model);
+        }
+
+        public EquipmentPresentation FindEquipment(
+            VoxelRenderPresentation model)
+        {
+            if (model == null)
+                return null;
+            return equipment.FirstOrDefault(
+                item => item != null && ReferenceEquals(item.Model, model));
         }
 
         public Matrix4x4 ResolveBodySocketWorld(string socketName)
@@ -276,8 +191,6 @@ namespace VoxelStore.Preview.Runtime
 
         public void ReleaseProvider()
         {
-            currentPlan = null;
-
             if (actor != null)
             {
                 actor.Dispose();
@@ -298,48 +211,13 @@ namespace VoxelStore.Preview.Runtime
             body?.ReleaseInstance();
         }
 
-        private VoxelActorAnimationPlan BuildPlan(
-            AvatarMotion motion,
-            EquipmentSlotSide driverSide,
-            string rootVariant)
-        {
-            var requests =
-                new VoxelActorAttachmentClipRequest[equipment.Length];
-            for (int i = 0; i < equipment.Length; i++)
-            {
-                EquipmentPresentation item = equipment[i];
-                requests[i] = new VoxelActorAttachmentClipRequest(
-                    item.BindingId,
-                    AvatarMotionClipCandidates.Build(
-                        motion,
-                        item.Side,
-                        item.Variant));
-            }
-
-            return actor.CreatePlan(
-                AvatarMotionClipCandidates.Build(
-                    motion,
-                    driverSide,
-                    rootVariant),
-                requests);
-        }
-
         private void SyncWorldTransform()
         {
             if (actor == null)
                 return;
 
             body.SyncWorldMatrix();
-            if (currentPlan != null)
-            {
-                actor.SampleNormalized(
-                    currentPlan,
-                    actor.CurrentNormalizedPhase);
-            }
-            else
-            {
-                actor.Reset();
-            }
+            actor.RefreshBindings();
         }
 
         private void Awake()
@@ -393,17 +271,5 @@ namespace VoxelStore.Preview.Runtime
             }
         }
 
-        private static void ValidateNormalizedTime(float normalizedTime)
-        {
-            if (float.IsNaN(normalizedTime) ||
-                float.IsInfinity(normalizedTime) ||
-                normalizedTime < 0f ||
-                normalizedTime > 1f)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(normalizedTime),
-                    "Normalized sample time must be in [0,1].");
-            }
-        }
     }
 }

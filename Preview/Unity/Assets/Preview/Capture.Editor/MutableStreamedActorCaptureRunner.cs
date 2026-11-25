@@ -124,19 +124,26 @@ namespace VoxelStore.Preview.Capture.Editor
 
                 await demo.InitializeRootAsync();
 
-                await demo.AttachInitialAsync(0.50f);
+                await demo.AttachInitialAsync(
+                    rootPhase: 0.20f,
+                    primaryPhase: 0.75f,
+                    secondaryPhase: 0.40f);
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-attached",
                     validateGrip: true);
 
-                demo.DetachSecondary(0.50f);
+                demo.DetachSecondaryPreservingPlayback();
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-detached",
                     validateGrip: true);
 
-                await demo.ReplacePrimaryAsync(0.50f);
+                await demo.ReplacePrimaryAsync();
+                demo.SampleCurrentTopology(
+                    rootPhase: 0.20f,
+                    primaryPhase: 0.65f,
+                    secondaryPhase: 0f);
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-replaced",
@@ -148,7 +155,9 @@ namespace VoxelStore.Preview.Capture.Editor
                     "mutable-reacquired-root-only",
                     validateGrip: false);
 
-                await demo.ReattachAfterReacquireAsync(0.50f);
+                await demo.ReattachAfterReacquireAsync(
+                    rootPhase: 0.35f,
+                    primaryPhase: 0.80f);
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-reattached",

@@ -49,7 +49,7 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
-        public void MotionVariantStateIsOptionalCanonicalAndModelLocal()
+        public void MotionVariantCandidatesRemainOptionalAndModelLocal()
         {
             Assert.AreEqual(
                 string.Empty,
@@ -59,31 +59,22 @@ namespace VoxelStore.Preview.Editor.Tests
             Assert.Throws<ArgumentException>(
                 () => AvatarMotionClipCandidates.NormalizeVariant("Heavy"));
 
-            var firstObject = new GameObject("equipment-v1");
-            var secondObject = new GameObject("equipment-v2");
-            try
-            {
-                EquipmentPresentation first =
-                    firstObject.AddComponent<EquipmentPresentation>();
-                EquipmentPresentation second =
-                    secondObject.AddComponent<EquipmentPresentation>();
-                Assert.IsTrue(first.SetVariant("V1"));
-                Assert.IsTrue(second.SetVariant("V2"));
-                Assert.AreEqual("V1", first.Variant);
-                Assert.AreEqual("V2", second.Variant);
-                Assert.IsTrue(first.SetVariant(string.Empty));
-                Assert.AreEqual(string.Empty, first.Variant);
-                Assert.AreEqual("V2", second.Variant);
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(firstObject);
-                UnityEngine.Object.DestroyImmediate(secondObject);
-            }
+            CollectionAssert.AreEqual(
+                new[] { "Attack.Left.V1", "Attack.V1", "Attack.Left", "Attack" },
+                AvatarMotionClipCandidates.Build(
+                    AvatarMotion.Attack,
+                    EquipmentSlotSide.Left,
+                    "V1"));
+            CollectionAssert.AreEqual(
+                new[] { "Idle.V2", "Idle" },
+                AvatarMotionClipCandidates.Build(
+                    AvatarMotion.Idle,
+                    null,
+                    "V2"));
         }
 
         [Test]
-        public void MotionInspectorListsAndParsesAuthoredAttackVariants()
+        public void ModelMotionInspectorUsesExactAuthoredClipInventory()
         {
             string[] clips =
             {
@@ -96,49 +87,20 @@ namespace VoxelStore.Preview.Editor.Tests
             };
 
             Assert.AreEqual(
-                "Attack.Left.V1",
-                AvatarMotionInspectorClips.ResolveCurrent(
+                4,
+                VoxelModelMotionInspectorClips.IndexOf(
                     clips,
-                    AvatarMotion.Attack,
-                    EquipmentSlotSide.Left,
-                    "V1"));
+                    "Attack.Left.V1"));
             Assert.AreEqual(
-                "Attack.Right",
-                AvatarMotionInspectorClips.ResolveCurrent(
+                3,
+                VoxelModelMotionInspectorClips.IndexOf(
                     clips,
-                    AvatarMotion.Attack,
-                    EquipmentSlotSide.Right,
-                    "V1"));
-
-            Assert.IsTrue(
-                AvatarMotionInspectorClips.TryParse(
-                    "Attack.Left.V1",
-                    out AvatarMotionInspectorSelection
-                        selection));
+                    "Attack.Right"));
             Assert.AreEqual(
-                AvatarMotion.Attack,
-                selection.Motion);
-            Assert.AreEqual(
-                EquipmentSlotSide.Left,
-                selection.Side);
-            Assert.AreEqual(
-                "V1",
-                selection.Variant);
-
-            Assert.IsTrue(
-                AvatarMotionInspectorClips.TryParse(
-                    "Idle.V1",
-                    out selection));
-            Assert.AreEqual(
-                AvatarMotion.Idle,
-                selection.Motion);
-            Assert.IsNull(selection.Side);
-            Assert.AreEqual("V1", selection.Variant);
-
-            Assert.IsFalse(
-                AvatarMotionInspectorClips.TryParse(
-                    "Attack.Left.Heavy",
-                    out _));
+                -1,
+                VoxelModelMotionInspectorClips.IndexOf(
+                    clips,
+                    "Attack.Left.V2"));
         }
 
         [Test]

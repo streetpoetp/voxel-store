@@ -27,22 +27,25 @@ namespace VoxelStore.Preview.Capture.Editor
 
         private static readonly CapturePoint[] Points =
         {
-            new CapturePoint(AvatarMotion.WalkForward, "walk-launch", 0.20f, EquipmentSlotSide.Right),
-            new CapturePoint(AvatarMotion.WalkForward, "walk-apex", 0.45f, EquipmentSlotSide.Right),
-            new CapturePoint(AvatarMotion.WalkForward, "walk-land", 0.70f, EquipmentSlotSide.Right),
-            new CapturePoint(AvatarMotion.Attack, "attack-left-anticipation", 0.22f, EquipmentSlotSide.Left),
-            new CapturePoint(AvatarMotion.Attack, "attack-left-contact", 0.50f, EquipmentSlotSide.Left),
-            new CapturePoint(AvatarMotion.Attack, "attack-right-contact", 0.50f, EquipmentSlotSide.Right),
-            new CapturePoint(AvatarMotion.Attack, "attack-right-follow-through", 0.70f, EquipmentSlotSide.Right),
-            new CapturePoint(AvatarMotion.Hit, "hit-recoil", 0.28f, EquipmentSlotSide.Right),
-            new CapturePoint(AvatarMotion.Hit, "hit-recover", 0.78f, EquipmentSlotSide.Right),
-            new CapturePoint(AvatarMotion.Death, "death-fall", 0.55f, EquipmentSlotSide.Right),
-            new CapturePoint(AvatarMotion.Death, "death-fallen", 0.88f, EquipmentSlotSide.Right),
-            new CapturePoint(AvatarMotion.Idle, "idle-v1-breathe", 0.50f, EquipmentSlotSide.Right, "V1", "V1"),
-            new CapturePoint(AvatarMotion.WalkForward, "walk-v1-apex", 0.45f, EquipmentSlotSide.Right, "V1", "V1"),
-            new CapturePoint(AvatarMotion.Attack, "attack-left-v1-contact", 0.50f, EquipmentSlotSide.Left, "V1", "V1"),
-            new CapturePoint(AvatarMotion.Hit, "hit-v1-recoil", 0.45f, EquipmentSlotSide.Right, "V1", "V1"),
-            new CapturePoint(AvatarMotion.Death, "death-v1-fallen", 0.88f, EquipmentSlotSide.Right, "V1", "V1")
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.WalkForward, "walk-launch", 0.20f, 0.20f),
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.WalkForward, "walk-apex", 0.45f, 0.45f),
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.WalkForward, "walk-land", 0.70f, 0.70f),
+            new CapturePoint(AvatarMotion.Attack, AvatarMotion.Attack, "attack-left-anticipation", 0.22f, 0.22f, EquipmentSlotSide.Left),
+            new CapturePoint(AvatarMotion.Attack, AvatarMotion.Attack, "attack-left-contact", 0.50f, 0.50f, EquipmentSlotSide.Left),
+            new CapturePoint(AvatarMotion.Attack, AvatarMotion.Attack, "attack-right-contact", 0.50f, 0.50f, EquipmentSlotSide.Right),
+            new CapturePoint(AvatarMotion.Attack, AvatarMotion.Attack, "attack-right-follow-through", 0.70f, 0.70f, EquipmentSlotSide.Right),
+            new CapturePoint(AvatarMotion.Hit, AvatarMotion.Hit, "hit-recoil", 0.28f, 0.28f),
+            new CapturePoint(AvatarMotion.Hit, AvatarMotion.Hit, "hit-recover", 0.78f, 0.78f),
+            new CapturePoint(AvatarMotion.Death, AvatarMotion.Death, "death-fall", 0.55f, 0.55f),
+            new CapturePoint(AvatarMotion.Death, AvatarMotion.Death, "death-fallen", 0.88f, 0.88f),
+            new CapturePoint(AvatarMotion.Idle, AvatarMotion.Idle, "idle-v1-breathe", 0.50f, 0.50f, null, "V1", "V1"),
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.WalkForward, "walk-v1-apex", 0.45f, 0.45f, null, "V1", "V1"),
+            new CapturePoint(AvatarMotion.Attack, AvatarMotion.Attack, "attack-left-v1-contact", 0.50f, 0.50f, EquipmentSlotSide.Left, "V1", "V1"),
+            new CapturePoint(AvatarMotion.Hit, AvatarMotion.Hit, "hit-v1-recoil", 0.45f, 0.45f, null, "V1", "V1"),
+            new CapturePoint(AvatarMotion.Death, AvatarMotion.Death, "death-v1-fallen", 0.88f, 0.88f, null, "V1", "V1"),
+            new CapturePoint(AvatarMotion.Idle, AvatarMotion.Attack, "independent-body-idle-weapon-attack", 0.50f, 0.75f),
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.Attack, "independent-phases", 0.25f, 0.80f),
+            new CapturePoint(AvatarMotion.Death, AvatarMotion.Death, "independent-death-commands", 0.55f, 0.30f)
         };
 
         static AvatarMotionCaptureRunner()
@@ -105,14 +108,14 @@ namespace VoxelStore.Preview.Capture.Editor
             {
                 if (!SessionState.GetBool(StartedKey, false))
                 {
-                    AvatarMotionPlayer[] players = FindPlayers();
-                    if (players.Length == 0)
+                    AvatarPresentation[] avatars = FindAvatars();
+                    if (avatars.Length == 0)
                         return;
 
                     SessionState.SetBool(StartedKey, true);
-                    ConfigureCaptureView(players);
+                    ConfigureCaptureView(avatars);
                     ValidateCaptureRenderers();
-                    _ = CaptureAllAsync(players);
+                    _ = CaptureAllAsync(avatars);
                 }
 
                 return;
@@ -139,22 +142,18 @@ namespace VoxelStore.Preview.Capture.Editor
         }
 
         private static async Task CaptureAllAsync(
-            AvatarMotionPlayer[] players)
+            AvatarPresentation[] avatars)
         {
             Exception failure = null;
             try
             {
                 foreach (CapturePoint point in Points)
                 {
-                    foreach (AvatarMotionPlayer player in players)
+                    foreach (AvatarPresentation avatar in avatars)
                     {
-                        ApplyVariants(player, point);
-                        player.SampleMotion(
-                            point.Motion,
-                            point.NormalizedTime,
-                            point.Side);
-                        ValidateAttachmentGrip(player, point);
-                        player.SubmitNow();
+                        ApplyPoint(avatar, point);
+                        ValidateAttachmentGrip(avatar, point);
+                        avatar.SubmitNow();
                     }
 
                     await GameViewCapture.CaptureAsync(
@@ -170,11 +169,8 @@ namespace VoxelStore.Preview.Capture.Editor
             }
             finally
             {
-                foreach (AvatarMotionPlayer player in players)
-                {
-                    if (player != null)
-                        player.ResetMotion();
-                }
+                foreach (AvatarPresentation avatar in avatars)
+                    avatar?.ResetPose();
 
                 SessionState.SetString(
                     ResultKey,
@@ -188,7 +184,7 @@ namespace VoxelStore.Preview.Capture.Editor
         }
 
         private static void ConfigureCaptureView(
-            AvatarMotionPlayer[] players)
+            AvatarPresentation[] avatars)
         {
             Camera camera = Camera.main;
             if (camera == null)
@@ -197,10 +193,10 @@ namespace VoxelStore.Preview.Capture.Editor
                     "Avatar motion capture requires the runtime gallery Main Camera.");
             }
 
-            if (players == null || players.Length == 0)
+            if (avatars == null || avatars.Length == 0)
             {
                 throw new InvalidOperationException(
-                    "Avatar motion capture requires at least one avatar player.");
+                    "Avatar motion capture requires at least one avatar.");
             }
 
             bool hasBounds = false;
@@ -209,19 +205,11 @@ namespace VoxelStore.Preview.Capture.Editor
             {
                 foreach (CapturePoint point in Points)
                 {
-                    foreach (AvatarMotionPlayer player in players)
+                    foreach (AvatarPresentation avatar in avatars)
                     {
-                        ApplyVariants(player, point);
-                        player.SampleMotion(
-                            point.Motion,
-                            point.NormalizedTime,
-                            point.Side);
-                        ValidateAttachmentGrip(player, point);
-                    }
-
-                    foreach (AvatarMotionPlayer player in players)
-                    {
-                        Bounds sampled = player.Avatar.GetWorldBounds();
+                        ApplyPoint(avatar, point);
+                        ValidateAttachmentGrip(avatar, point);
+                        Bounds sampled = avatar.GetWorldBounds();
                         if (!hasBounds)
                         {
                             bounds = sampled;
@@ -236,8 +224,8 @@ namespace VoxelStore.Preview.Capture.Editor
             }
             finally
             {
-                foreach (AvatarMotionPlayer player in players)
-                    player?.ResetMotion();
+                foreach (AvatarPresentation avatar in avatars)
+                    avatar?.ResetPose();
             }
 
             if (!hasBounds)
@@ -288,20 +276,47 @@ namespace VoxelStore.Preview.Capture.Editor
             return Mathf.Max(maxY, maxX / aspect);
         }
 
-        private static void ApplyVariants(
-            AvatarMotionPlayer player,
+        private static void ApplyPoint(
+            AvatarPresentation avatar,
             CapturePoint point)
         {
-            player.SetVariant(point.RootVariant);
-            player.SetEquipmentVariant(point.EquipmentVariant);
+            VoxelModelMotionPlayer[] players =
+                avatar.GetComponentsInChildren<VoxelModelMotionPlayer>(
+                    true);
+            VoxelModelMotionPlayer body =
+                players.SingleOrDefault(player => player.IsBody);
+            if (body == null)
+            {
+                throw new InvalidOperationException(
+                    "Avatar motion capture requires one body model player.");
+            }
+
+            body.SampleCandidates(
+                AvatarMotionClipCandidates.Build(
+                    point.BodyMotion,
+                    point.BodySide,
+                    point.BodyVariant),
+                point.BodyPhase);
+
+            foreach (VoxelModelMotionPlayer equipmentPlayer in
+                     players.Where(player => player.Equipment != null))
+            {
+                equipmentPlayer.SampleCandidates(
+                    AvatarMotionClipCandidates.Build(
+                        point.EquipmentMotion,
+                        equipmentPlayer.Equipment.Side,
+                        point.EquipmentVariant),
+                    point.EquipmentPhase);
+            }
+
+            avatar.RefreshBindings();
         }
 
         private static void ValidateAttachmentGrip(
-            AvatarMotionPlayer player,
+            AvatarPresentation avatar,
             CapturePoint point)
         {
             const float tolerance = 0.001f;
-            AvatarPresentation avatar = player.Avatar;
             foreach (EquipmentPresentation equipment in avatar.Equipment)
             {
                 VoxelRenderInstance instance = equipment.Model.Instance;
@@ -409,13 +424,13 @@ namespace VoxelStore.Preview.Capture.Editor
                 " submitted parts.");
         }
 
-        private static AvatarMotionPlayer[] FindPlayers() =>
+        private static AvatarPresentation[] FindAvatars() =>
             UnityEngine.Object
-                .FindObjectsByType<AvatarMotionPlayer>(
+                .FindObjectsByType<AvatarPresentation>(
                     FindObjectsInactive.Include,
                     FindObjectsSortMode.None)
                 .OrderBy(
-                    player => player.name,
+                    avatar => avatar.name,
                     StringComparer.Ordinal)
                 .ToArray();
 
@@ -430,30 +445,36 @@ namespace VoxelStore.Preview.Capture.Editor
         private readonly struct CapturePoint
         {
             public CapturePoint(
-                AvatarMotion motion,
+                AvatarMotion bodyMotion,
+                AvatarMotion equipmentMotion,
                 string checkpoint,
-                float normalizedTime,
-                EquipmentSlotSide side,
-                string rootVariant = "",
+                float bodyPhase,
+                float equipmentPhase,
+                EquipmentSlotSide? bodySide = null,
+                string bodyVariant = "",
                 string equipmentVariant = "")
             {
-                Motion = motion;
+                BodyMotion = bodyMotion;
+                EquipmentMotion = equipmentMotion;
                 Checkpoint = checkpoint;
-                NormalizedTime = normalizedTime;
-                Side = side;
-                RootVariant =
+                BodyPhase = bodyPhase;
+                EquipmentPhase = equipmentPhase;
+                BodySide = bodySide;
+                BodyVariant =
                     AvatarMotionClipCandidates.NormalizeVariant(
-                        rootVariant);
+                        bodyVariant);
                 EquipmentVariant =
                     AvatarMotionClipCandidates.NormalizeVariant(
                         equipmentVariant);
             }
 
-            public AvatarMotion Motion { get; }
+            public AvatarMotion BodyMotion { get; }
+            public AvatarMotion EquipmentMotion { get; }
             public string Checkpoint { get; }
-            public float NormalizedTime { get; }
-            public EquipmentSlotSide Side { get; }
-            public string RootVariant { get; }
+            public float BodyPhase { get; }
+            public float EquipmentPhase { get; }
+            public EquipmentSlotSide? BodySide { get; }
+            public string BodyVariant { get; }
             public string EquipmentVariant { get; }
         }
     }
