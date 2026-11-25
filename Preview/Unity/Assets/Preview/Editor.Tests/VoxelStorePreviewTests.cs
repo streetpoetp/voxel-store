@@ -83,6 +83,109 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
+        public void MotionInspectorListsAndParsesAuthoredAttackVariants()
+        {
+            string[] clips =
+            {
+                "Idle",
+                "Attack",
+                "Attack.Left",
+                "Attack.Right",
+                "Attack.Left.V1",
+                "Hit"
+            };
+
+            Assert.AreEqual(
+                "Attack.Left.V1",
+                AvatarMotionInspectorClips.ResolveCurrent(
+                    clips,
+                    AvatarMotion.Attack,
+                    EquipmentSlotSide.Left,
+                    "V1"));
+            Assert.AreEqual(
+                "Attack.Right",
+                AvatarMotionInspectorClips.ResolveCurrent(
+                    clips,
+                    AvatarMotion.Attack,
+                    EquipmentSlotSide.Right,
+                    "V1"));
+
+            Assert.IsTrue(
+                AvatarMotionInspectorClips.TryParse(
+                    "Attack.Left.V1",
+                    out AvatarMotionInspectorSelection
+                        selection));
+            Assert.AreEqual(
+                AvatarMotion.Attack,
+                selection.Motion);
+            Assert.AreEqual(
+                EquipmentSlotSide.Left,
+                selection.Side);
+            Assert.AreEqual(
+                "V1",
+                selection.Variant);
+
+            Assert.IsTrue(
+                AvatarMotionInspectorClips.TryParse(
+                    "Idle.V1",
+                    out selection));
+            Assert.AreEqual(
+                AvatarMotion.Idle,
+                selection.Motion);
+            Assert.IsNull(selection.Side);
+            Assert.AreEqual("V1", selection.Variant);
+
+            Assert.IsFalse(
+                AvatarMotionInspectorClips.TryParse(
+                    "Attack.Left.Heavy",
+                    out _));
+        }
+
+        [Test]
+        public void BakedVariantCoverageIsKindSpecificAndExact()
+        {
+            string[] avatarMissing =
+                RuntimeGalleryVariantCoverage.MissingClips(
+                    "Avatars",
+                    new[]
+                    {
+                        "Idle.V1",
+                        "WalkForward.V1",
+                        "Attack.Left.V1",
+                        "Hit.V1",
+                        "Death.V1"
+                    });
+            CollectionAssert.AreEqual(
+                new[] { "Attack.Right.V1" },
+                avatarMissing);
+
+            Assert.AreEqual(
+                0,
+                RuntimeGalleryVariantCoverage.MissingClips(
+                    "Equipment",
+                    new[]
+                    {
+                        "Idle.V1",
+                        "WalkForward.V1",
+                        "Attack.V1",
+                        "Hit.V1",
+                        "Death.V1"
+                    }).Length);
+
+            CollectionAssert.AreEqual(
+                new[] { "Death.V1" },
+                RuntimeGalleryVariantCoverage.MissingClips(
+                    "Equipment",
+                    new[]
+                    {
+                        "Idle.V1",
+                        "WalkForward.V1",
+                        "Attack.V1",
+                        "Hit.V1"
+                    }));
+        }
+
+        [Test]
         public void ParsePlanAcceptsValidAndEmptyPlans()
         {
             PreviewPlanContract valid = PreviewPlanClient.Parse(

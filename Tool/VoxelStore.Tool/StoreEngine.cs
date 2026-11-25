@@ -59,6 +59,9 @@ public sealed class AssetHealth
     public Dictionary<string, int> SlotCounts { get; } = new(StringComparer.Ordinal);
     public List<string> SemanticMotions { get; } = new();
     public List<SemanticMotionCoverage> SemanticMotionCoverage { get; } = new();
+    public bool RequiredV1Complete { get; set; }
+    public List<string> MissingRequiredV1 { get; } = new();
+    public List<string> AliasedRequiredV1 { get; } = new();
     public bool BasePublished { get; set; }
     public bool Published { get; set; }
     public string? FailedGate { get; set; }
@@ -522,6 +525,9 @@ public sealed class StoreEngine
                 ValidateEquipmentCompositionFrame(
                     compiled.Compilation,
                     asset.Manifest.Attachment ?? throw new InvalidDataException("Equipment attachment metadata is missing."));
+            ValidateRequiredV1Coverage(
+                compiled.Compilation,
+                asset.Manifest.Kind);
             PopulateAssetProjection(health, compiled.Compilation);
 
             ReferenceContract reference = ContractYaml.Load<ReferenceContract>(
@@ -1405,6 +1411,8 @@ public sealed class StoreEngine
         health.SlotCounts.Clear();
         health.SemanticMotions.Clear();
         health.SemanticMotionCoverage.Clear();
+        health.MissingRequiredV1.Clear();
+        health.AliasedRequiredV1.Clear();
 
         string[] clipNames = compilation.Animations
             .Select(x => x.Name)
@@ -1417,6 +1425,18 @@ public sealed class StoreEngine
         IReadOnlyList<SemanticMotionCoverage> coverage =
             SemanticAnimationClipName.BuildCoverage(clipNames);
         health.SemanticMotionCoverage.AddRange(coverage);
+
+        health.MissingRequiredV1.AddRange(
+            GetMissingRequiredV1Clips(
+                compilation,
+                health.Kind));
+        health.AliasedRequiredV1.AddRange(
+            GetAliasedRequiredV1Clips(
+                compilation,
+                health.Kind));
+        health.RequiredV1Complete =
+            health.MissingRequiredV1.Count == 0 &&
+            health.AliasedRequiredV1.Count == 0;
 
         if (health.Kind != "avatar")
             return;
@@ -1562,6 +1582,159 @@ public sealed class StoreEngine
                 ?? throw new InvalidDataException(
                     $"Side-reactive avatar animation clip '{name}' is missing.");
         }
+    }
+
+    internal static IReadOnlyList<string> RequiredV1Clips(
+        string kind) =>
+        kind switch
+        {
+            "avatar" => new[]
+            {
+                "Idle.V1",
+                "WalkForward.V1",
+                "Attack.Left.V1",
+                "Attack.Right.V1",
+                "Hit.V1",
+                "Death.V1"
+            },
+            "equipment" => new[]
+            {
+                "Idle.V1",
+                "WalkForward.V1",
+                "Attack.V1",
+                "Hit.V1",
+                "Death.V1"
+            },
+            _ => throw new InvalidDataException(
+                "Unsupported reusable model kind for required V1 coverage: " +
+                kind)
+        };
+
+    internal static IReadOnlyList<string> GetMissingRequiredV1Clips(
+        VoxelCompilation compilation,
+        string kind)
+    {
+        var names = compilation.Animations
+            .Select(x => x.Name)
+            .ToHashSet(StringComparer.Ordinal);
+        return RequiredV1Clips(kind)
+            .Where(x => !names.Contains(x))
+            .ToArray();
+    }
+
+    internal static IReadOnlyList<string> GetAliasedRequiredV1Clips(
+        VoxelCompilation compilation,
+        string kind)
+    {
+        var clips = compilation.Animations.ToDictionary(
+            x => x.Name,
+            StringComparer.Ordinal);
+        var aliased = new List<string>();
+        foreach (string variantName in RequiredV1Clips(kind))
+        {
+            if (!clips.TryGetValue(
+                    variantName,
+                    out CompiledAnimationClip? variant))
+            {
+                continue;
+            }
+
+            string fallbackName =
+                variantName[..^".V1".Length];
+            if (!clips.TryGetValue(
+                    fallbackName,
+                    out CompiledAnimationClip? fallback))
+            {
+                continue;
+            }
+
+            if (AnimationContentEquals(variant, fallback))
+                aliased.Add(variantName);
+        }
+
+        return aliased;
+    }
+
+    internal static void ValidateRequiredV1Coverage(
+        VoxelCompilation compilation,
+        string kind)
+    {
+        IReadOnlyList<string> missing =
+            GetMissingRequiredV1Clips(compilation, kind);
+        if (missing.Count > 0)
+        {
+            throw new InvalidDataException(
+                "Required V1 animation coverage is incomplete for " +
+                kind +
+                ": " +
+                string.Join(", ", missing));
+        }
+
+        IReadOnlyList<string> aliased =
+            GetAliasedRequiredV1Clips(compilation, kind);
+        if (aliased.Count > 0)
+        {
+            throw new InvalidDataException(
+                "Required V1 animation clips must contain authored motion " +
+                "different from their fallback clips: " +
+                string.Join(", ", aliased));
+        }
+    }
+
+    private static bool AnimationContentEquals(
+        CompiledAnimationClip left,
+        CompiledAnimationClip right)
+    {
+        if (left.Duration != right.Duration ||
+            left.Loop != right.Loop ||
+            left.Tracks.Count != right.Tracks.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < left.Tracks.Count; i++)
+        {
+            CompiledAnimationTrack a = left.Tracks[i];
+            CompiledAnimationTrack b = right.Tracks[i];
+            if (!string.Equals(
+                    a.PartName,
+                    b.PartName,
+                    StringComparison.Ordinal) ||
+                !AnimationChannelEquals(a.Position, b.Position) ||
+                !AnimationChannelEquals(a.Rotation, b.Rotation) ||
+                !AnimationChannelEquals(a.Scale, b.Scale))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool AnimationChannelEquals(
+        CompiledAnimationVectorChannel? left,
+        CompiledAnimationVectorChannel? right)
+    {
+        if (left == null || right == null)
+            return left == right;
+        if (left.Interpolation != right.Interpolation ||
+            left.Keys.Count != right.Keys.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < left.Keys.Count; i++)
+        {
+            CompiledAnimationVectorKey a = left.Keys[i];
+            CompiledAnimationVectorKey b = right.Keys[i];
+            if (a.Time != b.Time ||
+                a.Value != b.Value)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     internal static string ResolveSemanticClipName(
@@ -1864,7 +2037,10 @@ public sealed class StoreEngine
                 slotInstances = x.Kind == "avatar" ? x.SlotInstances : null,
                 slotCounts = x.Kind == "avatar" ? x.SlotCounts : null,
                 semanticMotions = x.SemanticMotions,
-                semanticMotionCoverage = x.SemanticMotionCoverage
+                semanticMotionCoverage = x.SemanticMotionCoverage,
+                requiredV1Complete = x.RequiredV1Complete,
+                missingRequiredV1 = x.MissingRequiredV1,
+                aliasedRequiredV1 = x.AliasedRequiredV1
             }).OrderBy(x => x.Id).ToArray()
         }, JsonOptions));
         File.WriteAllText(

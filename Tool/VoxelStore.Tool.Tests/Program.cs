@@ -492,6 +492,51 @@ static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string rep
                       keys:
                         - time: 0
                           value: [0, 0, 0]
+              - clip: Idle.V1
+                duration: 0.9
+                loop: true
+                tracks:
+                  - part: Staff
+                    rotation:
+                      keys:
+                        - time: 0
+                          value: [0, 0, 2]
+              - clip: WalkForward.V1
+                duration: 0.9
+                loop: true
+                tracks:
+                  - part: Staff
+                    rotation:
+                      keys:
+                        - time: 0
+                          value: [0, 0, 3]
+              - clip: Attack.V1
+                duration: 0.9
+                loop: false
+                tracks:
+                  - part: Staff
+                    rotation:
+                      keys:
+                        - time: 0
+                          value: [0, 0, 8]
+              - clip: Hit.V1
+                duration: 0.9
+                loop: false
+                tracks:
+                  - part: Staff
+                    rotation:
+                      keys:
+                        - time: 0
+                          value: [0, 0, -4]
+              - clip: Death.V1
+                duration: 0.9
+                loop: false
+                tracks:
+                  - part: Staff
+                    rotation:
+                      keys:
+                        - time: 0
+                          value: [0, 0, 12]
             """);
 
         var engine = new StoreEngine(root, HeroStudioSubmodule(repositoryRoot));
@@ -3222,6 +3267,123 @@ static IReadOnlyList<Hero.Voxel.Tool.CompiledAnimationClip> RequiredSemanticClip
     foreach ((string name, bool loop) in extraClips)
         clips.Add(Clip(name, loop));
     return clips;
+}
+
+static IReadOnlyList<Hero.Voxel.Tool.CompiledAnimationClip>
+    RequiredV1Fixture(
+        string partName,
+        string kind)
+{
+    var clips = RequiredSemanticClips(
+            partName,
+            includeSideAttack:
+                string.Equals(
+                    kind,
+                    "avatar",
+                    StringComparison.Ordinal))
+        .ToList();
+    foreach (string variantName in
+             StoreEngine.RequiredV1Clips(kind))
+    {
+        string fallbackName =
+            variantName[..^".V1".Length];
+        Hero.Voxel.Tool.CompiledAnimationClip fallback =
+            clips.Single(x =>
+                string.Equals(
+                    x.Name,
+                    fallbackName,
+                    StringComparison.Ordinal));
+        clips.Add(
+            fallback with
+            {
+                Name = variantName,
+                Duration = fallback.Duration + 0.1f
+            });
+    }
+
+    return clips;
+}
+
+var equipmentV1Compilation =
+    new Hero.Voxel.Tool.VoxelCompilation(
+        "EquipmentV1Fixture",
+        8,
+        Array.Empty<Hero.Voxel.Tool.PaletteEntry>(),
+        Array.Empty<Hero.Voxel.Tool.CompiledPart>(),
+        Array.Empty<Hero.Voxel.Tool.CompiledSocket>(),
+        RequiredV1Fixture("Staff", "equipment"));
+StoreEngine.ValidateRequiredV1Coverage(
+    equipmentV1Compilation,
+    "equipment");
+Require(
+    StoreEngine.GetMissingRequiredV1Clips(
+        equipmentV1Compilation,
+        "equipment").Count == 0,
+    "complete equipment V1 fixture must have no missing required clips");
+Require(
+    StoreEngine.GetAliasedRequiredV1Clips(
+        equipmentV1Compilation,
+        "equipment").Count == 0,
+    "distinct equipment V1 fixture must have no aliased required clips");
+
+ExpectFailure(
+    () => StoreEngine.ValidateRequiredV1Coverage(
+        equipmentV1Compilation with
+        {
+            Animations = equipmentV1Compilation.Animations
+                .Where(x => x.Name != "Death.V1")
+                .ToArray()
+        },
+        "equipment"),
+    "Death.V1");
+
+Hero.Voxel.Tool.CompiledAnimationClip deathBase =
+    equipmentV1Compilation.Animations.Single(
+        x => x.Name == "Death");
+Hero.Voxel.Tool.CompiledAnimationClip[] aliasedEquipment =
+    equipmentV1Compilation.Animations
+        .Where(x => x.Name != "Death.V1")
+        .Append(deathBase with { Name = "Death.V1" })
+        .ToArray();
+ExpectFailure(
+    () => StoreEngine.ValidateRequiredV1Coverage(
+        equipmentV1Compilation with
+        {
+            Animations = aliasedEquipment
+        },
+        "equipment"),
+    "different from their fallback");
+
+var avatarV1Compilation =
+    new Hero.Voxel.Tool.VoxelCompilation(
+        "AvatarV1Fixture",
+        8,
+        Array.Empty<Hero.Voxel.Tool.PaletteEntry>(),
+        Array.Empty<Hero.Voxel.Tool.CompiledPart>(),
+        Array.Empty<Hero.Voxel.Tool.CompiledSocket>(),
+        RequiredV1Fixture("Body", "avatar"));
+StoreEngine.ValidateRequiredV1Coverage(
+    avatarV1Compilation,
+    "avatar");
+Require(
+    StoreEngine.RequiredV1Clips("avatar")
+        .SequenceEqual(
+            new[]
+            {
+                "Idle.V1",
+                "WalkForward.V1",
+                "Attack.Left.V1",
+                "Attack.Right.V1",
+                "Hit.V1",
+                "Death.V1"
+            }),
+    "avatar publication floor must require both side-qualified Attack V1 takes");
+
+if (args.Contains("--required-v1-only", StringComparer.Ordinal))
+{
+    Console.WriteLine(
+        "PASS: required V1 publication coverage and alias rejection tests");
+    return;
 }
 
 SemanticAnimationClipIdentity parsedVariant =

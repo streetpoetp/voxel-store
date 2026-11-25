@@ -98,6 +98,8 @@ namespace VoxelStore.Preview.Editor
                     ". Expected <Catalog>/<Model>/Source/<Model>.asset.");
             }
 
+            RuntimeGalleryVariantCoverage.ValidateAll(models);
+
             RuntimeGalleryModel[] avatarModels = models
                 .Where(x =>
                     RuntimeGalleryCatalogDiscovery.IsCatalog(
