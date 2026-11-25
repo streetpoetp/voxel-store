@@ -32,6 +32,10 @@ Every composed checkpoint validates root socket to child `Mount` position within
 
 The proof selects current preview motion candidates (`Attack`, side, `V1`) and current socket names. Hero Studio remains unaware of inventory, weapon class, loadout meaning, or combat policy.
 
+### 5. Consume the sealed presenter inspection API
+
+After Hero Studio seals the streamed actor game-client API, the proof uses only presenter-owned read-only queries for replacement identity, handle membership, socket world matrices, and composite bounds. It no longer receives mutable `VoxelRenderInstance` objects from `VoxelActorPresenter`. This keeps the proof production-faithful to the final game-client boundary while preserving the same lifecycle and graphical assertions.
+
 ## Risks / Trade-offs
 
 - The proof uses one deterministic avatar/equipment subset rather than every combination; exhaustive model/socket/animation coverage remains owned by existing store validation and `avatar-motion-gallery`.

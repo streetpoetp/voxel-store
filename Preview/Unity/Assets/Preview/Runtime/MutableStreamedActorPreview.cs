@@ -196,9 +196,15 @@ namespace VoxelStore.Preview.Runtime
 
             VoxelActorAttachmentHandle preservedHandle = primaryHandle;
             VoxelActorAnimationPlan stalePlan = currentPlan;
-            VoxelRenderInstance before =
-                actor.GetAttachmentRenderInstance(primaryHandle);
-            VoxelUnitId beforeUnit = before.Assembly.UnitId;
+            if (!actor.TryGetAttachmentInfo(
+                    primaryHandle,
+                    out VoxelActorAttachmentInfo before))
+            {
+                throw new InvalidOperationException(
+                    "Primary attachment handle is not current before replacement.");
+            }
+
+            VoxelUnitId beforeUnit = before.UnitId;
 
             await actor.ReplaceAsync(
                 primaryHandle,
@@ -212,10 +218,11 @@ namespace VoxelStore.Preview.Runtime
                     "Successful replacement changed the public attachment handle.");
             }
 
-            VoxelRenderInstance after =
-                actor.GetAttachmentRenderInstance(primaryHandle);
-            if (after.Assembly.UnitId != replacementAssembly.UnitId ||
-                after.Assembly.UnitId == beforeUnit)
+            if (!actor.TryGetAttachmentInfo(
+                    primaryHandle,
+                    out VoxelActorAttachmentInfo after) ||
+                after.UnitId != replacementAssembly.UnitId ||
+                after.UnitId == beforeUnit)
             {
                 throw new InvalidOperationException(
                     "Replacement handle did not resolve the replacement equipment unit.");
@@ -299,25 +306,7 @@ namespace VoxelStore.Preview.Runtime
         public Bounds GetWorldBounds()
         {
             RequireInitialized();
-            Bounds result =
-                VoxelRenderPresentation.CalculateWorldBounds(
-                    actor.RootRenderInstance);
-
-            if (hasPrimary)
-            {
-                result.Encapsulate(
-                    VoxelRenderPresentation.CalculateWorldBounds(
-                        actor.GetAttachmentRenderInstance(primaryHandle)));
-            }
-
-            if (hasSecondary)
-            {
-                result.Encapsulate(
-                    VoxelRenderPresentation.CalculateWorldBounds(
-                        actor.GetAttachmentRenderInstance(secondaryHandle)));
-            }
-
-            return result;
+            return actor.GetWorldBounds();
         }
 
         public void SubmitNow()
@@ -408,17 +397,13 @@ namespace VoxelStore.Preview.Runtime
             string socketName,
             float tolerance)
         {
-            VoxelRenderInstance root = actor.RootRenderInstance;
-            VoxelRenderInstance child =
-                actor.GetAttachmentRenderInstance(handle);
-
-            int rootSocket = root.RequireSocket(socketName);
-            int childMount = child.RequireSocket(MountAnchor);
             Vector3 expected =
-                root.GetSocketWorldMatrix(rootSocket)
+                actor.GetRootSocketWorldMatrix(socketName)
                     .MultiplyPoint3x4(Vector3.zero);
             Vector3 actual =
-                child.GetSocketWorldMatrix(childMount)
+                actor.GetAttachmentSocketWorldMatrix(
+                        handle,
+                        MountAnchor)
                     .MultiplyPoint3x4(Vector3.zero);
             float drift = Vector3.Distance(expected, actual);
             if (drift > tolerance)
@@ -435,17 +420,8 @@ namespace VoxelStore.Preview.Runtime
             VoxelActorAttachmentHandle handle,
             string label)
         {
-            bool rejected = false;
-            try
-            {
-                actor.GetAttachmentRenderInstance(handle);
-            }
-            catch (ArgumentException)
-            {
-                rejected = true;
-            }
-
-            if (!rejected)
+            if (actor.ContainsAttachment(handle) ||
+                actor.TryGetAttachmentInfo(handle, out _))
             {
                 throw new InvalidOperationException(
                     "Expected stale mutable attachment handle to fail closed: " +
