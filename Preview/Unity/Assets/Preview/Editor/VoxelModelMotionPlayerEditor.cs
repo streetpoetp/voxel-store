@@ -72,6 +72,21 @@ namespace VoxelStore.Preview.Editor
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
+            VoxelModelMotionPlayer player =
+                (VoxelModelMotionPlayer)target;
+            string previousClipName =
+                clipNameProperty.stringValue;
+            bool previousLoop =
+                loopProperty.boolValue;
+            float previousSpeed =
+                speedProperty.floatValue;
+            bool wasPlaying =
+                Application.isPlaying &&
+                player.IsPlaying;
+            float previousPhase =
+                Application.isPlaying
+                    ? player.CurrentNormalizedPhase
+                    : 0f;
 
             EditorGUILayout.PropertyField(
                 modelProperty,
@@ -93,8 +108,17 @@ namespace VoxelStore.Preview.Editor
                 new GUIContent("Speed"));
 
             bool changed = serializedObject.ApplyModifiedProperties();
-            VoxelModelMotionPlayer player =
-                (VoxelModelMotionPlayer)target;
+            bool exactClipChanged =
+                !string.Equals(
+                    previousClipName,
+                    clipNameProperty.stringValue,
+                    StringComparison.Ordinal);
+            bool loopChanged =
+                previousLoop != loopProperty.boolValue;
+            bool speedChanged =
+                !Mathf.Approximately(
+                    previousSpeed,
+                    speedProperty.floatValue);
 
             if (changed &&
                 Application.isPlaying &&
@@ -106,6 +130,27 @@ namespace VoxelStore.Preview.Editor
                     clipNameProperty.stringValue,
                     loopProperty.boolValue,
                     speedProperty.floatValue);
+
+                if (exactClipChanged)
+                {
+                    if (wasPlaying)
+                    {
+                        player.PlayConfigured();
+                    }
+                    else
+                    {
+                        player.SampleExact(
+                            clipNameProperty.stringValue,
+                            previousPhase);
+                    }
+                }
+                else if (loopChanged && wasPlaying)
+                {
+                    player.PlayConfigured();
+                }
+
+                if (speedChanged)
+                    player.SetSpeed(speedProperty.floatValue);
             }
 
             EditorGUILayout.Space();
