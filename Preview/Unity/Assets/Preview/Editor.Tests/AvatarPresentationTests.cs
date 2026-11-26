@@ -335,6 +335,36 @@ namespace VoxelStore.Preview.Editor.Tests
             AssertMountBound(fixture, fixture.Primary);
         }
 
+        [Test]
+        public void ProviderResetClearsRuntimeStateButPreservesPreviewIntent()
+        {
+            using Fixture fixture = CreateFixture();
+
+            fixture.PrimaryPlayer.SetPlaybackSettings(
+                "Attack",
+                shouldLoop: false,
+                playbackSpeed: 2f);
+            fixture.PrimaryPlayer.SampleExact(
+                "Attack",
+                0.4f);
+
+            fixture.Primary.Model
+                .EnsureAnimationTrack()
+                .Reset();
+
+            Assert.AreEqual("Attack", fixture.PrimaryPlayer.ClipName);
+            Assert.IsFalse(fixture.PrimaryPlayer.Loop);
+            Assert.That(
+                fixture.PrimaryPlayer.Speed,
+                Is.EqualTo(2f).Within(0.0001f));
+            Assert.AreEqual(
+                string.Empty,
+                fixture.PrimaryPlayer.CurrentClipName);
+            Assert.That(
+                fixture.PrimaryPlayer.CurrentNormalizedPhase,
+                Is.EqualTo(0f).Within(0.0001f));
+        }
+
         private static Fixture CreateFixture(
             bool includeSecondEquipment = false,
             bool omitEquipmentDeath = false,

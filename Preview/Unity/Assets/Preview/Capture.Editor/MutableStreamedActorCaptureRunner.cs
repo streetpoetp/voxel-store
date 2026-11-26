@@ -139,6 +139,12 @@ namespace VoxelStore.Preview.Capture.Editor
                     "mutable-detached",
                     validateGrip: true);
 
+                demo.RebindPrimaryPreservingPlayback();
+                await CaptureCheckpointAsync(
+                    demo,
+                    "mutable-rebound",
+                    validateGrip: true);
+
                 await demo.ReplacePrimaryAsync();
                 demo.SampleCurrentTopology(
                     rootPhase: 0.20f,
@@ -190,6 +196,16 @@ namespace VoxelStore.Preview.Capture.Editor
         {
             if (validateGrip)
                 demo.ValidateAttachmentGrip();
+
+            Debug.Log(
+                "Mutable streamed checkpoint " +
+                checkpoint +
+                ": topologyRevision=" +
+                demo.TopologyRevision +
+                ", attachments=" +
+                demo.AttachmentCount +
+                ", mutableAttachments=" +
+                demo.MutableAttachmentCount + ".");
 
             Bounds bounds = demo.GetWorldBounds();
             ConfigureCaptureView(bounds);

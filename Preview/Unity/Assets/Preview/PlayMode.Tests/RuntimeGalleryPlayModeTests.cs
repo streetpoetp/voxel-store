@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using Hero.Voxel.Actor.Runtime.Unity;
 using Hero.Voxel.Render.Runtime.Unity;
 using Hero.Voxel.Runtime.Animation;
 using Hero.Voxel.Runtime.Assets;
@@ -216,6 +217,75 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     Is.EqualTo(1f).Within(0.0001f));
                 Assert.IsFalse(
                     fixture.BodyModel.AnimationTrack.IsPlaying);
+                yield return null;
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ExternalTrackResetStopsPreviewControllerWithoutAdvanceError()
+        {
+            Fixture fixture = CreateFixture();
+            try
+            {
+                fixture.EquipmentPlayer.PlayExact(
+                    "Attack",
+                    shouldLoop: true,
+                    playbackSpeed: 1f);
+                Assert.IsTrue(fixture.EquipmentPlayer.IsPlaying);
+
+                fixture.Equipment.Model
+                    .EnsureAnimationTrack()
+                    .Reset();
+
+                Assert.IsFalse(
+                    fixture.Equipment.Model.AnimationTrack.HasSelection);
+                Assert.IsFalse(
+                    fixture.Equipment.Model.AnimationTrack.IsPlaying);
+
+                yield return null;
+
+                Assert.IsFalse(fixture.EquipmentPlayer.IsPlaying);
+                Assert.AreEqual(
+                    string.Empty,
+                    fixture.EquipmentPlayer.CurrentClipName);
+                AssertMountBound(fixture);
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator NonLoopCompletionUsesProviderPlayingState()
+        {
+            Fixture fixture = CreateFixture();
+            try
+            {
+                fixture.EquipmentPlayer.PlayExact(
+                    "Attack",
+                    shouldLoop: false,
+                    playbackSpeed: 1f);
+                Assert.IsTrue(fixture.EquipmentPlayer.IsPlaying);
+
+                float duration =
+                    fixture.EquipmentPlayer.CurrentDuration;
+                VoxelModelAnimationTrack track =
+                    fixture.Equipment.Model.EnsureAnimationTrack();
+                Assert.That(
+                    track.Advance(duration * 1.5f),
+                    Is.EqualTo(1f).Within(0.0001f));
+
+                Assert.IsFalse(track.IsPlaying);
+                Assert.IsFalse(fixture.EquipmentPlayer.IsPlaying);
+                Assert.That(
+                    fixture.EquipmentPlayer.CurrentNormalizedPhase,
+                    Is.EqualTo(1f).Within(0.0001f));
+                AssertMountBound(fixture);
                 yield return null;
             }
             finally

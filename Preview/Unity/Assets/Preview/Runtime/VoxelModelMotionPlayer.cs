@@ -15,8 +15,6 @@ namespace VoxelStore.Preview.Runtime
         [SerializeField] private bool loop = true;
         [SerializeField, Min(0.05f)] private float speed = 1f;
 
-        private bool playing;
-
         public VoxelRenderPresentation Model => model;
         public AvatarPresentation Composition => composition;
         public VoxelAnimationAsset Animation =>
@@ -33,7 +31,6 @@ namespace VoxelStore.Preview.Runtime
                 : null;
         public bool IsPlaying =>
             Application.isPlaying &&
-            playing &&
             model != null &&
             model.AnimationTrack != null &&
             model.AnimationTrack.IsPlaying;
@@ -71,7 +68,6 @@ namespace VoxelStore.Preview.Runtime
                 configuredClip,
                 shouldLoop,
                 playbackSpeed);
-            playing = false;
 
             if (Application.isPlaying)
                 ResetMotion();
@@ -112,7 +108,7 @@ namespace VoxelStore.Preview.Runtime
             }
 
             clipName = normalized;
-            if (playing && Application.isPlaying)
+            if (IsPlaying)
                 PlayConfigured();
         }
 
@@ -122,7 +118,7 @@ namespace VoxelStore.Preview.Runtime
                 return;
 
             loop = shouldLoop;
-            if (playing && Application.isPlaying)
+            if (IsPlaying)
                 PlayConfigured();
         }
 
@@ -159,7 +155,6 @@ namespace VoxelStore.Preview.Runtime
                 new[] { clipName },
                 shouldLoop,
                 playbackSpeed);
-            playing = true;
             RefreshComposition();
         }
 
@@ -181,7 +176,6 @@ namespace VoxelStore.Preview.Runtime
                 resolved,
                 loopOverride,
                 playbackSpeed);
-            playing = true;
             RefreshComposition();
         }
 
@@ -203,7 +197,6 @@ namespace VoxelStore.Preview.Runtime
                 model.EnsureAnimationTrack();
             track.Select(new[] { clipName });
             track.SampleNormalized(normalizedTime);
-            playing = false;
             RefreshComposition();
         }
 
@@ -220,13 +213,11 @@ namespace VoxelStore.Preview.Runtime
             clipName = resolved.Clip.Name;
             track.Select(resolved);
             track.SampleNormalized(normalizedTime);
-            playing = false;
             RefreshComposition();
         }
 
         public void Stop()
         {
-            playing = false;
             VoxelModelAnimationTrack track =
                 model != null ? model.AnimationTrack : null;
             track?.Stop();
@@ -234,7 +225,6 @@ namespace VoxelStore.Preview.Runtime
 
         public void ResetMotion()
         {
-            playing = false;
             if (model == null)
                 return;
 
@@ -259,19 +249,22 @@ namespace VoxelStore.Preview.Runtime
 
         private void Update()
         {
-            if (!Application.isPlaying ||
-                !playing ||
-                model == null)
+            if (!Application.isPlaying || model == null)
             {
                 return;
             }
 
             VoxelModelAnimationTrack track =
-                model.EnsureAnimationTrack();
+                model.AnimationTrack;
+            if (track == null ||
+                !track.HasSelection ||
+                !track.IsPlaying)
+            {
+                return;
+            }
+
             track.Advance(Time.deltaTime);
             RefreshComposition();
-            if (!track.IsPlaying)
-                playing = false;
         }
 
         private void OnEnable()

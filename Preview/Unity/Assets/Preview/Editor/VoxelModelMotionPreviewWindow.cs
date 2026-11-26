@@ -214,6 +214,21 @@ namespace VoxelStore.Preview.Editor
                         : target.Equipment != null
                             ? "Equipment"
                             : "Standalone");
+                EditorGUILayout.LabelField(
+                    "Configured Clip",
+                    target.ClipName);
+                EditorGUILayout.LabelField(
+                    "Runtime Clip",
+                    string.IsNullOrEmpty(target.CurrentClipName)
+                        ? "(none)"
+                        : target.CurrentClipName);
+                EditorGUILayout.LabelField(
+                    "Runtime State",
+                    target.IsPlaying
+                        ? "Playing"
+                        : target.CurrentClipName.Length > 0
+                            ? "Selected / Stopped"
+                            : "Unselected");
             }
             else if (targets.Length > 1)
             {

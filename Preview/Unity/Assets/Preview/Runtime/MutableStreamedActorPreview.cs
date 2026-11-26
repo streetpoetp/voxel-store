@@ -40,8 +40,6 @@ namespace VoxelStore.Preview.Runtime
         private VoxelActorPresenter actor;
         private VoxelActorAttachmentHandle primaryHandle;
         private VoxelActorAttachmentHandle secondaryHandle;
-        private bool hasPrimary;
-        private bool hasSecondary;
 
         public bool IsConfigured =>
             world != null &&
@@ -56,6 +54,14 @@ namespace VoxelStore.Preview.Runtime
 
         public bool IsInitialized => actor != null && actor.IsActive;
         public int AttachmentCount => IsInitialized ? actor.AttachmentCount : 0;
+        public int MutableAttachmentCount =>
+            IsInitialized ? actor.MutableAttachmentCount : 0;
+        public int TopologyRevision =>
+            IsInitialized ? actor.TopologyRevision : 0;
+        public bool HasPrimaryAttachment =>
+            IsCurrentAttachment(primaryHandle);
+        public bool HasSecondaryAttachment =>
+            IsCurrentAttachment(secondaryHandle);
         public VoxelUnitId RootUnitId => rootAssembly != null ? rootAssembly.UnitId : default;
         public VoxelUnitId PrimaryUnitId => primaryAssembly != null ? primaryAssembly.UnitId : default;
         public VoxelUnitId SecondaryUnitId => secondaryAssembly != null ? secondaryAssembly.UnitId : default;
@@ -133,8 +139,13 @@ namespace VoxelStore.Preview.Runtime
                 maxIdlePresenters: 1);
 
             actor = await actors.AcquireAsync().AsTask();
-            hasPrimary = false;
-            hasSecondary = false;
+            primaryHandle = default;
+            secondaryHandle = default;
+            if (actor.MutableAttachmentCount != 0)
+            {
+                throw new InvalidOperationException(
+                    "Fresh streamed proof actor must not contain mutable attachments.");
+            }
             ApplyTransformAndVisibility();
             SampleRootOnly(0.5f);
         }
@@ -154,17 +165,39 @@ namespace VoxelStore.Preview.Runtime
                     "Initial streamed proof requires a root-only actor.");
             }
 
+            int beforePrimaryAttach = actor.TopologyRevision;
             primaryHandle = await actor.AttachAsync(
                 primaryAssembly.UnitId,
                 RightSocket,
                 MountAnchor).AsTask();
-            hasPrimary = true;
+            RequireTopologyAdvanced(
+                beforePrimaryAttach,
+                "attach primary");
+            RequireCurrentAttachment(
+                primaryHandle,
+                "primary after attach");
+            if (actor.MutableAttachmentCount != 1)
+            {
+                throw new InvalidOperationException(
+                    "Primary attach did not produce exactly one mutable attachment.");
+            }
 
+            int beforeSecondaryAttach = actor.TopologyRevision;
             secondaryHandle = await actor.AttachAsync(
                 secondaryAssembly.UnitId,
                 LeftSocket,
                 MountAnchor).AsTask();
-            hasSecondary = true;
+            RequireTopologyAdvanced(
+                beforeSecondaryAttach,
+                "attach secondary");
+            RequireCurrentAttachment(
+                secondaryHandle,
+                "secondary after attach");
+            if (actor.MutableAttachmentCount != 2)
+            {
+                throw new InvalidOperationException(
+                    "Secondary attach did not produce exactly two mutable attachments.");
+            }
 
             if (primaryHandle == secondaryHandle)
             {
@@ -181,8 +214,12 @@ namespace VoxelStore.Preview.Runtime
         public void DetachSecondaryPreservingPlayback()
         {
             RequireInitialized();
-            if (!hasSecondary)
-                throw new InvalidOperationException("Secondary attachment is not active.");
+            RequireCurrentAttachment(
+                primaryHandle,
+                "primary before secondary detach");
+            RequireCurrentAttachment(
+                secondaryHandle,
+                "secondary before detach");
 
             VoxelModelAnimationTrack rootTrack = actor.RootTrack;
             VoxelModelAnimationTrack primaryTrack =
@@ -190,10 +227,17 @@ namespace VoxelStore.Preview.Runtime
             float rootPhase = rootTrack.NormalizedPhase;
             float primaryPhase = primaryTrack.NormalizedPhase;
             VoxelActorAttachmentHandle stale = secondaryHandle;
+            int beforeDetach = actor.TopologyRevision;
             actor.Detach(secondaryHandle);
-            hasSecondary = false;
-            secondaryHandle = default;
+            RequireTopologyAdvanced(
+                beforeDetach,
+                "detach secondary");
             RequireStaleHandle(stale, "detached secondary");
+            if (actor.MutableAttachmentCount != 1)
+            {
+                throw new InvalidOperationException(
+                    "Secondary detach did not leave exactly one mutable attachment.");
+            }
             if (!ReferenceEquals(rootTrack, actor.RootTrack) ||
                 !ReferenceEquals(
                     primaryTrack,
@@ -213,17 +257,99 @@ namespace VoxelStore.Preview.Runtime
             actor.RefreshBindings();
         }
 
+        public void RebindPrimaryPreservingPlayback()
+        {
+            RequireInitialized();
+            RequireCurrentAttachment(
+                primaryHandle,
+                "primary before rebind");
+
+            VoxelModelAnimationTrack rootTrack = actor.RootTrack;
+            VoxelModelAnimationTrack primaryTrack =
+                actor.GetAttachmentTrack(primaryHandle);
+            VoxelModelAnimationTrack secondaryTrack =
+                IsCurrentAttachment(secondaryHandle)
+                    ? actor.GetAttachmentTrack(secondaryHandle)
+                    : null;
+            float rootPhase = rootTrack.NormalizedPhase;
+            float primaryPhase = primaryTrack.NormalizedPhase;
+            float secondaryPhase =
+                secondaryTrack != null
+                    ? secondaryTrack.NormalizedPhase
+                    : 0f;
+
+            int beforeLeftRebind = actor.TopologyRevision;
+            actor.Rebind(
+                primaryHandle,
+                LeftSocket,
+                MountAnchor);
+            RequireTopologyAdvanced(
+                beforeLeftRebind,
+                "rebind primary left");
+            RequireCurrentAttachment(
+                primaryHandle,
+                "primary after left rebind");
+            ValidateGrip(primaryHandle, LeftSocket, 0.001f);
+            RequireUnchangedTrack(
+                rootTrack,
+                actor.RootTrack,
+                rootPhase,
+                "root during primary rebind");
+            RequireUnchangedTrack(
+                primaryTrack,
+                actor.GetAttachmentTrack(primaryHandle),
+                primaryPhase,
+                "primary during rebind");
+            if (secondaryTrack != null)
+            {
+                RequireUnchangedTrack(
+                    secondaryTrack,
+                    actor.GetAttachmentTrack(secondaryHandle),
+                    secondaryPhase,
+                    "secondary during primary rebind");
+            }
+
+            int beforeRightRebind = actor.TopologyRevision;
+            actor.Rebind(
+                primaryHandle,
+                RightSocket,
+                MountAnchor);
+            RequireTopologyAdvanced(
+                beforeRightRebind,
+                "rebind primary right");
+            ValidateGrip(primaryHandle, RightSocket, 0.001f);
+            RequireUnchangedTrack(
+                rootTrack,
+                actor.RootTrack,
+                rootPhase,
+                "root after primary rebind");
+            RequireUnchangedTrack(
+                primaryTrack,
+                actor.GetAttachmentTrack(primaryHandle),
+                primaryPhase,
+                "primary after rebind");
+        }
+
         public async Task ReplacePrimaryAsync()
         {
             RequireInitialized();
-            if (!hasPrimary)
-                throw new InvalidOperationException("Primary attachment is not active.");
+            RequireCurrentAttachment(
+                primaryHandle,
+                "primary before replacement");
 
             VoxelActorAttachmentHandle preservedHandle = primaryHandle;
             VoxelModelAnimationTrack rootTrack = actor.RootTrack;
             VoxelModelAnimationTrack oldPrimaryTrack =
                 actor.GetAttachmentTrack(primaryHandle);
+            VoxelModelAnimationTrack secondaryTrack =
+                IsCurrentAttachment(secondaryHandle)
+                    ? actor.GetAttachmentTrack(secondaryHandle)
+                    : null;
             float rootPhase = rootTrack.NormalizedPhase;
+            float secondaryPhase =
+                secondaryTrack != null
+                    ? secondaryTrack.NormalizedPhase
+                    : 0f;
             if (!actor.TryGetAttachmentInfo(
                     primaryHandle,
                     out VoxelActorAttachmentInfo before))
@@ -234,11 +360,15 @@ namespace VoxelStore.Preview.Runtime
 
             VoxelUnitId beforeUnit = before.UnitId;
 
+            int beforeReplace = actor.TopologyRevision;
             await actor.ReplaceAsync(
                 primaryHandle,
                 replacementAssembly.UnitId,
                 RightSocket,
                 MountAnchor).AsTask();
+            RequireTopologyAdvanced(
+                beforeReplace,
+                "replace primary");
 
             if (primaryHandle != preservedHandle)
             {
@@ -273,6 +403,14 @@ namespace VoxelStore.Preview.Runtime
                 throw new InvalidOperationException(
                     "Replacing one attachment changed root playback.");
             }
+            if (secondaryTrack != null)
+            {
+                RequireUnchangedTrack(
+                    secondaryTrack,
+                    actor.GetAttachmentTrack(secondaryHandle),
+                    secondaryPhase,
+                    "secondary during primary replacement");
+            }
             ApplyTransformAndVisibility();
             actor.RefreshBindings();
         }
@@ -283,20 +421,28 @@ namespace VoxelStore.Preview.Runtime
             RequireNormalizedPhase(normalizedPhase);
 
             VoxelActorAttachmentHandle stalePrimary = primaryHandle;
+            VoxelActorAttachmentHandle staleSecondary = secondaryHandle;
             actors.Release(actor);
             actor = await actors.AcquireAsync().AsTask();
 
-            hasPrimary = false;
-            hasSecondary = false;
-            primaryHandle = default;
-            secondaryHandle = default;
-            if (actor.AttachmentCount != 0)
+            if (actor.MutableAttachmentCount != 0 ||
+                actor.AttachmentCount != 0)
             {
                 throw new InvalidOperationException(
                     "Warm reacquisition inherited runtime-added attachments.");
             }
+            if (actor.RootTrack.HasSelection ||
+                actor.RootTrack.IsPlaying)
+            {
+                throw new InvalidOperationException(
+                    "Warm reacquisition inherited root playback state.");
+            }
 
             RequireStaleHandle(stalePrimary, "pre-release primary");
+            if (staleSecondary.IsInitialized)
+                RequireStaleHandle(
+                    staleSecondary,
+                    "pre-release secondary");
             ApplyTransformAndVisibility();
             SampleRootOnly(normalizedPhase);
         }
@@ -314,11 +460,17 @@ namespace VoxelStore.Preview.Runtime
                     "Post-reacquire proof expected a root-only actor.");
             }
 
+            int beforeAttach = actor.TopologyRevision;
             primaryHandle = await actor.AttachAsync(
                 replacementAssembly.UnitId,
                 RightSocket,
                 MountAnchor).AsTask();
-            hasPrimary = true;
+            RequireTopologyAdvanced(
+                beforeAttach,
+                "reattach primary after reacquire");
+            RequireCurrentAttachment(
+                primaryHandle,
+                "primary after reacquire attach");
             SampleCurrentTopology(
                 rootPhase,
                 primaryPhase,
@@ -331,9 +483,9 @@ namespace VoxelStore.Preview.Runtime
             if (tolerance < 0f || float.IsNaN(tolerance) || float.IsInfinity(tolerance))
                 throw new ArgumentOutOfRangeException(nameof(tolerance));
 
-            if (hasPrimary)
+            if (IsCurrentAttachment(primaryHandle))
                 ValidateGrip(primaryHandle, RightSocket, tolerance);
-            if (hasSecondary)
+            if (IsCurrentAttachment(secondaryHandle))
                 ValidateGrip(secondaryHandle, LeftSocket, tolerance);
         }
 
@@ -352,8 +504,6 @@ namespace VoxelStore.Preview.Runtime
         public void DisposeProviderState()
         {
             actor = null;
-            hasPrimary = false;
-            hasSecondary = false;
             primaryHandle = default;
             secondaryHandle = default;
 
@@ -382,7 +532,7 @@ namespace VoxelStore.Preview.Runtime
             rootTrack.SampleNormalized(rootPhase);
             actor.RefreshBindings();
 
-            if (hasPrimary)
+            if (IsCurrentAttachment(primaryHandle))
             {
                 VoxelModelAnimationTrack primaryTrack =
                     actor.GetAttachmentTrack(primaryHandle);
@@ -391,7 +541,7 @@ namespace VoxelStore.Preview.Runtime
                 primaryTrack.SampleNormalized(primaryPhase);
             }
 
-            if (hasSecondary)
+            if (IsCurrentAttachment(secondaryHandle))
             {
                 VoxelModelAnimationTrack secondaryTrack =
                     actor.GetAttachmentTrack(secondaryHandle);
@@ -462,6 +612,59 @@ namespace VoxelStore.Preview.Runtime
             {
                 throw new InvalidOperationException(
                     "Expected stale mutable attachment handle to fail closed: " +
+                    label + ".");
+            }
+        }
+
+        private bool IsCurrentAttachment(
+            VoxelActorAttachmentHandle handle)
+        {
+            return IsInitialized &&
+                handle.IsInitialized &&
+                actor.ContainsAttachment(handle);
+        }
+
+        private void RequireCurrentAttachment(
+            VoxelActorAttachmentHandle handle,
+            string label)
+        {
+            if (!handle.IsInitialized ||
+                !actor.ContainsAttachment(handle) ||
+                !actor.TryGetAttachmentInfo(handle, out _))
+            {
+                throw new InvalidOperationException(
+                    "Expected current mutable attachment handle: " +
+                    label + ".");
+            }
+        }
+
+        private void RequireTopologyAdvanced(
+            int beforeRevision,
+            string label)
+        {
+            if (actor.TopologyRevision <= beforeRevision)
+            {
+                throw new InvalidOperationException(
+                    "Mutable streamed actor topology revision did not advance for " +
+                    label +
+                    ". before=" + beforeRevision +
+                    ", after=" + actor.TopologyRevision + ".");
+            }
+        }
+
+        private static void RequireUnchangedTrack(
+            VoxelModelAnimationTrack expectedTrack,
+            VoxelModelAnimationTrack actualTrack,
+            float expectedPhase,
+            string label)
+        {
+            if (!ReferenceEquals(expectedTrack, actualTrack) ||
+                !Mathf.Approximately(
+                    expectedPhase,
+                    actualTrack.NormalizedPhase))
+            {
+                throw new InvalidOperationException(
+                    "Mutable streamed actor changed unaffected playback: " +
                     label + ".");
             }
         }

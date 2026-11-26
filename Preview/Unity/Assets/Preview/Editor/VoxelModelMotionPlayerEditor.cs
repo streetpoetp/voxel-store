@@ -140,10 +140,17 @@ namespace VoxelStore.Preview.Editor
             if (model != null)
             {
                 EditorGUILayout.LabelField(
-                    "Current Clip",
+                    "Runtime Clip",
                     string.IsNullOrEmpty(player.CurrentClipName)
                         ? "(none)"
                         : player.CurrentClipName);
+                EditorGUILayout.LabelField(
+                    "Runtime State",
+                    player.IsPlaying
+                        ? "Playing"
+                        : player.CurrentClipName.Length > 0
+                            ? "Selected / Stopped"
+                            : "Unselected");
                 EditorGUILayout.LabelField(
                     "Role",
                     player.IsBody
