@@ -1066,11 +1066,6 @@ public sealed class StoreEngine
         string Side,
         int Instance,
         CompiledSocket Socket);
-    private readonly record struct SampledPartPose(
-        Vector3 Position,
-        Quaternion Rotation,
-        Vector3 Scale);
-
     private static readonly CompatibilitySample[] CanonicalCompatibilitySamples =
     {
         new("Idle", 0f),
@@ -1146,16 +1141,16 @@ public sealed class StoreEngine
                 }
                 else
                 {
-                    CompiledSocket mount =
-                        equipmentCompilation.Sockets.Single(
-                            x => string.Equals(
-                                x.Name,
-                                attachment.Anchor,
-                                StringComparison.Ordinal));
-                    Matrix4x4 mountBind =
-                        BuildSocketBindMatrix(
+                    int mountSocketIndex =
+                        RequireSocketIndex(
                             equipmentCompilation,
-                            mount);
+                            attachment.Anchor);
+                    Matrix4x4 mountBind =
+                        VoxelCompiledPoseEvaluator.Evaluate(
+                                equipmentCompilation,
+                                null,
+                                0f)
+                            .GetSocketModelMatrix(mountSocketIndex);
                     if (!Matrix4x4.Invert(
                             mountBind,
                             out Matrix4x4 inverseMountBind))
@@ -1190,26 +1185,24 @@ public sealed class StoreEngine
                                     equipmentClipName,
                                     StringComparison.Ordinal));
 
-                        Matrix4x4 bodySocket =
-                            EvaluateBodySocketFrame(
+                        int bodySocketIndex =
+                            RequireSocketIndex(
                                 avatarCompilation,
-                                slot.Socket,
-                                bodyClip,
-                                sample.Phase);
+                                slot.Socket.Name);
+                        Matrix4x4 bodySocket =
+                            VoxelCompiledPoseEvaluator.Evaluate(
+                                    avatarCompilation,
+                                    bodyClip,
+                                    sample.Phase)
+                                .GetSocketModelMatrix(bodySocketIndex);
                         Matrix4x4 equipmentRoot =
                             inverseMountBind * bodySocket;
-                        SampledPartPose equipmentPose =
-                            SampleRootPartPose(
-                                equipmentCompilation,
-                                equipmentClip,
-                                sample.Phase);
-                        Matrix4x4 equipmentPartPose =
-                            BuildPoseMatrix(
-                                equipmentPose,
-                                equipmentCompilation.VoxelsPerUnit);
                         Matrix4x4 evaluatedMount =
-                            mountBind *
-                            equipmentPartPose *
+                            VoxelCompiledPoseEvaluator.Evaluate(
+                                    equipmentCompilation,
+                                    equipmentClip,
+                                    sample.Phase)
+                                .GetSocketModelMatrix(mountSocketIndex) *
                             equipmentRoot;
 
                         Vector3 bodySocketOrigin =
@@ -1764,174 +1757,23 @@ public sealed class StoreEngine
             $"Semantic animation clip '{motion}' is unavailable.");
     }
 
-    private static Matrix4x4 EvaluateBodySocketFrame(
+    private static int RequireSocketIndex(
         VoxelCompilation compilation,
-        CompiledSocket socket,
-        CompiledAnimationClip clip,
-        float phase)
+        string socketName)
     {
-        CompiledPart body = compilation.Parts[0];
-        SampledPartPose pose =
-            SampleRootPartPose(
-                compilation,
-                clip,
-                phase);
-        Matrix4x4 bodyPose =
-            BuildPoseMatrix(
-                pose,
-                compilation.VoxelsPerUnit);
-        Vector3 socketPosition =
-            (ToVector(socket.Transform.Translation) -
-             ToVector(body.Pivot)) /
-            compilation.VoxelsPerUnit;
-        Matrix4x4 socketLocal =
-            Matrix4x4.CreateFromQuaternion(
-                Euler(socket.Transform.Rotation)) *
-            Matrix4x4.CreateTranslation(socketPosition);
-        return socketLocal * bodyPose;
-    }
-
-    private static Matrix4x4 BuildSocketBindMatrix(
-        VoxelCompilation compilation,
-        CompiledSocket socket)
-    {
-        CompiledPart part = compilation.Parts.Single(
-            x => string.Equals(
-                x.Name,
-                socket.ParentName,
-                StringComparison.Ordinal));
-        Vector3 socketPosition =
-            (ToVector(socket.Transform.Translation) -
-             ToVector(part.Pivot)) /
-            compilation.VoxelsPerUnit;
-        return Matrix4x4.CreateFromQuaternion(
-                   Euler(socket.Transform.Rotation)) *
-               Matrix4x4.CreateTranslation(socketPosition);
-    }
-
-    private static SampledPartPose SampleRootPartPose(
-        VoxelCompilation compilation,
-        CompiledAnimationClip clip,
-        float phase)
-    {
-        string partName = compilation.Parts[0].Name;
-        CompiledAnimationTrack? track =
-            clip.Tracks.SingleOrDefault(
-                x => string.Equals(
-                    x.PartName,
-                    partName,
-                    StringComparison.Ordinal));
-        if (track == null)
+        for (int i = 0; i < compilation.Sockets.Count; i++)
         {
-            return new SampledPartPose(
-                Vector3.Zero,
-                Quaternion.Identity,
-                Vector3.One);
+            if (string.Equals(
+                    compilation.Sockets[i].Name,
+                    socketName,
+                    StringComparison.Ordinal))
+            {
+                return i;
+            }
         }
 
-        float time = Math.Clamp(phase, 0f, 1f);
-        return new SampledPartPose(
-            track.Position == null
-                ? Vector3.Zero
-                : ToVector(SampleVector(track.Position, time, Vector3.Zero)),
-            track.Rotation == null
-                ? Quaternion.Identity
-                : SampleRotation(track.Rotation, time),
-            track.Scale == null
-                ? Vector3.One
-                : ToVector(SampleVector(track.Scale, time, Vector3.One)));
-    }
-
-    private static Matrix4x4 BuildPoseMatrix(
-        SampledPartPose pose,
-        int voxelsPerUnit) =>
-        Matrix4x4.CreateScale(pose.Scale) *
-        Matrix4x4.CreateFromQuaternion(pose.Rotation) *
-        Matrix4x4.CreateTranslation(
-            pose.Position / voxelsPerUnit);
-
-    private static Float3 SampleVector(
-        CompiledAnimationVectorChannel channel,
-        float time,
-        Vector3 fallback)
-    {
-        int count = channel.Keys.Count;
-        if (count == 0)
-            return new Float3(fallback.X, fallback.Y, fallback.Z);
-        if (count == 1 || time <= channel.Keys[0].Time)
-            return channel.Keys[0].Value;
-        if (time >= channel.Keys[count - 1].Time)
-            return channel.Keys[count - 1].Value;
-
-        int upper = 1;
-        while (upper < count && channel.Keys[upper].Time < time)
-            upper++;
-        CompiledAnimationVectorKey a = channel.Keys[upper - 1];
-        CompiledAnimationVectorKey b = channel.Keys[upper];
-        if (time == b.Time)
-            return b.Value;
-        float t = (time - a.Time) / (b.Time - a.Time);
-        t = channel.Interpolation switch
-        {
-            CompiledAnimationInterpolation.Step => 0f,
-            CompiledAnimationInterpolation.Linear => t,
-            CompiledAnimationInterpolation.SmoothStep =>
-                t * t * (3f - 2f * t),
-            _ => throw new ArgumentOutOfRangeException(nameof(channel))
-        };
-        return new Float3(
-            a.Value.X + ((b.Value.X - a.Value.X) * t),
-            a.Value.Y + ((b.Value.Y - a.Value.Y) * t),
-            a.Value.Z + ((b.Value.Z - a.Value.Z) * t));
-    }
-
-    private static Quaternion SampleRotation(
-        CompiledAnimationVectorChannel channel,
-        float time)
-    {
-        int count = channel.Keys.Count;
-        if (count == 0)
-            return Quaternion.Identity;
-        if (count == 1 || time <= channel.Keys[0].Time)
-            return Euler(channel.Keys[0].Value);
-        if (time >= channel.Keys[count - 1].Time)
-            return Euler(channel.Keys[count - 1].Value);
-
-        int upper = 1;
-        while (upper < count && channel.Keys[upper].Time < time)
-            upper++;
-        CompiledAnimationVectorKey a = channel.Keys[upper - 1];
-        CompiledAnimationVectorKey b = channel.Keys[upper];
-        if (time == b.Time)
-            return Euler(b.Value);
-        float t = (time - a.Time) / (b.Time - a.Time);
-        t = channel.Interpolation switch
-        {
-            CompiledAnimationInterpolation.Step => 0f,
-            CompiledAnimationInterpolation.Linear => t,
-            CompiledAnimationInterpolation.SmoothStep =>
-                t * t * (3f - 2f * t),
-            _ => throw new ArgumentOutOfRangeException(nameof(channel))
-        };
-        return Quaternion.Normalize(
-            Quaternion.Slerp(
-                Euler(a.Value),
-                Euler(b.Value),
-                t));
-    }
-
-    private static Quaternion Euler(Float3 degrees)
-    {
-        float x = degrees.X * (MathF.PI / 180f);
-        float y = degrees.Y * (MathF.PI / 180f);
-        float z = degrees.Z * (MathF.PI / 180f);
-        Quaternion qx =
-            Quaternion.CreateFromAxisAngle(Vector3.UnitX, x);
-        Quaternion qy =
-            Quaternion.CreateFromAxisAngle(Vector3.UnitY, y);
-        Quaternion qz =
-            Quaternion.CreateFromAxisAngle(Vector3.UnitZ, z);
-        return Quaternion.Normalize(qy * qx * qz);
+        throw new InvalidDataException(
+            $"Compiled socket '{socketName}' is unavailable.");
     }
 
     private static bool Near(Int3 value, Float3 other) =>
@@ -1941,12 +1783,6 @@ public sealed class StoreEngine
 
     private static Vector3 MatrixOrigin(Matrix4x4 matrix) =>
         Vector3.Transform(Vector3.Zero, matrix);
-
-    private static Vector3 ToVector(Int3 value) =>
-        new(value.X, value.Y, value.Z);
-
-    private static Vector3 ToVector(Float3 value) =>
-        new(value.X, value.Y, value.Z);
 
     internal static void ValidatePublicationBudget(int voxels, int parts, StoreBudget budget)
     {
