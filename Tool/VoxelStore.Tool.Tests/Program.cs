@@ -4373,6 +4373,43 @@ foreach (AssetRecord asset in assets)
         $"provider compile produced no parts for {asset.Manifest.Id}");
 }
 
+// Explicitly downgrade copied current proof to both retired repository conventions.
+string compatibilityFixtureRoot = Path.Combine(
+    coldStartRoot,
+    "Assets",
+    "Avatars",
+    "FoundationGuard01",
+    "Proof",
+    "Compatibility");
+string copiedSwordCompatibility = Path.Combine(
+    compatibilityFixtureRoot,
+    "foundation.equipment.sword.02.json");
+string copiedDaggerCompatibility = Path.Combine(
+    compatibilityFixtureRoot,
+    "foundation.equipment.dagger.02.json");
+File.WriteAllText(
+    copiedSwordCompatibility,
+    File.ReadAllText(copiedSwordCompatibility).Replace(
+        "model-socket-reference-influence-semantic-phase.v3",
+        "model-socket-reference-semantic-phase.v2",
+        StringComparison.Ordinal));
+File.WriteAllText(
+    copiedDaggerCompatibility,
+    File.ReadAllText(copiedDaggerCompatibility).Replace(
+        "model-socket-reference-influence-semantic-phase.v3",
+        "model-socket-animated-mount.v1",
+        StringComparison.Ordinal));
+
+StoreSnapshot obsoleteCompatibility =
+    coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);Require(
+    obsoleteCompatibility.Assets
+        .Where(x =>
+            x.Id == "foundation.avatar.humanoid.guard-01" ||
+            x.Id == "foundation.equipment.sword.02" ||
+            x.Id == "foundation.equipment.dagger.02")
+        .All(x => !x.Published && x.FailedGate == "compatibility"),
+    "retired tracked compatibility evidence must fail the affected publication gate before regeneration");
+
 // Positive deterministic scan and all-pairs animated composition proof.
 StoreSnapshot first =
     coldStartEngine.Scan(writeDerived: true, writeCompatibility: true);
@@ -4448,23 +4485,90 @@ using (JsonDocument evidence =
        JsonDocument.Parse(File.ReadAllText(compatibilityEvidence)))
 {
     JsonElement samples = evidence.RootElement.GetProperty("samples");
+    JsonElement provider = evidence.RootElement.GetProperty("provider");
+    JsonElement inputs = evidence.RootElement.GetProperty("inputs");
     Require(
-        evidence.RootElement.GetProperty("convention").GetString() == "model-socket-reference-semantic-phase.v2" &&
+        evidence.RootElement.GetProperty("convention").GetString() ==
+            "model-socket-reference-influence-semantic-phase.v3" &&
+        provider.GetProperty("heroStudioRevision").GetString() ==
+            resolution.Lock.HeroStudioRevision &&
+        provider.GetProperty("workflowSha256").GetString() ==
+            resolution.Lock.WorkflowSha256 &&
+        inputs.GetProperty("avatarSourceSha256").GetString()!.Length == 64 &&
+        inputs.GetProperty("avatarPaletteSha256").GetString()!.Length == 64 &&
+        inputs.GetProperty("equipmentSourceSha256").GetString()!.Length == 64 &&
+        inputs.GetProperty("equipmentPaletteSha256").GetString()!.Length == 64 &&
         samples.GetArrayLength() == 16,
-        "compatibility evidence must use the model-socket reference semantic-phase convention for both Hand slots");
+        "compatibility evidence must use the reference-influence convention with current provider and input identity");
     Require(
         samples.EnumerateArray().All(x =>
             x.GetProperty("capability").GetString() == "Hand" &&
             x.GetProperty("socket").GetString()!.StartsWith("Equip.Hand.", StringComparison.Ordinal) &&
             x.GetProperty("phase").GetSingle() is >= 0f and <= 1f &&
+            x.GetProperty("referenceInfluence").GetSingle() is >= 0f and <= 1f &&
             x.GetProperty("bodySocketOrigin").GetArrayLength() == 3 &&
             x.GetProperty("attachmentReferenceOrigin").GetArrayLength() == 3 &&
             x.GetProperty("evaluatedMountOrigin").GetArrayLength() == 3 &&
             x.GetProperty("referenceError").GetSingle() <= 0.0001f &&
             x.GetProperty("animatedMountDrift").GetSingle() >= 0f &&
             x.GetProperty("passed").GetBoolean()),
-        "compatibility evidence must persist slot, phase, bind reference, evaluated Mount drift, and pass result");
+        "compatibility evidence must persist slot, phase, sampled influence, bind reference, evaluated Mount drift, and pass result");
 }
+
+string canonicalCompatibilityEvidence =
+    File.ReadAllText(compatibilityEvidence);
+
+// Missing tracked proof must fail publication even when live recomputation passes.
+File.Delete(compatibilityEvidence);
+StoreSnapshot missingCompatibility =
+    coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);
+Require(
+    missingCompatibility.Assets.Single(
+        x => x.Id == "foundation.avatar.humanoid.guard-01").FailedGate ==
+        "compatibility" &&
+    missingCompatibility.Assets.Single(
+        x => x.Id == "foundation.equipment.sword.02").FailedGate ==
+        "compatibility",
+    "missing tracked compatibility proof must fail affected publication despite passing live compatibility");
+coldStartEngine.Scan(writeDerived: false, writeCompatibility: true);
+Require(
+    File.ReadAllText(compatibilityEvidence) == canonicalCompatibilityEvidence,
+    "scan --write must regenerate missing compatibility proof byte-identically");
+
+// Obsolete v2 naming with otherwise current bytes must still fail.
+string obsoleteV2Evidence =
+    canonicalCompatibilityEvidence.Replace(
+        "model-socket-reference-influence-semantic-phase.v3",
+        "model-socket-reference-semantic-phase.v2",
+        StringComparison.Ordinal);
+File.WriteAllText(compatibilityEvidence, obsoleteV2Evidence);
+StoreSnapshot obsoleteV2 =
+    coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);
+Require(
+    obsoleteV2.Assets.Single(
+        x => x.Id == "foundation.equipment.sword.02").FailedGate ==
+        "compatibility",
+    "obsolete v2 compatibility convention must fail affected publication");
+
+// A correctly named but stale payload must fail exact expected-evidence comparison.
+File.WriteAllText(
+    compatibilityEvidence,
+    canonicalCompatibilityEvidence.Replace(
+        "\"referenceInfluence\": 1",
+        "\"referenceInfluence\": 0.75",
+        StringComparison.Ordinal));
+StoreSnapshot staleCompatibility =
+    coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);
+Require(
+    staleCompatibility.Assets.Single(
+        x => x.Id == "foundation.equipment.sword.02").FailedGate ==
+        "compatibility",
+    "stale tracked compatibility proof must fail affected publication even when live recomputation passes");
+
+coldStartEngine.Scan(writeDerived: false, writeCompatibility: true);
+Require(
+    File.ReadAllText(compatibilityEvidence) == canonicalCompatibilityEvidence,
+    "scan --write must deterministically repair stale compatibility evidence");
 
 // Derived catalog/health can be deleted and regenerated byte-identically.
 string catalogPath =
@@ -4728,7 +4832,7 @@ try
     }
 
     StoreSnapshot fullCatalog =
-        new StoreEngine(fullCatalogRoot, resolution.Root).Scan(false, false);
+        new StoreEngine(fullCatalogRoot, resolution.Root).Scan(false, true);
     Require(
         fullCatalog.Healthy &&
         fullCatalog.Assets.Count(x => x.Kind == "equipment") == 10 &&

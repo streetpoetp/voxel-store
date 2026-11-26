@@ -19,6 +19,8 @@ namespace VoxelStore.Preview.Runtime
         [SerializeField] private EquipmentSlotSide side;
 
         private VoxelActorBindingId bindingId;
+        private readonly AttachmentReferenceInfluenceResolver
+            referenceResolver = new AttachmentReferenceInfluenceResolver();
 
         public Transform PlacementRoot => transform;
         public VoxelRenderPresentation Model => model;
@@ -48,6 +50,7 @@ namespace VoxelStore.Preview.Runtime
             socketName = avatarSocketName;
             side = slotSide;
             bindingId = default;
+            referenceResolver.Reset();
         }
 
         internal void SetBinding(VoxelActorBindingId id)
@@ -55,11 +58,22 @@ namespace VoxelStore.Preview.Runtime
             if (!id.IsValid)
                 throw new ArgumentException("A valid actor binding is required.", nameof(id));
             bindingId = id;
+            referenceResolver.Reset();
         }
 
         internal void ClearBinding()
         {
             bindingId = default;
+            referenceResolver.Reset();
+        }
+
+        internal Matrix4x4 ResolveReferenceWorld(
+            Matrix4x4 currentReferenceWorld,
+            float referenceInfluence)
+        {
+            return referenceResolver.Resolve(
+                currentReferenceWorld,
+                referenceInfluence);
         }
 
         internal void RequireConfigured()

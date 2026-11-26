@@ -40,6 +40,12 @@ namespace VoxelStore.Preview.Runtime
         private VoxelActorPresenter actor;
         private VoxelActorAttachmentHandle primaryHandle;
         private VoxelActorAttachmentHandle secondaryHandle;
+        private readonly Dictionary<
+            VoxelActorAttachmentHandle,
+            AttachmentReferenceInfluenceResolver> attachmentResolvers =
+                new Dictionary<
+                    VoxelActorAttachmentHandle,
+                    AttachmentReferenceInfluenceResolver>();
 
         public bool IsConfigured =>
             world != null &&
@@ -66,6 +72,35 @@ namespace VoxelStore.Preview.Runtime
         public VoxelUnitId PrimaryUnitId => primaryAssembly != null ? primaryAssembly.UnitId : default;
         public VoxelUnitId SecondaryUnitId => secondaryAssembly != null ? secondaryAssembly.UnitId : default;
         public VoxelUnitId ReplacementUnitId => replacementAssembly != null ? replacementAssembly.UnitId : default;
+
+        public float PrimaryReferenceInfluence
+        {
+            get
+            {
+                RequireCurrentAttachment(
+                    primaryHandle,
+                    "primary influence");
+                return actor.GetAttachmentTrack(primaryHandle)
+                    .ReferenceInfluence;
+            }
+        }
+
+        public float PrimaryReferencePositionDistance
+        {
+            get
+            {
+                RequireCurrentAttachment(
+                    primaryHandle,
+                    "primary reference distance");
+                Matrix4x4 reference =
+                    actor.GetAttachmentReferenceWorldMatrix(primaryHandle);
+                Matrix4x4 actual =
+                    actor.GetAttachmentTrack(primaryHandle).WorldMatrix;
+                return Vector3.Distance(
+                    reference.MultiplyPoint3x4(Vector3.zero),
+                    actual.MultiplyPoint3x4(Vector3.zero));
+            }
+        }
 
         public void Configure(
             VoxelRenderWorld configuredWorld,
@@ -232,6 +267,12 @@ namespace VoxelStore.Preview.Runtime
             RequireTopologyAdvanced(
                 beforeDetach,
                 "detach secondary");
+            attachmentResolvers.Remove(stale);
+            if (attachmentResolvers.ContainsKey(stale))
+            {
+                throw new InvalidOperationException(
+                    "Detached streamed attachment retained resolver state.");
+            }
             RequireStaleHandle(stale, "detached secondary");
             if (actor.MutableAttachmentCount != 1)
             {
@@ -362,6 +403,11 @@ namespace VoxelStore.Preview.Runtime
 
             VoxelUnitId beforeUnit = before.UnitId;
 
+            AttachmentReferenceInfluenceResolver previousResolver = null;
+            attachmentResolvers.TryGetValue(
+                primaryHandle,
+                out previousResolver);
+
             int beforeReplace = actor.TopologyRevision;
             await actor.ReplaceAsync(
                 primaryHandle,
@@ -390,6 +436,7 @@ namespace VoxelStore.Preview.Runtime
 
             VoxelModelAnimationTrack replacementTrack =
                 actor.GetAttachmentTrack(primaryHandle);
+            attachmentResolvers.Remove(primaryHandle);
             if (ReferenceEquals(oldPrimaryTrack, replacementTrack) ||
                 replacementTrack.HasSelection)
             {
@@ -415,6 +462,14 @@ namespace VoxelStore.Preview.Runtime
             }
             ApplyTransformAndVisibility();
             ApplyCurrentAttachmentReferences();
+            if (previousResolver != null &&
+                ReferenceEquals(
+                    previousResolver,
+                    RequireAttachmentResolver(primaryHandle)))
+            {
+                throw new InvalidOperationException(
+                    "Replacement reused stale attachment resolver state.");
+            }
         }
 
         public async Task ReleaseAndReacquireRootOnlyAsync(float normalizedPhase)
@@ -426,6 +481,12 @@ namespace VoxelStore.Preview.Runtime
             VoxelActorAttachmentHandle staleSecondary = secondaryHandle;
             actors.Release(actor);
             actor = await actors.AcquireAsync().AsTask();
+            attachmentResolvers.Clear();
+            if (attachmentResolvers.Count != 0)
+            {
+                throw new InvalidOperationException(
+                    "Warm streamed actor release retained attachment resolver state.");
+            }
 
             if (actor.MutableAttachmentCount != 0 ||
                 actor.AttachmentCount != 0)
@@ -508,6 +569,7 @@ namespace VoxelStore.Preview.Runtime
             actor = null;
             primaryHandle = default;
             secondaryHandle = default;
+            attachmentResolvers.Clear();
 
             actors?.Dispose();
             actors = null;
@@ -532,7 +594,6 @@ namespace VoxelStore.Preview.Runtime
             rootTrack.Select(
                 AttackCandidates(EquipmentSlotSide.Right));
             rootTrack.SampleNormalized(rootPhase);
-            ApplyCurrentAttachmentReferences();
 
             if (IsCurrentAttachment(primaryHandle))
             {
@@ -551,6 +612,8 @@ namespace VoxelStore.Preview.Runtime
                     AttackCandidates(EquipmentSlotSide.Left));
                 secondaryTrack.SampleNormalized(secondaryPhase);
             }
+
+            ApplyCurrentAttachmentReferences();
         }
 
         private void SampleRootOnly(float normalizedPhase)
@@ -591,30 +654,70 @@ namespace VoxelStore.Preview.Runtime
         private void ApplyAttachmentReference(
             VoxelActorAttachmentHandle handle)
         {
-            actor.GetAttachmentTrack(handle).SetWorldMatrix(
-                actor.GetAttachmentReferenceWorldMatrix(handle));
+            RequireCurrentAttachment(
+                handle,
+                "apply attachment reference");
+            VoxelModelAnimationTrack track =
+                actor.GetAttachmentTrack(handle);
+            Matrix4x4 reference =
+                actor.GetAttachmentReferenceWorldMatrix(handle);
+            AttachmentReferenceInfluenceResolver resolver =
+                RequireAttachmentResolver(handle);
+            track.SetWorldMatrix(
+                resolver.Resolve(
+                    reference,
+                    track.ReferenceInfluence));
+        }
+
+        private AttachmentReferenceInfluenceResolver
+            RequireAttachmentResolver(
+                VoxelActorAttachmentHandle handle)
+        {
+            if (!attachmentResolvers.TryGetValue(
+                    handle,
+                    out AttachmentReferenceInfluenceResolver resolver))
+            {
+                resolver =
+                    new AttachmentReferenceInfluenceResolver();
+                attachmentResolvers.Add(handle, resolver);
+            }
+
+            return resolver;
         }
 
         private void ValidateReference(
             VoxelActorAttachmentHandle handle,
             float tolerance)
         {
+            RequireCurrentAttachment(
+                handle,
+                "validate attachment reference");
             Matrix4x4 reference =
                 actor.GetAttachmentReferenceWorldMatrix(handle);
-            Matrix4x4 actual =
-                actor.GetAttachmentTrack(handle).WorldMatrix;
-            if (!IsFinite(reference) || !IsFinite(actual))
+            VoxelModelAnimationTrack track =
+                actor.GetAttachmentTrack(handle);
+            Matrix4x4 actual = track.WorldMatrix;
+            float influence = track.ReferenceInfluence;
+            if (!IsFinite(reference) ||
+                !IsFinite(actual) ||
+                !float.IsFinite(influence) ||
+                influence < 0f ||
+                influence > 1f)
             {
                 throw new InvalidOperationException(
-                    "Mutable streamed attachment reference is not finite.");
+                    "Mutable streamed attachment reference state is not finite or valid.");
             }
 
-            float error = MaxMatrixDelta(reference, actual);
+            Matrix4x4 expected =
+                RequireAttachmentResolver(handle)
+                    .Resolve(reference, influence);
+            float error = MaxMatrixDelta(expected, actual);
             if (error > tolerance)
             {
                 throw new InvalidOperationException(
-                    "Mutable streamed attachment track does not match its current reference: " +
-                    "error=" + error.ToString("R") +
+                    "Mutable streamed attachment track does not match resolved presentation: " +
+                    "influence=" + influence.ToString("R") +
+                    ", error=" + error.ToString("R") +
                     ", tolerance=" + tolerance.ToString("R") + ".");
             }
         }

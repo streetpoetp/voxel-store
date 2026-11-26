@@ -123,6 +123,8 @@ public sealed class StoreEngine
         new(StringComparer.Ordinal) { "Left", "Right", "Center" };
     private readonly string _root;
     private readonly HeroVoxelProvider _provider;
+    private const string CompatibilityEvidenceConvention =
+        "model-socket-reference-influence-semantic-phase.v3";
 
     public StoreEngine(string root, string? providerRoot = null)
     {
@@ -1093,6 +1095,8 @@ public sealed class StoreEngine
         bool write)
     {
         var result = new List<CompatibilityResult>();
+        HeroVoxelProvider.Resolution providerResolution =
+            _provider.Resolve();
         AssetRecord[] equipmentAssets = assets
             .Where(x => x.Manifest.Kind == "equipment" && health[x.Manifest.Id].BasePublished)
             .OrderBy(x => x.Manifest.Id, StringComparer.Ordinal)
@@ -1230,6 +1234,10 @@ public sealed class StoreEngine
                             phase = sample.Phase,
                             bodyClip = bodyClipName,
                             equipmentClip = equipmentClipName,
+                            referenceInfluence =
+                                SampleReferenceInfluence(
+                                    equipmentClip,
+                                    sample.Phase),
                             bodySocketOrigin = Vector(MatrixOrigin(pose.BodySocket)),
                             attachmentReferenceOrigin =
                                 Vector(MatrixOrigin(pose.AttachmentReference)),
@@ -1242,12 +1250,32 @@ public sealed class StoreEngine
                     }
                 }
 
-                if (write)
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(evidencePath)!);
-                    File.WriteAllText(evidencePath, JsonSerializer.Serialize(new
+                string expectedEvidence =
+                    JsonSerializer.Serialize(new
                     {
-                        convention = "model-socket-reference-semantic-phase.v2",
+                        convention = CompatibilityEvidenceConvention,
+                        provider = new
+                        {
+                            heroStudioRevision =
+                                providerResolution.Lock.HeroStudioRevision,
+                            workflowSha256 =
+                                providerResolution.Lock.WorkflowSha256
+                        },
+                        inputs = new
+                        {
+                            avatarSourceSha256 =
+                                EvidenceHash.HashFile(
+                                    avatar.SourceBase + ".voxel.yaml"),
+                            avatarPaletteSha256 =
+                                EvidenceHash.HashFile(
+                                    avatar.PalettePath),
+                            equipmentSourceSha256 =
+                                EvidenceHash.HashFile(
+                                    equipment.SourceBase + ".voxel.yaml"),
+                            equipmentPaletteSha256 =
+                                EvidenceHash.HashFile(
+                                    equipment.PalettePath)
+                        },
                         avatar = avatar.Manifest.Id,
                         equipment = equipment.Manifest.Id,
                         attachment = new
@@ -1257,12 +1285,94 @@ public sealed class StoreEngine
                             anchor = attachment.Anchor
                         },
                         samples
-                    }, JsonOptions));
+                    }, JsonOptions);
+
+                if (write)
+                {
+                    Directory.CreateDirectory(
+                        Path.GetDirectoryName(evidencePath)!);
+                    File.WriteAllText(
+                        evidencePath,
+                        expectedEvidence);
                 }
-            }
+                else if (!EvidenceHash.TextFileEquals(
+                             evidencePath,
+                             expectedEvidence))
+                {
+                    string detail = File.Exists(evidencePath)
+                        ? "Tracked compatibility evidence is stale or uses an obsolete convention."
+                        : "Tracked compatibility evidence is missing.";
+                    result.Add(new CompatibilityResult(
+                        avatar.Manifest.Id,
+                        equipment.Manifest.Id,
+                        attachment.Capability,
+                        string.Empty,
+                        string.Empty,
+                        string.Empty,
+                        0f,
+                        false,
+                        detail,
+                        evidenceRef));
+                }            }
         }
 
         return result;
+    }
+
+    private static float SampleReferenceInfluence(
+        CompiledAnimationClip clip,
+        float phase)
+    {
+        ArgumentNullException.ThrowIfNull(clip);
+        CompiledAnimationScalarChannel? channel =
+            clip.ReferenceInfluence;
+        if (channel == null)
+            return 1f;
+
+        IReadOnlyList<CompiledAnimationScalarKey> keys =
+            channel.Keys;
+        if (keys.Count == 0)
+            return 1f;
+
+        float time = Math.Clamp(phase, 0f, 1f);
+        if (keys.Count == 1 ||
+            time <= keys[0].Time)
+        {
+            return keys[0].Value;
+        }
+
+        if (time >= keys[^1].Time)
+            return keys[^1].Value;
+
+        int upper = 1;
+        while (upper < keys.Count &&
+               keys[upper].Time < time)
+        {
+            upper++;
+        }
+
+        CompiledAnimationScalarKey a =
+            keys[upper - 1];
+        CompiledAnimationScalarKey b =
+            keys[upper];
+        if (time == b.Time)
+            return b.Value;
+
+        float t =
+            (time - a.Time) /
+            (b.Time - a.Time);
+        t = channel.Interpolation switch
+        {
+            CompiledAnimationInterpolation.Step => 0f,
+            CompiledAnimationInterpolation.Linear => t,
+            CompiledAnimationInterpolation.SmoothStep =>
+                t * t * (3f - 2f * t),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(channel.Interpolation))
+        };
+
+        return a.Value +
+               ((b.Value - a.Value) * t);
     }
 
     internal static void ValidateRigidBodyAvatar(VoxelCompilation compilation)

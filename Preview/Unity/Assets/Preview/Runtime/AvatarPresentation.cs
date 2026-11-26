@@ -237,17 +237,7 @@ namespace VoxelStore.Preview.Runtime
 
             body.SyncWorldMatrix();
             foreach (EquipmentPresentation item in equipment)
-            {
-                VoxelModelMotionPlayer player =
-                    item.Model.GetComponent<VoxelModelMotionPlayer>();
-                if (player != null &&
-                    !player.ShouldFollowAttachmentReference)
-                {
-                    continue;
-                }
-
                 ApplyAttachmentReferenceCurrent(item);
-            }
         }
 
         private void ApplyAttachmentReferenceCurrent(
@@ -255,7 +245,13 @@ namespace VoxelStore.Preview.Runtime
         {
             Matrix4x4 reference =
                 actor.GetAttachmentReferenceWorldMatrix(item.BindingId);
-            item.Model.EnsureAnimationTrack().SetWorldMatrix(reference);
+            VoxelModelAnimationTrack track =
+                item.Model.EnsureAnimationTrack();
+            Matrix4x4 resolved =
+                item.ResolveReferenceWorld(
+                    reference,
+                    track.ReferenceInfluence);
+            track.SetWorldMatrix(resolved);
         }
 
         private void RequireCurrentEquipment(

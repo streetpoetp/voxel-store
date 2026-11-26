@@ -85,7 +85,7 @@ namespace VoxelStore.Preview.PlayMode.Tests
         }
 
         [UnityTest]
-        public IEnumerator TranslatedNonLoopingWeaponIgnoresBodySocketMotionUntilTerminalReturn()
+        public IEnumerator TranslatedLegacyClipDefaultsToFullReferenceInfluence()
         {
             Fixture fixture = CreateFixture();
             try
@@ -93,36 +93,22 @@ namespace VoxelStore.Preview.PlayMode.Tests
                 fixture.EquipmentPlayer.SampleExact(
                     "Attack",
                     0.55f);
-                Matrix4x4 latchedWorld =
-                    fixture.Equipment.Model.AnimationTrack.WorldMatrix;
                 VoxelActorBindingId bindingBefore =
                     fixture.Equipment.BindingId;
-                Matrix4x4 referenceBefore =
-                    fixture.Avatar.ResolveAttachmentReferenceWorld(
-                        fixture.Equipment);
-                AssertMatrixNear(latchedWorld, referenceBefore);
-
-                fixture.BodyPlayer.SampleExact(
-                    "Attack.Right",
-                    0.75f);
-
-                Matrix4x4 referenceAfterBodyMove =
-                    fixture.Avatar.ResolveAttachmentReferenceWorld(
-                        fixture.Equipment);
                 Assert.That(
-                    MatrixDistance(referenceBefore, referenceAfterBodyMove),
-                    Is.GreaterThan(0.01f));
+                    fixture.Equipment.Model.AnimationTrack.ReferenceInfluence,
+                    Is.EqualTo(1f).Within(0.0001f));
+
+                fixture.Unit.transform.position +=
+                    new Vector3(1.25f, 0.25f, -0.5f);
+                fixture.Avatar.RefreshAttachmentReferences();
+
+                Matrix4x4 currentReference =
+                    fixture.Avatar.ResolveAttachmentReferenceWorld(
+                        fixture.Equipment);
                 AssertMatrixNear(
                     fixture.Equipment.Model.AnimationTrack.WorldMatrix,
-                    latchedWorld);
-                Assert.That(
-                    fixture.Equipment.BindingId,
-                    Is.EqualTo(bindingBefore));
-
-                fixture.EquipmentPlayer.SampleExact(
-                    "Attack",
-                    1f);
-                AssertReferenceApplied(fixture);
+                    currentReference);
                 Assert.That(
                     fixture.Equipment.BindingId,
                     Is.EqualTo(bindingBefore));
@@ -133,6 +119,193 @@ namespace VoxelStore.Preview.PlayMode.Tests
                 fixture.Dispose();
             }
         }
+
+        [UnityTest]
+        public IEnumerator RotationOnlyClipCanReleaseFromMovingReference()
+        {
+            Fixture fixture = CreateFixture();
+            try
+            {
+                fixture.EquipmentPlayer.SampleExact(
+                    "RotationReleased",
+                    0.5f);
+                Matrix4x4 releaseBasis =
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix;
+                Assert.That(
+                    fixture.Equipment.Model.AnimationTrack.ReferenceInfluence,
+                    Is.EqualTo(0f).Within(0.0001f));
+
+                fixture.Unit.transform.position +=
+                    new Vector3(1.5f, 0f, 0.25f);
+                fixture.Avatar.RefreshAttachmentReferences();
+
+                Matrix4x4 currentReference =
+                    fixture.Avatar.ResolveAttachmentReferenceWorld(
+                        fixture.Equipment);
+                Assert.That(
+                    MatrixDistance(releaseBasis, currentReference),
+                    Is.GreaterThan(0.01f));
+                AssertMatrixNear(
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix,
+                    releaseBasis);
+                yield return null;
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator IntermediateInfluenceBlendsReleaseBasisTowardCurrentReference()
+        {
+            Fixture fixture = CreateFixture();
+            try
+            {
+                fixture.EquipmentPlayer.SampleExact(
+                    "BlendReturn",
+                    0.5f);
+                Matrix4x4 releaseBasis =
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix;
+                Assert.That(
+                    fixture.Equipment.Model.AnimationTrack.ReferenceInfluence,
+                    Is.EqualTo(0f).Within(0.0001f));
+
+                fixture.Unit.transform.position +=
+                    new Vector3(2f, 0.5f, 0f);
+                Matrix4x4 currentReference =
+                    fixture.Avatar.ResolveAttachmentReferenceWorld(
+                        fixture.Equipment);
+
+                fixture.EquipmentPlayer.SampleExact(
+                    "BlendReturn",
+                    0.75f);
+                Assert.That(
+                    fixture.Equipment.Model.AnimationTrack.ReferenceInfluence,
+                    Is.EqualTo(0.4f).Within(0.0001f));
+
+                Vector3 expected =
+                    Vector3.Lerp(
+                        releaseBasis.MultiplyPoint3x4(Vector3.zero),
+                        currentReference.MultiplyPoint3x4(Vector3.zero),
+                        0.4f);
+                Vector3 actual =
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix
+                        .MultiplyPoint3x4(Vector3.zero);
+                Assert.That(
+                    Vector3.Distance(actual, expected),
+                    Is.LessThan(0.0001f));
+                yield return null;
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator MovingReferenceReturnConvergesBeforeTerminalFrame()
+        {
+            Fixture fixture = CreateFixture();
+            try
+            {
+                fixture.EquipmentPlayer.SampleExact(
+                    "BlendReturn",
+                    0.5f);
+                fixture.Unit.transform.position +=
+                    new Vector3(2.5f, 0f, -0.5f);
+                Matrix4x4 currentReference =
+                    fixture.Avatar.ResolveAttachmentReferenceWorld(
+                        fixture.Equipment);
+
+                fixture.EquipmentPlayer.SampleExact(
+                    "BlendReturn",
+                    0.75f);
+                float earlyDistance = MatrixDistance(
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix,
+                    currentReference);
+
+                fixture.EquipmentPlayer.SampleExact(
+                    "BlendReturn",
+                    0.9f);
+                float lateDistance = MatrixDistance(
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix,
+                    currentReference);
+
+                Assert.That(earlyDistance, Is.GreaterThan(0.01f));
+                Assert.That(lateDistance, Is.GreaterThan(0.001f));
+                Assert.That(lateDistance, Is.LessThan(earlyDistance));
+
+                fixture.EquipmentPlayer.SampleExact(
+                    "BlendReturn",
+                    1f);
+                AssertMatrixNear(
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix,
+                    currentReference);
+                yield return null;
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator EffectiveLoopOverrideDoesNotRedefineReferenceInfluence()
+        {
+            Fixture fixture = CreateFixture();
+            try
+            {
+                fixture.EquipmentPlayer.PlayExact(
+                    "AuthoredLoopReleased",
+                    shouldLoop: false,
+                    playbackSpeed: 1f);
+                VoxelModelAnimationTrack releasedTrack =
+                    fixture.Equipment.Model.AnimationTrack;
+                releasedTrack.SampleNormalized(0.5f);
+                fixture.Avatar.RefreshAttachmentReferences();
+                Matrix4x4 releaseBasis = releasedTrack.WorldMatrix;
+                Assert.IsFalse(releasedTrack.EffectiveLoop);
+                Assert.That(
+                    releasedTrack.ReferenceInfluence,
+                    Is.EqualTo(0f).Within(0.0001f));
+
+                fixture.Unit.transform.position +=
+                    new Vector3(1f, 0f, 0f);
+                fixture.Avatar.RefreshAttachmentReferences();
+                AssertMatrixNear(
+                    releasedTrack.WorldMatrix,
+                    releaseBasis);
+
+                fixture.EquipmentPlayer.ResetMotion();
+                fixture.EquipmentPlayer.PlayExact(
+                    "AuthoredNonLoopFollow",
+                    shouldLoop: true,
+                    playbackSpeed: 1f);
+                VoxelModelAnimationTrack followingTrack =
+                    fixture.Equipment.Model.AnimationTrack;
+                followingTrack.SampleNormalized(0.5f);
+                fixture.Avatar.RefreshAttachmentReferences();
+                Assert.IsTrue(followingTrack.EffectiveLoop);
+                Assert.That(
+                    followingTrack.ReferenceInfluence,
+                    Is.EqualTo(1f).Within(0.0001f));
+
+                fixture.Unit.transform.position +=
+                    new Vector3(1f, 0f, 0f);
+                fixture.Avatar.RefreshAttachmentReferences();
+                AssertMatrixNear(
+                    followingTrack.WorldMatrix,
+                    fixture.Avatar.ResolveAttachmentReferenceWorld(
+                        fixture.Equipment));
+                yield return null;
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
 
         [UnityTest]
         public IEnumerator BodyAndEquipmentResetOnlyWhenExplicitlyCommanded()
@@ -551,7 +724,33 @@ namespace VoxelStore.Preview.PlayMode.Tests
                             "Death",
                             false,
                             Quaternion.Euler(0f, 0f, 82f),
-                            1.4f)
+                            1.4f),
+                        RotationClip(
+                            "RotationReleased",
+                            false,
+                            Quaternion.Euler(0f, 0f, 55f),
+                            1f,
+                            ConstantInfluence(0f)),
+                        TransformClip(
+                            "BlendReturn",
+                            false,
+                            new Vector3(0f, 0f, -0.5f),
+                            Quaternion.Euler(0f, 0f, 45f),
+                            1f,
+                            ReturnInfluence()),
+                        RotationClip(
+                            "AuthoredLoopReleased",
+                            true,
+                            Quaternion.Euler(0f, 0f, 30f),
+                            1f,
+                            ConstantInfluence(0f)),
+                        TransformClip(
+                            "AuthoredNonLoopFollow",
+                            false,
+                            new Vector3(0f, 0f, -0.4f),
+                            Quaternion.Euler(0f, 0f, 25f),
+                            1f,
+                            ConstantInfluence(1f))
                     });
 
             fixture.WorldRoot = new GameObject("WorldRoot");
@@ -661,7 +860,8 @@ namespace VoxelStore.Preview.PlayMode.Tests
             string name,
             bool loop,
             Quaternion end,
-            float duration)
+            float duration,
+            VoxelScalarChannel? referenceInfluence = null)
         {
             return new VoxelAnimationClip(
                 name,
@@ -680,7 +880,8 @@ namespace VoxelStore.Preview.PlayMode.Tests
                                 new VoxelQuaternionKey(1f, end)
                             }),
                         null)
-                });
+                },
+                referenceInfluence);
         }
 
         private static VoxelAnimationClip TransformClip(
@@ -688,7 +889,8 @@ namespace VoxelStore.Preview.PlayMode.Tests
             bool loop,
             Vector3 positionEnd,
             Quaternion rotationEnd,
-            float duration)
+            float duration,
+            VoxelScalarChannel? referenceInfluence = null)
         {
             return new VoxelAnimationClip(
                 name,
@@ -717,6 +919,33 @@ namespace VoxelStore.Preview.PlayMode.Tests
                                     Quaternion.Euler(0f, 0f, 10f))
                             }),
                         null)
+                },
+                referenceInfluence);
+        }
+
+        private static VoxelScalarChannel ConstantInfluence(float value)
+        {
+            return new VoxelScalarChannel(
+                VoxelAnimationInterpolation.Linear,
+                new[]
+                {
+                    new VoxelScalarKey(0f, value),
+                    new VoxelScalarKey(1f, value)
+                });
+        }
+
+        private static VoxelScalarChannel ReturnInfluence()
+        {
+            return new VoxelScalarChannel(
+                VoxelAnimationInterpolation.Linear,
+                new[]
+                {
+                    new VoxelScalarKey(0f, 1f),
+                    new VoxelScalarKey(0.25f, 0f),
+                    new VoxelScalarKey(0.5f, 0f),
+                    new VoxelScalarKey(0.75f, 0.4f),
+                    new VoxelScalarKey(0.9f, 0.8f),
+                    new VoxelScalarKey(1f, 1f)
                 });
         }
 

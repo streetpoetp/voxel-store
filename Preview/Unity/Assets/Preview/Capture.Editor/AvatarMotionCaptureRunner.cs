@@ -55,10 +55,15 @@ namespace VoxelStore.Preview.Capture.Editor
         private static readonly CapturePoint[] FocusedAxe03Points =
         {
             new CapturePoint(AvatarMotion.Idle, AvatarMotion.Idle, "axe03-idle-hold", 0.50f, 0.50f),
-            new CapturePoint(AvatarMotion.Idle, AvatarMotion.Attack, "axe03-attack-v0-contact", 0.50f, 0.50f),
-            new CapturePoint(AvatarMotion.Idle, AvatarMotion.Attack, "axe03-attack-v1-contact", 0.50f, 0.50f, null, "", "V1")
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.Attack, "axe03-v0-release", 0.20f, 0.50f),
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.Attack, "axe03-v0-return-early", 0.45f, 0.78f),
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.Attack, "axe03-v0-return-late", 0.70f, 0.90f),
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.Attack, "axe03-v0-rejoined", 0.90f, 1.00f),
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.Attack, "axe03-v1-release", 0.20f, 0.50f, null, "", "V1"),
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.Attack, "axe03-v1-return-early", 0.45f, 0.82f, null, "", "V1"),
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.Attack, "axe03-v1-return-late", 0.70f, 0.92f, null, "", "V1"),
+            new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.Attack, "axe03-v1-rejoined", 0.90f, 1.00f, null, "", "V1")
         };
-
         static AvatarMotionCaptureRunner()
         {
             EditorApplication.update -= Poll;
@@ -484,16 +489,24 @@ namespace VoxelStore.Preview.Capture.Editor
                         point.Checkpoint + ".");
                 }
 
-                VoxelModelMotionPlayer player =
-                    equipment.Model.GetComponent<VoxelModelMotionPlayer>();
-                if (player == null ||
-                    player.ShouldFollowAttachmentReference)
+                float influence = track.ReferenceInfluence;
+                if (!float.IsFinite(influence) ||
+                    influence < 0f ||
+                    influence > 1f)
+                {
+                    throw new InvalidOperationException(
+                        "Capture attachment has invalid sampled reference influence at " +
+                        point.Checkpoint +
+                        ": influence=" + influence.ToString("R") + ".");
+                }
+
+                if (influence >= 1f)
                 {
                     float error = MaxMatrixDelta(reference, actual);
                     if (error > tolerance)
                     {
                         throw new InvalidOperationException(
-                            "Capture attachment track does not match its current reference at " +
+                            "Fully influenced capture attachment does not match its current reference at " +
                             point.Checkpoint +
                             ": error=" + error.ToString("R") +
                             ", tolerance=" + tolerance.ToString("R") + ".");

@@ -52,62 +52,6 @@ namespace VoxelStore.Preview.Runtime
             model.AnimationTrack.HasSelection
                 ? model.AnimationTrack.SelectedClip.Clip.Name
                 : string.Empty;
-        public bool ShouldFollowAttachmentReference
-        {
-            get
-            {
-                if (Equipment == null)
-                    return true;
-
-                VoxelModelAnimationTrack track =
-                    model != null ? model.AnimationTrack : null;
-                if (track == null || !track.HasSelection)
-                    return true;
-
-                VoxelAnimationClip clip = track.SelectedClip.Clip;
-                if (clip.Loop)
-                    return true;
-
-                bool hasMeaningfulTranslation = false;
-                bool terminalTranslationIsZero = true;
-                const float epsilonSquared = 0.00000001f;
-                for (int trackIndex = 0;
-                     trackIndex < clip.TrackCount;
-                     trackIndex++)
-                {
-                    VoxelAnimationTrack authored = clip.GetTrack(trackIndex);
-                    if (!authored.HasPosition ||
-                        authored.Position.KeyCount == 0)
-                    {
-                        continue;
-                    }
-
-                    VoxelVectorChannel position = authored.Position;
-                    for (int keyIndex = 0;
-                         keyIndex < position.KeyCount;
-                         keyIndex++)
-                    {
-                        if (position.GetKey(keyIndex).Value.sqrMagnitude >
-                            epsilonSquared)
-                        {
-                            hasMeaningfulTranslation = true;
-                        }
-                    }
-
-                    if (position.GetKey(position.KeyCount - 1)
-                            .Value.sqrMagnitude > epsilonSquared)
-                    {
-                        terminalTranslationIsZero = false;
-                    }
-                }
-
-                if (!hasMeaningfulTranslation)
-                    return true;
-
-                return track.NormalizedPhase >= 0.9999f &&
-                       terminalTranslationIsZero;
-            }
-        }
 
         public void Configure(
             VoxelRenderPresentation renderModel,
@@ -207,7 +151,6 @@ namespace VoxelStore.Preview.Runtime
 
             VoxelModelAnimationTrack track =
                 model.EnsureAnimationTrack();
-            PrepareAttachmentReferenceForSelection();
             track.Play(
                 new[] { clipName },
                 shouldLoop,
@@ -229,7 +172,6 @@ namespace VoxelStore.Preview.Runtime
             clipName = resolved.Clip.Name;
             loop = loopOverride ?? resolved.Loop;
             speed = playbackSpeed;
-            PrepareAttachmentReferenceForSelection();
             track.Play(
                 resolved,
                 loopOverride,
@@ -253,7 +195,6 @@ namespace VoxelStore.Preview.Runtime
             clipName = exactClipName.Trim();
             VoxelModelAnimationTrack track =
                 model.EnsureAnimationTrack();
-            PrepareAttachmentReferenceForSelection();
             track.Select(new[] { clipName });
             track.SampleNormalized(normalizedTime);
             RefreshComposition();
@@ -270,7 +211,6 @@ namespace VoxelStore.Preview.Runtime
             VoxelActorResolvedClip resolved =
                 track.ResolveRequired(candidates);
             clipName = resolved.Clip.Name;
-            PrepareAttachmentReferenceForSelection();
             track.Select(resolved);
             track.SampleNormalized(normalizedTime);
             RefreshComposition();
@@ -347,13 +287,6 @@ namespace VoxelStore.Preview.Runtime
                 composition.RefreshAttachmentReferences();
             else
                 model?.SyncWorldMatrix();
-        }
-
-        private void PrepareAttachmentReferenceForSelection()
-        {
-            EquipmentPresentation equipment = Equipment;
-            if (composition != null && equipment != null)
-                composition.ApplyAttachmentReference(equipment);
         }
 
         private void RequireConfigured()
