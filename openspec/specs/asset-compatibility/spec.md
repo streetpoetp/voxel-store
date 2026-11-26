@@ -60,19 +60,23 @@ Reusable equipment attachment SHALL resolve from Hero.Voxel sockets authored on 
 - **THEN** compatibility fails with the missing capability/socket evidence
 
 ### Requirement: Equipment attachment uses its authored Mount frame
-Reusable equipment SHALL align its evaluated Mount socket to the selected evaluated avatar equipment socket.
+Reusable equipment SHALL use its authored bind-pose Mount frame to establish the attachment reference for the selected evaluated avatar equipment socket. Animated visual motion MAY move the evaluated Mount away from that reference without invalidating logical attachment.
 
 #### Scenario: Static attachment is solved
 - **WHEN** body and equipment are evaluated at neutral pose
-- **THEN** equipment root is solved as avatar-socket matrix multiplied by the inverse equipment-Mount matrix
+- **THEN** the equipment attachment reference is solved as avatar-socket matrix multiplied by the inverse equipment bind-Mount matrix
 
 #### Scenario: Equipment pivot differs from its grip
 - **WHEN** the equipment root/pivot is not located at the authored Mount socket
-- **THEN** compatibility uses the Mount frame and does not require a corrective Unity offset
+- **THEN** compatibility uses the bind-Mount frame and does not require a corrective Unity offset
 
 #### Scenario: Pair-specific correction is required
 - **WHEN** acceptable composition requires an extra transform unique to one avatar/equipment pair
 - **THEN** compatibility fails instead of persisting the correction
+
+#### Scenario: Authored animation moves the evaluated Mount
+- **WHEN** an equipment clip changes the evaluated Mount-bearing part transform after a valid bind reference has been established
+- **THEN** logical attachment remains valid and compatibility does not require the evaluated animated Mount to coincide with the avatar socket
 
 ### Requirement: Multiple equipment instances attach independently by slot
 A reusable avatar SHALL support multiple equipment instances, including repeated instances of the same equipment asset or form, by resolving each instance against a distinct compatible physical socket without making another equipment item its attachment parent.
@@ -98,23 +102,27 @@ A reusable avatar SHALL support multiple equipment instances, including repeated
 - **THEN** compatibility preserves their distinct side semantics and never treats them as interchangeable anonymous `Hand.0`/`Hand.1` instances
 
 ### Requirement: Animated attachment uses current body socket and equipment bind Mount
-Equipment attachment SHALL solve the equipment root from the current animated body socket and the equipment's bind Mount frame. Body and equipment animation SHALL be sampled independently around that physical attachment relationship.
+Animated composition SHALL expose the current body socket combined with the equipment bind-Mount inverse as attachment reference data while body and equipment animation remain independently sampled. Equipment visual animation MAY depart from that reference; following the reference is an explicit presentation choice rather than a continuous compatibility invariant.
 
 #### Scenario: Body socket moves during animation
 - **WHEN** the Body animation changes pose and therefore moves an equipment socket
-- **THEN** the equipment attachment root follows the current evaluated socket frame regardless of the equipment animation's independent phase or playing state
+- **THEN** the current attachment reference changes with that socket without requiring compatibility to overwrite the equipment's independently authored visual animation state
 
 #### Scenario: Single-part weapon rotates during animation
 - **WHEN** an equipment clip independently rotates its Mount-bearing part around a pivot colocated with Mount
-- **THEN** the weapon visibly rotates around the grip while its attachment root remains bound to the current body socket
+- **THEN** the weapon visibly rotates from its model-local animation while the bind-Mount reference remains available for socket-relative presentation
 
 #### Scenario: Runtime tries to solve against evaluated animated Mount
 - **WHEN** composition would use the evaluated animated Mount matrix as the inverse root-solving input for a one-part weapon
-- **THEN** compatibility rejects that method because it cancels the weapon's authored part transform
+- **THEN** compatibility rejects that method because it would cancel or feed back the weapon's authored part transform instead of using the bind-Mount reference
 
 #### Scenario: Single-part weapon translates its Mount-bearing part
-- **WHEN** an equipment animation contains a position track on the current one-part Mount-bearing part
-- **THEN** compatibility fails because the grip would translate away from the body socket
+- **WHEN** an equipment animation contains a finite position track on the current one-part Mount-bearing part
+- **THEN** compatibility permits the authored visual translation and does not fail solely because the evaluated Mount moves away from the body socket
+
+#### Scenario: Visual motion departs from the attachment reference
+- **WHEN** equipment animation produces a visual pose whose evaluated Mount differs from the current attachment reference
+- **THEN** the equipment remains the same logically attached instance and no detach, reattach, or pair-specific correction is required
 
 ### Requirement: Socket and animation compatibility remain density-independent
 Different positive avatar/equipment authoring densities SHALL remain compatible when baked world scale, socket frames, Mount alignment, and semantic animation sampling satisfy the shared contracts.

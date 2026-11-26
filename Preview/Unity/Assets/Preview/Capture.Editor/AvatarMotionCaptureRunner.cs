@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Hero.Consumer.Editor;
+using Hero.Voxel.Actor.Runtime.Unity;
 using Hero.Voxel.Render.Runtime.Unity;
 using UnityEditor;
 using UnityEngine;
@@ -24,9 +26,11 @@ namespace VoxelStore.Preview.Capture.Editor
             "VoxelStore.AvatarMotionCapture.Error";
         private const string OutputDirectory =
             "Library/Capture/AvatarMotionGallery";
+        private const string FocusEquipmentAssemblyName = "Axe03";
 
         private static readonly CapturePoint[] Points =
         {
+            new CapturePoint(AvatarMotion.Idle, AvatarMotion.Idle, "idle-baseline-hold", 0.50f, 0.50f),
             new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.WalkForward, "walk-launch", 0.20f, 0.20f),
             new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.WalkForward, "walk-apex", 0.45f, 0.45f),
             new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.WalkForward, "walk-land", 0.70f, 0.70f),
@@ -46,6 +50,13 @@ namespace VoxelStore.Preview.Capture.Editor
             new CapturePoint(AvatarMotion.Idle, AvatarMotion.Attack, "independent-body-idle-weapon-attack", 0.50f, 0.75f),
             new CapturePoint(AvatarMotion.WalkForward, AvatarMotion.Attack, "independent-phases", 0.25f, 0.80f),
             new CapturePoint(AvatarMotion.Death, AvatarMotion.Death, "independent-death-commands", 0.55f, 0.30f)
+        };
+
+        private static readonly CapturePoint[] FocusedAxe03Points =
+        {
+            new CapturePoint(AvatarMotion.Idle, AvatarMotion.Idle, "axe03-idle-hold", 0.50f, 0.50f),
+            new CapturePoint(AvatarMotion.Idle, AvatarMotion.Attack, "axe03-attack-v0-contact", 0.50f, 0.50f),
+            new CapturePoint(AvatarMotion.Idle, AvatarMotion.Attack, "axe03-attack-v1-contact", 0.50f, 0.50f, null, "", "V1")
         };
 
         static AvatarMotionCaptureRunner()
@@ -152,10 +163,31 @@ namespace VoxelStore.Preview.Capture.Editor
                     foreach (AvatarPresentation avatar in avatars)
                     {
                         ApplyPoint(avatar, point);
-                        ValidateAttachmentGrip(avatar, point);
+                        ValidateAttachmentReference(avatar, point);
                         avatar.SubmitNow();
                     }
 
+                    await GameViewCapture.CaptureAsync(
+                        OutputDirectory,
+                        point.Checkpoint,
+                        stableFrames: 1);
+                }
+
+                AvatarPresentation axeAvatar =
+                    FindAvatarWithEquipment(
+                        avatars,
+                        FocusEquipmentAssemblyName);
+                ConfigureFocusedCaptureView(
+                    axeAvatar,
+                    FocusedAxe03Points);
+                foreach (CapturePoint point in FocusedAxe03Points)
+                {
+                    ApplyFocusedEquipmentPoint(
+                        axeAvatar,
+                        point,
+                        FocusEquipmentAssemblyName);
+                    ValidateAttachmentReference(axeAvatar, point);
+                    axeAvatar.SubmitNow();
                     await GameViewCapture.CaptureAsync(
                         OutputDirectory,
                         point.Checkpoint,
@@ -208,7 +240,7 @@ namespace VoxelStore.Preview.Capture.Editor
                     foreach (AvatarPresentation avatar in avatars)
                     {
                         ApplyPoint(avatar, point);
-                        ValidateAttachmentGrip(avatar, point);
+                        ValidateAttachmentReference(avatar, point);
                         Bounds sampled = avatar.GetWorldBounds();
                         if (!hasBounds)
                         {
@@ -276,6 +308,66 @@ namespace VoxelStore.Preview.Capture.Editor
             return Mathf.Max(maxY, maxX / aspect);
         }
 
+        private static void ConfigureFocusedCaptureView(
+            AvatarPresentation avatar,
+            IReadOnlyList<CapturePoint> points)
+        {
+            Camera camera = Camera.main;
+            if (camera == null)
+            {
+                throw new InvalidOperationException(
+                    "Focused equipment capture requires the runtime gallery Main Camera.");
+            }
+            if (avatar == null)
+                throw new ArgumentNullException(nameof(avatar));
+            if (points == null || points.Count == 0)
+            {
+                throw new ArgumentException(
+                    "Focused equipment capture requires at least one point.",
+                    nameof(points));
+            }
+
+            bool hasBounds = false;
+            Bounds bounds = default;
+            try
+            {
+                foreach (CapturePoint point in points)
+                {
+                    ApplyFocusedEquipmentPoint(
+                        avatar,
+                        point,
+                        FocusEquipmentAssemblyName);
+                    ValidateAttachmentReference(avatar, point);
+                    Bounds sampled = avatar.GetWorldBounds();
+                    if (!hasBounds)
+                    {
+                        bounds = sampled;
+                        hasBounds = true;
+                    }
+                    else
+                    {
+                        bounds.Encapsulate(sampled);
+                    }
+                }
+            }
+            finally
+            {
+                avatar.ResetPose();
+            }
+
+            camera.transform.rotation =
+                Quaternion.Euler(30f, 35f, 0f);
+            float distance = Mathf.Max(
+                8f,
+                bounds.extents.magnitude * 4f);
+            camera.transform.position =
+                bounds.center -
+                camera.transform.forward * distance;
+            camera.orthographicSize =
+                RequiredOrthographicSize(camera, bounds) * 1.2f;
+        }
+
+
         private static void ApplyPoint(
             AvatarPresentation avatar,
             CapturePoint point)
@@ -309,41 +401,133 @@ namespace VoxelStore.Preview.Capture.Editor
                     point.EquipmentPhase);
             }
 
-            avatar.RefreshBindings();
+            avatar.RefreshAttachmentReferences();
         }
 
-        private static void ValidateAttachmentGrip(
+        private static void ApplyFocusedEquipmentPoint(
+            AvatarPresentation avatar,
+            CapturePoint point,
+            string equipmentAssemblyName)
+        {
+            VoxelModelMotionPlayer[] players =
+                avatar.GetComponentsInChildren<VoxelModelMotionPlayer>(
+                    true);
+            VoxelModelMotionPlayer body =
+                players.SingleOrDefault(player => player.IsBody);
+            if (body == null)
+            {
+                throw new InvalidOperationException(
+                    "Focused equipment capture requires one body model player.");
+            }
+
+            body.SampleCandidates(
+                AvatarMotionClipCandidates.Build(
+                    point.BodyMotion,
+                    point.BodySide,
+                    point.BodyVariant),
+                point.BodyPhase);
+
+            foreach (VoxelModelMotionPlayer equipmentPlayer in
+                     players.Where(player => player.Equipment != null))
+            {
+                bool focused =
+                    string.Equals(
+                        equipmentPlayer.Model.Assembly.AssemblyName,
+                        equipmentAssemblyName,
+                        StringComparison.Ordinal);
+                equipmentPlayer.SampleCandidates(
+                    AvatarMotionClipCandidates.Build(
+                        focused
+                            ? point.EquipmentMotion
+                            : AvatarMotion.Idle,
+                        equipmentPlayer.Equipment.Side,
+                        focused
+                            ? point.EquipmentVariant
+                            : string.Empty),
+                    focused
+                        ? point.EquipmentPhase
+                        : 0.50f);
+            }
+
+            avatar.RefreshAttachmentReferences();
+        }
+
+
+        private static void ValidateAttachmentReference(
             AvatarPresentation avatar,
             CapturePoint point)
         {
             const float tolerance = 0.001f;
             foreach (EquipmentPresentation equipment in avatar.Equipment)
             {
-                VoxelRenderInstance instance = equipment.Model.Instance;
-                if (instance == null)
+                if (!equipment.BindingId.IsValid)
                 {
                     throw new InvalidOperationException(
-                        "Capture attachment has no provider render instance.");
+                        "Capture attachment has no current provider binding.");
                 }
 
-                Vector3 expected =
-                    avatar.ResolveBodySocketWorld(equipment.SocketName)
-                        .MultiplyPoint3x4(Vector3.zero);
-                int mountIndex = instance.RequireSocket("Mount");
-                Vector3 actual =
-                    instance.GetSocketWorldMatrix(mountIndex)
-                        .MultiplyPoint3x4(Vector3.zero);
-                float drift = Vector3.Distance(expected, actual);
-                if (drift > tolerance)
+                VoxelModelAnimationTrack track =
+                    equipment.Model.AnimationTrack;
+                if (track == null)
                 {
                     throw new InvalidOperationException(
-                        "Animated attachment grip drift exceeds tolerance at " +
-                        point.Checkpoint +
-                        ": socket=" + equipment.SocketName +
-                        ", drift=" + drift.ToString("R") +
-                        ", tolerance=" + tolerance.ToString("R") + ".");
+                        "Capture attachment has no provider model track.");
+                }
+
+                Matrix4x4 reference =
+                    avatar.ResolveAttachmentReferenceWorld(equipment);
+                Matrix4x4 actual = track.WorldMatrix;
+                if (!IsFinite(reference) || !IsFinite(actual))
+                {
+                    throw new InvalidOperationException(
+                        "Capture attachment reference/world matrix is not finite at " +
+                        point.Checkpoint + ".");
+                }
+
+                VoxelModelMotionPlayer player =
+                    equipment.Model.GetComponent<VoxelModelMotionPlayer>();
+                if (player == null ||
+                    player.ShouldFollowAttachmentReference)
+                {
+                    float error = MaxMatrixDelta(reference, actual);
+                    if (error > tolerance)
+                    {
+                        throw new InvalidOperationException(
+                            "Capture attachment track does not match its current reference at " +
+                            point.Checkpoint +
+                            ": error=" + error.ToString("R") +
+                            ", tolerance=" + tolerance.ToString("R") + ".");
+                    }
                 }
             }
+        }
+
+        private static bool IsFinite(Matrix4x4 value)
+        {
+            for (int row = 0; row < 4; row++)
+            for (int column = 0; column < 4; column++)
+            {
+                if (!float.IsFinite(value[row, column]))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static float MaxMatrixDelta(
+            Matrix4x4 left,
+            Matrix4x4 right)
+        {
+            float max = 0f;
+            for (int row = 0; row < 4; row++)
+            for (int column = 0; column < 4; column++)
+            {
+                max = Mathf.Max(
+                    max,
+                    Mathf.Abs(left[row, column] - right[row, column]));
+            }
+
+            return max;
         }
 
         private static void ValidateCaptureRenderers()
@@ -423,6 +607,34 @@ namespace VoxelStore.Preview.Capture.Editor
                 expectedParts +
                 " submitted parts.");
         }
+
+        private static AvatarPresentation FindAvatarWithEquipment(
+            IReadOnlyList<AvatarPresentation> avatars,
+            string assemblyName)
+        {
+            AvatarPresentation match =
+                avatars.FirstOrDefault(
+                    avatar =>
+                        avatar != null &&
+                        avatar.Equipment.Any(
+                            item =>
+                                item != null &&
+                                item.Model != null &&
+                                item.Model.Assembly != null &&
+                                string.Equals(
+                                    item.Model.Assembly.AssemblyName,
+                                    assemblyName,
+                                    StringComparison.Ordinal)));
+            if (match == null)
+            {
+                throw new InvalidOperationException(
+                    "Avatar motion capture could not find carried equipment assembly '" +
+                    assemblyName + "'.");
+            }
+
+            return match;
+        }
+
 
         private static AvatarPresentation[] FindAvatars() =>
             UnityEngine.Object

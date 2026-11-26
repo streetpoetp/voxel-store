@@ -285,7 +285,11 @@ Every reusable avatar and equipment asset SHALL author the baseline Hero.Voxel s
 
 #### Scenario: Current single-part equipment owns visible equipped animation
 - **WHEN** an equipment model has one authored part and its Mount is parented to that part
-- **THEN** publication requires Mount position to coincide with that part's pivot and rejects equipped semantic position tracks on that Mount-bearing part, allowing authored rotation around the grip without moving the grip point
+- **THEN** publication requires Mount position to coincide with that part's bind pivot and permits finite authored position, rotation, and scale tracks on the Mount-bearing part so semantic takes can produce distinct visual trajectories
+
+#### Scenario: Equipment variants use different spatial trajectories
+- **WHEN** baseline `Attack` and `Attack.V1` on one equipment model author different finite position and rotation curves
+- **THEN** publication accepts them as independent model-local takes without requiring matching spatial curves, attachment-state metadata, or gameplay semantics
 
 ### Requirement: Generated catalog projects attachment and motion coverage
 Generated catalog/health output SHALL project attachment capability, anchor identity, side-aware slot addresses, counts by capability and side, compatible equipment-side policy, and structured semantic-motion coverage including base, side, variant, and side+variant availability from authoritative manifests and compiled source.

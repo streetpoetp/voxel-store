@@ -95,7 +95,7 @@ namespace VoxelStore.Preview.Runtime
             if (IsProviderInitialized &&
                 equipment.All(x => x.Model.IsInitialized && x.BindingId.IsValid))
             {
-                SyncWorldTransform();
+                body.SyncWorldMatrix();
                 return;
             }
 
@@ -117,8 +117,7 @@ namespace VoxelStore.Preview.Runtime
                 item.SetBinding(binding);
             }
 
-            body.SyncWorldMatrix();
-            actor.Reset();
+            SyncWorldTransform();
         }
 
         public void ResetPose()
@@ -130,15 +129,35 @@ namespace VoxelStore.Preview.Runtime
             body.EnsureAnimationTrack().Reset();
             foreach (EquipmentPresentation item in equipment)
                 item.Model.EnsureAnimationTrack().Reset();
-            body.SyncWorldMatrix();
-            actor.Reset();
+            SyncWorldTransform();
         }
 
-        public void RefreshBindings()
+        public void RefreshAttachmentReferences()
         {
             InitializeProvider();
+            SyncWorldTransform();
+        }
+
+        public Matrix4x4 ResolveAttachmentReferenceWorld(
+            EquipmentPresentation item)
+        {
+            if (item == null)
+                throw new ArgumentNullException(nameof(item));
+            InitializeProvider();
             body.SyncWorldMatrix();
-            actor.RefreshBindings();
+            RequireCurrentEquipment(item);
+            return actor.GetAttachmentReferenceWorldMatrix(item.BindingId);
+        }
+
+        public void ApplyAttachmentReference(
+            EquipmentPresentation item)
+        {
+            if (item == null)
+                throw new ArgumentNullException(nameof(item));
+            InitializeProvider();
+            body.SyncWorldMatrix();
+            RequireCurrentEquipment(item);
+            ApplyAttachmentReferenceCurrent(item);
         }
 
         public bool IsBodyModel(VoxelRenderPresentation model)
@@ -217,7 +236,38 @@ namespace VoxelStore.Preview.Runtime
                 return;
 
             body.SyncWorldMatrix();
-            actor.RefreshBindings();
+            foreach (EquipmentPresentation item in equipment)
+            {
+                VoxelModelMotionPlayer player =
+                    item.Model.GetComponent<VoxelModelMotionPlayer>();
+                if (player != null &&
+                    !player.ShouldFollowAttachmentReference)
+                {
+                    continue;
+                }
+
+                ApplyAttachmentReferenceCurrent(item);
+            }
+        }
+
+        private void ApplyAttachmentReferenceCurrent(
+            EquipmentPresentation item)
+        {
+            Matrix4x4 reference =
+                actor.GetAttachmentReferenceWorldMatrix(item.BindingId);
+            item.Model.EnsureAnimationTrack().SetWorldMatrix(reference);
+        }
+
+        private void RequireCurrentEquipment(
+            EquipmentPresentation item)
+        {
+            if (!item.BindingId.IsValid ||
+                equipment == null ||
+                !equipment.Contains(item))
+            {
+                throw new InvalidOperationException(
+                    "Equipment is not a current attachment of this avatar presentation.");
+            }
         }
 
         private void Awake()

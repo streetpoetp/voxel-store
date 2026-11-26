@@ -37,6 +37,15 @@ public sealed record CompatibilityResult(
     string Detail,
     string Evidence);
 
+internal sealed record CompatibilityPoseEvaluation(
+    Matrix4x4 BodySocket,
+    Matrix4x4 AttachmentReference,
+    Matrix4x4 EvaluatedMount,
+    float ReferenceError,
+    float AnimatedMountDrift,
+    bool Passed,
+    string Detail);
+
 public sealed record PngInfo(int Width, int Height);
 public sealed record ReferenceStyleAuthority(
     string Id,
@@ -1189,33 +1198,17 @@ public sealed class StoreEngine
                             RequireSocketIndex(
                                 avatarCompilation,
                                 slot.Socket.Name);
-                        Matrix4x4 bodySocket =
-                            VoxelCompiledPoseEvaluator.Evaluate(
-                                    avatarCompilation,
-                                    bodyClip,
-                                    sample.Phase)
-                                .GetSocketModelMatrix(bodySocketIndex);
-                        Matrix4x4 equipmentRoot =
-                            inverseMountBind * bodySocket;
-                        Matrix4x4 evaluatedMount =
-                            VoxelCompiledPoseEvaluator.Evaluate(
-                                    equipmentCompilation,
-                                    equipmentClip,
-                                    sample.Phase)
-                                .GetSocketModelMatrix(mountSocketIndex) *
-                            equipmentRoot;
-
-                        Vector3 bodySocketOrigin =
-                            MatrixOrigin(bodySocket);
-                        Vector3 evaluatedMountOrigin =
-                            MatrixOrigin(evaluatedMount);
-                        bool passed =
-                            Vector3.Distance(
-                                bodySocketOrigin,
-                                evaluatedMountOrigin) <= 0.0001f;
-                        string detail = passed
-                            ? "PASS"
-                            : "Animated equipment Mount position drifted from the body socket.";
+                        CompatibilityPoseEvaluation pose =
+                            EvaluateCompatibilityPose(
+                                avatarCompilation,
+                                bodyClip,
+                                bodySocketIndex,
+                                equipmentCompilation,
+                                equipmentClip,
+                                mountSocketIndex,
+                                sample.Phase,
+                                mountBind,
+                                inverseMountBind);
 
                         result.Add(new CompatibilityResult(
                             avatar.Manifest.Id,
@@ -1225,8 +1218,8 @@ public sealed class StoreEngine
                             slot.Side,
                             sample.Motion,
                             sample.Phase,
-                            passed,
-                            detail,
+                            pose.Passed,
+                            pose.Detail,
                             evidenceRef));
                         samples.Add(new
                         {
@@ -1237,11 +1230,14 @@ public sealed class StoreEngine
                             phase = sample.Phase,
                             bodyClip = bodyClipName,
                             equipmentClip = equipmentClipName,
-                            bodySocketOrigin = Vector(bodySocketOrigin),
-                            equipmentRootOrigin = Vector(MatrixOrigin(equipmentRoot)),
-                            evaluatedMountOrigin = Vector(evaluatedMountOrigin),
-                            passed,
-                            detail
+                            bodySocketOrigin = Vector(MatrixOrigin(pose.BodySocket)),
+                            attachmentReferenceOrigin =
+                                Vector(MatrixOrigin(pose.AttachmentReference)),
+                            evaluatedMountOrigin = Vector(MatrixOrigin(pose.EvaluatedMount)),
+                            referenceError = pose.ReferenceError,
+                            animatedMountDrift = pose.AnimatedMountDrift,
+                            passed = pose.Passed,
+                            detail = pose.Detail
                         });
                     }
                 }
@@ -1251,7 +1247,7 @@ public sealed class StoreEngine
                     Directory.CreateDirectory(Path.GetDirectoryName(evidencePath)!);
                     File.WriteAllText(evidencePath, JsonSerializer.Serialize(new
                     {
-                        convention = "model-socket-semantic-phase.v1",
+                        convention = "model-socket-reference-semantic-phase.v2",
                         avatar = avatar.Manifest.Id,
                         equipment = equipment.Manifest.Id,
                         attachment = new
@@ -1365,16 +1361,100 @@ public sealed class StoreEngine
         ValidateSemanticAnimationSet(
             compilation,
             requireSideAttackVariants: false);
-        foreach (CompiledAnimationClip clip in compilation.Animations)
-        foreach (CompiledAnimationTrack track in clip.Tracks)
+    }
+
+    internal static CompatibilityPoseEvaluation EvaluateCompatibilityPose(
+        VoxelCompilation avatarCompilation,
+        CompiledAnimationClip bodyClip,
+        int bodySocketIndex,
+        VoxelCompilation equipmentCompilation,
+        CompiledAnimationClip equipmentClip,
+        int mountSocketIndex,
+        float phase)
+    {
+        Matrix4x4 mountBind =
+            VoxelCompiledPoseEvaluator.Evaluate(
+                    equipmentCompilation,
+                    null,
+                    0f)
+                .GetSocketModelMatrix(mountSocketIndex);
+        if (!Matrix4x4.Invert(mountBind, out Matrix4x4 inverseMountBind))
         {
-            if (string.Equals(track.PartName, part.Name, StringComparison.Ordinal) &&
-                track.Position != null)
-            {
-                throw new InvalidDataException(
-                    $"Equipment clip '{clip.Name}' must not translate the current Mount-bearing root part.");
-            }
+            throw new InvalidDataException(
+                "Equipment Mount bind frame is singular.");
         }
+
+        return EvaluateCompatibilityPose(
+            avatarCompilation,
+            bodyClip,
+            bodySocketIndex,
+            equipmentCompilation,
+            equipmentClip,
+            mountSocketIndex,
+            phase,
+            mountBind,
+            inverseMountBind);
+    }
+
+    private static CompatibilityPoseEvaluation EvaluateCompatibilityPose(
+        VoxelCompilation avatarCompilation,
+        CompiledAnimationClip bodyClip,
+        int bodySocketIndex,
+        VoxelCompilation equipmentCompilation,
+        CompiledAnimationClip equipmentClip,
+        int mountSocketIndex,
+        float phase,
+        Matrix4x4 mountBind,
+        Matrix4x4 inverseMountBind)
+    {
+        Matrix4x4 bodySocket =
+            VoxelCompiledPoseEvaluator.Evaluate(
+                    avatarCompilation,
+                    bodyClip,
+                    phase)
+                .GetSocketModelMatrix(bodySocketIndex);
+        Matrix4x4 attachmentReference =
+            inverseMountBind * bodySocket;
+        Matrix4x4 evaluatedMount =
+            VoxelCompiledPoseEvaluator.Evaluate(
+                    equipmentCompilation,
+                    equipmentClip,
+                    phase)
+                .GetSocketModelMatrix(mountSocketIndex) *
+            attachmentReference;
+        Matrix4x4 resolvedBindMount =
+            mountBind * attachmentReference;
+
+        bool finite =
+            IsFinite(bodySocket) &&
+            IsFinite(attachmentReference) &&
+            IsFinite(evaluatedMount) &&
+            IsFinite(resolvedBindMount);
+        float referenceError = finite
+            ? MaxMatrixDelta(resolvedBindMount, bodySocket)
+            : float.PositiveInfinity;
+        float animatedMountDrift = finite
+            ? Vector3.Distance(
+                MatrixOrigin(bodySocket),
+                MatrixOrigin(evaluatedMount))
+            : float.PositiveInfinity;
+        bool passed =
+            finite &&
+            referenceError <= 0.0001f;
+        string detail = !finite
+            ? "Compatibility evaluation produced a non-finite attachment transform."
+            : passed
+                ? "PASS"
+                : "Equipment bind Mount did not resolve to the current body socket reference.";
+
+        return new CompatibilityPoseEvaluation(
+            bodySocket,
+            attachmentReference,
+            evaluatedMount,
+            referenceError,
+            animatedMountDrift,
+            passed,
+            detail);
     }
 
     internal static bool IsEquipmentCompositionFrameValid(VoxelCompilation compilation)
@@ -1783,6 +1863,45 @@ public sealed class StoreEngine
 
     private static Vector3 MatrixOrigin(Matrix4x4 matrix) =>
         Vector3.Transform(Vector3.Zero, matrix);
+
+    private static bool IsFinite(Matrix4x4 matrix) =>
+        float.IsFinite(matrix.M11) &&
+        float.IsFinite(matrix.M12) &&
+        float.IsFinite(matrix.M13) &&
+        float.IsFinite(matrix.M14) &&
+        float.IsFinite(matrix.M21) &&
+        float.IsFinite(matrix.M22) &&
+        float.IsFinite(matrix.M23) &&
+        float.IsFinite(matrix.M24) &&
+        float.IsFinite(matrix.M31) &&
+        float.IsFinite(matrix.M32) &&
+        float.IsFinite(matrix.M33) &&
+        float.IsFinite(matrix.M34) &&
+        float.IsFinite(matrix.M41) &&
+        float.IsFinite(matrix.M42) &&
+        float.IsFinite(matrix.M43) &&
+        float.IsFinite(matrix.M44);
+
+    private static float MaxMatrixDelta(Matrix4x4 left, Matrix4x4 right) =>
+        new[]
+        {
+            MathF.Abs(left.M11 - right.M11),
+            MathF.Abs(left.M12 - right.M12),
+            MathF.Abs(left.M13 - right.M13),
+            MathF.Abs(left.M14 - right.M14),
+            MathF.Abs(left.M21 - right.M21),
+            MathF.Abs(left.M22 - right.M22),
+            MathF.Abs(left.M23 - right.M23),
+            MathF.Abs(left.M24 - right.M24),
+            MathF.Abs(left.M31 - right.M31),
+            MathF.Abs(left.M32 - right.M32),
+            MathF.Abs(left.M33 - right.M33),
+            MathF.Abs(left.M34 - right.M34),
+            MathF.Abs(left.M41 - right.M41),
+            MathF.Abs(left.M42 - right.M42),
+            MathF.Abs(left.M43 - right.M43),
+            MathF.Abs(left.M44 - right.M44)
+        }.Max();
 
     internal static void ValidatePublicationBudget(int voxels, int parts, StoreBudget budget)
     {

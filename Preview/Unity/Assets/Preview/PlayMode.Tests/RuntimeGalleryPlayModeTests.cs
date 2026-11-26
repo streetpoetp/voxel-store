@@ -46,7 +46,8 @@ namespace VoxelStore.Preview.PlayMode.Tests
                             .GetPartWorldMatrix(0)
                             .rotation),
                     Is.GreaterThan(20f));
-                AssertMountBound(fixture);
+                AssertReferenceApplied(fixture);
+                AssertMountDrifted(fixture);
                 yield return null;
             }
             finally
@@ -73,7 +74,58 @@ namespace VoxelStore.Preview.PlayMode.Tests
                 Assert.That(
                     fixture.EquipmentPlayer.CurrentNormalizedPhase,
                     Is.EqualTo(0.80f).Within(0.0001f));
-                AssertMountBound(fixture);
+                AssertReferenceApplied(fixture);
+                AssertMountDrifted(fixture);
+                yield return null;
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator TranslatedNonLoopingWeaponIgnoresBodySocketMotionUntilTerminalReturn()
+        {
+            Fixture fixture = CreateFixture();
+            try
+            {
+                fixture.EquipmentPlayer.SampleExact(
+                    "Attack",
+                    0.55f);
+                Matrix4x4 latchedWorld =
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix;
+                VoxelActorBindingId bindingBefore =
+                    fixture.Equipment.BindingId;
+                Matrix4x4 referenceBefore =
+                    fixture.Avatar.ResolveAttachmentReferenceWorld(
+                        fixture.Equipment);
+                AssertMatrixNear(latchedWorld, referenceBefore);
+
+                fixture.BodyPlayer.SampleExact(
+                    "Attack.Right",
+                    0.75f);
+
+                Matrix4x4 referenceAfterBodyMove =
+                    fixture.Avatar.ResolveAttachmentReferenceWorld(
+                        fixture.Equipment);
+                Assert.That(
+                    MatrixDistance(referenceBefore, referenceAfterBodyMove),
+                    Is.GreaterThan(0.01f));
+                AssertMatrixNear(
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix,
+                    latchedWorld);
+                Assert.That(
+                    fixture.Equipment.BindingId,
+                    Is.EqualTo(bindingBefore));
+
+                fixture.EquipmentPlayer.SampleExact(
+                    "Attack",
+                    1f);
+                AssertReferenceApplied(fixture);
+                Assert.That(
+                    fixture.Equipment.BindingId,
+                    Is.EqualTo(bindingBefore));
                 yield return null;
             }
             finally
@@ -117,7 +169,7 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     Is.EqualTo(string.Empty));
                 Assert.IsFalse(
                     fixture.Equipment.Model.AnimationTrack.HasSelection);
-                AssertMountBound(fixture);
+                AssertReferenceApplied(fixture);
 
                 fixture.BodyPlayer.ResetMotion();
                 Assert.That(
@@ -169,7 +221,7 @@ namespace VoxelStore.Preview.PlayMode.Tests
                 Assert.That(
                     fixture.BodyPlayer.CurrentNormalizedPhase,
                     Is.EqualTo(bodyPhase).Within(0.0001f));
-                AssertMountBound(fixture);
+                AssertReferenceApplied(fixture);
             }
             finally
             {
@@ -252,7 +304,7 @@ namespace VoxelStore.Preview.PlayMode.Tests
                 Assert.AreEqual(
                     string.Empty,
                     fixture.EquipmentPlayer.CurrentClipName);
-                AssertMountBound(fixture);
+                AssertReferenceApplied(fixture);
             }
             finally
             {
@@ -285,7 +337,7 @@ namespace VoxelStore.Preview.PlayMode.Tests
                 Assert.That(
                     fixture.EquipmentPlayer.CurrentNormalizedPhase,
                     Is.EqualTo(1f).Within(0.0001f));
-                AssertMountBound(fixture);
+                AssertReferenceApplied(fixture);
                 yield return null;
             }
             finally
@@ -294,7 +346,44 @@ namespace VoxelStore.Preview.PlayMode.Tests
             }
         }
 
-        private static void AssertMountBound(Fixture fixture)
+        [UnityTest]
+        public IEnumerator ExternallyOwnedWorldMatrixSurvivesBoundsAndSubmitQueries()
+        {
+            Fixture fixture = CreateFixture();
+            try
+            {
+                VoxelModelAnimationTrack track =
+                    fixture.Equipment.Model.EnsureAnimationTrack();
+                Matrix4x4 authored =
+                    Matrix4x4.TRS(
+                        new Vector3(3f, 2f, 1f),
+                        Quaternion.Euler(0f, 25f, 0f),
+                        Vector3.one);
+                track.SetWorldMatrix(authored);
+
+                _ = fixture.Equipment.Model.GetWorldBounds();
+                fixture.World.SubmitNow();
+
+                AssertMatrixNear(track.WorldMatrix, authored);
+                yield return null;
+            }
+            finally
+            {
+                fixture.Dispose();
+            }
+        }
+
+        private static void AssertReferenceApplied(Fixture fixture)
+        {
+            Matrix4x4 expected =
+                fixture.Avatar.ResolveAttachmentReferenceWorld(
+                    fixture.Equipment);
+            Matrix4x4 actual =
+                fixture.Equipment.Model.AnimationTrack.WorldMatrix;
+            AssertMatrixNear(actual, expected);
+        }
+
+        private static void AssertMountDrifted(Fixture fixture)
         {
             Vector3 expected =
                 fixture.Avatar
@@ -306,7 +395,31 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     "Mount");
             Assert.That(
                 Vector3.Distance(expected, actual),
-                Is.LessThan(0.0001f));
+                Is.GreaterThan(0.01f));
+        }
+
+        private static void AssertMatrixNear(
+            Matrix4x4 actual,
+            Matrix4x4 expected)
+        {
+            for (int row = 0; row < 4; row++)
+            for (int column = 0; column < 4; column++)
+            {
+                Assert.That(
+                    actual[row, column],
+                    Is.EqualTo(expected[row, column]).Within(0.0001f),
+                    $"matrix[{row},{column}]");
+            }
+        }
+
+        private static float MatrixDistance(
+            Matrix4x4 a,
+            Matrix4x4 b)
+        {
+            return Vector3.Distance(
+                       a.MultiplyPoint3x4(Vector3.zero),
+                       b.MultiplyPoint3x4(Vector3.zero)) +
+                   Quaternion.Angle(a.rotation, b.rotation);
         }
 
         private static Vector3 SocketPosition(
@@ -423,9 +536,10 @@ namespace VoxelStore.Preview.PlayMode.Tests
                             true,
                             Quaternion.Euler(0f, 0f, 5f),
                             0.9f),
-                        RotationClip(
+                        TransformClip(
                             "Attack",
                             false,
+                            new Vector3(0f, 0f, -0.75f),
                             Quaternion.Euler(0f, 0f, 70f),
                             1.2f),
                         RotationClip(
@@ -564,6 +678,43 @@ namespace VoxelStore.Preview.PlayMode.Tests
                             {
                                 new VoxelQuaternionKey(0f, Quaternion.identity),
                                 new VoxelQuaternionKey(1f, end)
+                            }),
+                        null)
+                });
+        }
+
+        private static VoxelAnimationClip TransformClip(
+            string name,
+            bool loop,
+            Vector3 positionEnd,
+            Quaternion rotationEnd,
+            float duration)
+        {
+            return new VoxelAnimationClip(
+                name,
+                duration,
+                loop,
+                new[]
+                {
+                    new VoxelAnimationTrack(
+                        0,
+                        new VoxelVectorChannel(
+                            VoxelAnimationInterpolation.SmoothStep,
+                            new[]
+                            {
+                                new VoxelVectorKey(0f, Vector3.zero),
+                                new VoxelVectorKey(0.55f, positionEnd),
+                                new VoxelVectorKey(1f, Vector3.zero)
+                            }),
+                        new VoxelQuaternionChannel(
+                            VoxelAnimationInterpolation.SmoothStep,
+                            new[]
+                            {
+                                new VoxelQuaternionKey(0f, Quaternion.identity),
+                                new VoxelQuaternionKey(0.55f, rotationEnd),
+                                new VoxelQuaternionKey(
+                                    1f,
+                                    Quaternion.Euler(0f, 0f, 10f))
                             }),
                         null)
                 });

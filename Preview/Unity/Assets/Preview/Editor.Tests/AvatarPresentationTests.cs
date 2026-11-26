@@ -168,7 +168,7 @@ namespace VoxelStore.Preview.Editor.Tests
                     0.7f);
                 fixture.BodyPlayer.ResetMotion();
                 fixture.PrimaryPlayer.ResetMotion();
-                fixture.Avatar.RefreshBindings();
+                fixture.Avatar.RefreshAttachmentReferences();
 
                 Assert.That(
                     Vector3.Distance(

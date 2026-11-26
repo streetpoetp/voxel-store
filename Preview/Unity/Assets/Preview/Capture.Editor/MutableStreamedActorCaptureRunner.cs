@@ -131,19 +131,19 @@ namespace VoxelStore.Preview.Capture.Editor
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-attached",
-                    validateGrip: true);
+                    validateReferences: true);
 
                 demo.DetachSecondaryPreservingPlayback();
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-detached",
-                    validateGrip: true);
+                    validateReferences: true);
 
                 demo.RebindPrimaryPreservingPlayback();
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-rebound",
-                    validateGrip: true);
+                    validateReferences: true);
 
                 await demo.ReplacePrimaryAsync();
                 demo.SampleCurrentTopology(
@@ -153,13 +153,13 @@ namespace VoxelStore.Preview.Capture.Editor
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-replaced",
-                    validateGrip: true);
+                    validateReferences: true);
 
                 await demo.ReleaseAndReacquireRootOnlyAsync(0.50f);
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-reacquired-root-only",
-                    validateGrip: false);
+                    validateReferences: false);
 
                 await demo.ReattachAfterReacquireAsync(
                     rootPhase: 0.35f,
@@ -167,7 +167,7 @@ namespace VoxelStore.Preview.Capture.Editor
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-reattached",
-                    validateGrip: true);
+                    validateReferences: true);
             }
             catch (Exception exception)
             {
@@ -192,10 +192,10 @@ namespace VoxelStore.Preview.Capture.Editor
         private static async Task CaptureCheckpointAsync(
             MutableStreamedActorPreview demo,
             string checkpoint,
-            bool validateGrip)
+            bool validateReferences)
         {
-            if (validateGrip)
-                demo.ValidateAttachmentGrip();
+            if (validateReferences)
+                demo.ValidateAttachmentReferences();
 
             Debug.Log(
                 "Mutable streamed checkpoint " +

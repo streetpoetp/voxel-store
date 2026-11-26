@@ -254,7 +254,7 @@ namespace VoxelStore.Preview.Runtime
                     "Detaching one streamed attachment changed unaffected model playback.");
             }
             ApplyTransformAndVisibility();
-            actor.RefreshBindings();
+            ApplyCurrentAttachmentReferences();
         }
 
         public void RebindPrimaryPreservingPlayback()
@@ -289,7 +289,8 @@ namespace VoxelStore.Preview.Runtime
             RequireCurrentAttachment(
                 primaryHandle,
                 "primary after left rebind");
-            ValidateGrip(primaryHandle, LeftSocket, 0.001f);
+            ApplyAttachmentReference(primaryHandle);
+            ValidateReference(primaryHandle, 0.001f);
             RequireUnchangedTrack(
                 rootTrack,
                 actor.RootTrack,
@@ -317,7 +318,8 @@ namespace VoxelStore.Preview.Runtime
             RequireTopologyAdvanced(
                 beforeRightRebind,
                 "rebind primary right");
-            ValidateGrip(primaryHandle, RightSocket, 0.001f);
+            ApplyAttachmentReference(primaryHandle);
+            ValidateReference(primaryHandle, 0.001f);
             RequireUnchangedTrack(
                 rootTrack,
                 actor.RootTrack,
@@ -412,7 +414,7 @@ namespace VoxelStore.Preview.Runtime
                     "secondary during primary replacement");
             }
             ApplyTransformAndVisibility();
-            actor.RefreshBindings();
+            ApplyCurrentAttachmentReferences();
         }
 
         public async Task ReleaseAndReacquireRootOnlyAsync(float normalizedPhase)
@@ -477,16 +479,16 @@ namespace VoxelStore.Preview.Runtime
                 secondaryPhase: 0f);
         }
 
-        public void ValidateAttachmentGrip(float tolerance = 0.001f)
+        public void ValidateAttachmentReferences(float tolerance = 0.001f)
         {
             RequireInitialized();
             if (tolerance < 0f || float.IsNaN(tolerance) || float.IsInfinity(tolerance))
                 throw new ArgumentOutOfRangeException(nameof(tolerance));
 
             if (IsCurrentAttachment(primaryHandle))
-                ValidateGrip(primaryHandle, RightSocket, tolerance);
+                ValidateReference(primaryHandle, tolerance);
             if (IsCurrentAttachment(secondaryHandle))
-                ValidateGrip(secondaryHandle, LeftSocket, tolerance);
+                ValidateReference(secondaryHandle, tolerance);
         }
 
         public Bounds GetWorldBounds()
@@ -530,7 +532,7 @@ namespace VoxelStore.Preview.Runtime
             rootTrack.Select(
                 AttackCandidates(EquipmentSlotSide.Right));
             rootTrack.SampleNormalized(rootPhase);
-            actor.RefreshBindings();
+            ApplyCurrentAttachmentReferences();
 
             if (IsCurrentAttachment(primaryHandle))
             {
@@ -558,7 +560,6 @@ namespace VoxelStore.Preview.Runtime
             rootTrack.Select(
                 AttackCandidates(EquipmentSlotSide.Right));
             rootTrack.SampleNormalized(normalizedPhase);
-            actor.RefreshBindings();
         }
 
         private static IReadOnlyList<string> AttackCandidates(
@@ -579,28 +580,71 @@ namespace VoxelStore.Preview.Runtime
             actor.SetVisible(true);
         }
 
-        private void ValidateGrip(
+        private void ApplyCurrentAttachmentReferences()
+        {
+            if (IsCurrentAttachment(primaryHandle))
+                ApplyAttachmentReference(primaryHandle);
+            if (IsCurrentAttachment(secondaryHandle))
+                ApplyAttachmentReference(secondaryHandle);
+        }
+
+        private void ApplyAttachmentReference(
+            VoxelActorAttachmentHandle handle)
+        {
+            actor.GetAttachmentTrack(handle).SetWorldMatrix(
+                actor.GetAttachmentReferenceWorldMatrix(handle));
+        }
+
+        private void ValidateReference(
             VoxelActorAttachmentHandle handle,
-            string socketName,
             float tolerance)
         {
-            Vector3 expected =
-                actor.GetRootSocketWorldMatrix(socketName)
-                    .MultiplyPoint3x4(Vector3.zero);
-            Vector3 actual =
-                actor.GetAttachmentSocketWorldMatrix(
-                        handle,
-                        MountAnchor)
-                    .MultiplyPoint3x4(Vector3.zero);
-            float drift = Vector3.Distance(expected, actual);
-            if (drift > tolerance)
+            Matrix4x4 reference =
+                actor.GetAttachmentReferenceWorldMatrix(handle);
+            Matrix4x4 actual =
+                actor.GetAttachmentTrack(handle).WorldMatrix;
+            if (!IsFinite(reference) || !IsFinite(actual))
             {
                 throw new InvalidOperationException(
-                    "Mutable streamed attachment grip drift exceeds tolerance: " +
-                    "socket=" + socketName +
-                    ", drift=" + drift.ToString("R") +
+                    "Mutable streamed attachment reference is not finite.");
+            }
+
+            float error = MaxMatrixDelta(reference, actual);
+            if (error > tolerance)
+            {
+                throw new InvalidOperationException(
+                    "Mutable streamed attachment track does not match its current reference: " +
+                    "error=" + error.ToString("R") +
                     ", tolerance=" + tolerance.ToString("R") + ".");
             }
+        }
+
+        private static bool IsFinite(Matrix4x4 value)
+        {
+            for (int row = 0; row < 4; row++)
+            for (int column = 0; column < 4; column++)
+            {
+                if (!float.IsFinite(value[row, column]))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static float MaxMatrixDelta(
+            Matrix4x4 left,
+            Matrix4x4 right)
+        {
+            float max = 0f;
+            for (int row = 0; row < 4; row++)
+            for (int column = 0; column < 4; column++)
+            {
+                max = Mathf.Max(
+                    max,
+                    Mathf.Abs(left[row, column] - right[row, column]));
+            }
+
+            return max;
         }
 
         private void RequireStaleHandle(

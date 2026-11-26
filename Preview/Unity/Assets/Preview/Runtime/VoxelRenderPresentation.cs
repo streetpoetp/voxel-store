@@ -77,13 +77,16 @@ namespace VoxelStore.Preview.Runtime
         public VoxelRenderInstance EnsureInstance()
         {
             RequireConfigured();
+            bool created = false;
             if (instance == null || !instance.IsValid)
             {
                 instance = world.Spawn(assembly, animationAsset);
                 animationTrack = new VoxelModelAnimationTrack(instance);
+                created = true;
             }
 
-            SyncWorldMatrix();
+            if (created || !externallyOwnedLifecycle)
+                SyncWorldMatrix();
             return instance;
         }
 
