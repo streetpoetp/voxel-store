@@ -6,7 +6,7 @@ using UnityEditor;
 
 namespace VoxelStore.Preview.Editor
 {
-    internal sealed class RuntimeGalleryModel
+    internal sealed class PreviewCatalogModel
     {
         public string Catalog;
         public string Name;
@@ -14,9 +14,9 @@ namespace VoxelStore.Preview.Editor
         public string AnimationAssetPath;
     }
 
-    internal static class RuntimeGalleryCatalogDiscovery
+    internal static class PreviewCatalogDiscovery
     {
-        internal static RuntimeGalleryModel[] Discover(
+        internal static PreviewCatalogModel[] Discover(
             string root = null)
         {
             string discoveryRoot = string.IsNullOrWhiteSpace(root)
@@ -24,12 +24,12 @@ namespace VoxelStore.Preview.Editor
                 : root.Replace('\\', '/').TrimEnd('/');
 
             if (!AssetDatabase.IsValidFolder(discoveryRoot))
-                return Array.Empty<RuntimeGalleryModel>();
+                return Array.Empty<PreviewCatalogModel>();
 
             string[] guids = AssetDatabase.FindAssets(
                 "t:VoxelAssemblyAsset",
                 new[] { discoveryRoot });
-            var models = new List<RuntimeGalleryModel>(guids.Length);
+            var models = new List<PreviewCatalogModel>(guids.Length);
             var identities = new HashSet<string>(
                 StringComparer.OrdinalIgnoreCase);
 
@@ -72,12 +72,12 @@ namespace VoxelStore.Preview.Editor
                 if (!identities.Add(identity))
                 {
                     throw new InvalidOperationException(
-                        "Runtime gallery contains duplicate paired model identity: " +
+                        "Preview catalog contains duplicate paired model identity: " +
                         identity);
                 }
 
                 models.Add(
-                    new RuntimeGalleryModel
+                    new PreviewCatalogModel
                     {
                         Catalog = catalog,
                         Name = modelName,
@@ -196,14 +196,14 @@ namespace VoxelStore.Preview.Editor
         }
 
         internal static VoxelAssemblyAsset LoadAssembly(
-            RuntimeGalleryModel model)
+            PreviewCatalogModel model)
         {
             if (model == null)
                 throw new ArgumentNullException(nameof(model));
             if (string.IsNullOrWhiteSpace(model.AssetPath))
             {
                 throw new InvalidOperationException(
-                    "Runtime gallery model has no asset path: " +
+                    "Preview catalog model has no asset path: " +
                     model.Catalog +
                     "/" +
                     model.Name);
@@ -215,7 +215,7 @@ namespace VoxelStore.Preview.Editor
             if (assembly == null)
             {
                 throw new InvalidOperationException(
-                    "Runtime gallery could not load imported voxel assembly: " +
+                    "Preview catalog could not load imported voxel assembly: " +
                     model.AssetPath);
             }
 
@@ -223,14 +223,14 @@ namespace VoxelStore.Preview.Editor
         }
 
         internal static VoxelAnimationAsset LoadAnimation(
-            RuntimeGalleryModel model)
+            PreviewCatalogModel model)
         {
             if (model == null)
                 throw new ArgumentNullException(nameof(model));
             if (string.IsNullOrWhiteSpace(model.AnimationAssetPath))
             {
                 throw new InvalidOperationException(
-                    "Runtime gallery model has no animation asset path: " +
+                    "Preview catalog model has no animation asset path: " +
                     model.Catalog +
                     "/" +
                     model.Name);
@@ -242,7 +242,7 @@ namespace VoxelStore.Preview.Editor
             if (animation == null)
             {
                 throw new InvalidOperationException(
-                    "Runtime gallery requires the baked authored animation asset: " +
+                    "Preview catalog requires the baked authored animation asset: " +
                     model.AnimationAssetPath);
             }
 
@@ -250,7 +250,7 @@ namespace VoxelStore.Preview.Editor
             if (animation.Assembly != assembly)
             {
                 throw new InvalidOperationException(
-                    "Runtime gallery animation targets a different assembly: " +
+                    "Preview catalog animation targets a different assembly: " +
                     model.AnimationAssetPath);
             }
 
@@ -258,7 +258,7 @@ namespace VoxelStore.Preview.Editor
         }
 
         internal static bool IsCatalog(
-            RuntimeGalleryModel model,
+            PreviewCatalogModel model,
             string catalog) =>
             model != null &&
             string.Equals(

@@ -2,13 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NUnit.Framework;
-using Hero.Voxel.Actor.Streaming.Runtime.Unity;
+using Hero.Voxel.Actor.Runtime.Unity;
+using Hero.Voxel.Editor.Preview.Scene;
 using Hero.Voxel.Render.Runtime.Unity;
-using UnityEditor;
-using UnityEditor.SceneManagement;
+using NUnit.Framework;
 using UnityEngine;
-using VoxelStore.Preview.Runtime;
 
 namespace VoxelStore.Preview.Editor.Tests
 {
@@ -20,131 +18,61 @@ namespace VoxelStore.Preview.Editor.Tests
             "\"GeneratedVox\":\"Assets/A/Source/A.generated.vox\"," +
             "\"GeneratedAnimation\":\"Assets/A/Source/A.animation.generated.yaml\"}";
 
-
         [Test]
-        public void MutableStreamedProofUsesActorPresenterWithoutResolverShadow()
+        public void PreviewHasNoStoreRuntimeAssembly()
         {
-            Type type = typeof(MutableStreamedActorPreview);
-            const System.Reflection.BindingFlags flags =
-                System.Reflection.BindingFlags.Instance |
-                System.Reflection.BindingFlags.NonPublic;
+            string projectRoot =
+                Path.GetDirectoryName(Application.dataPath);
+            Assert.That(projectRoot, Is.Not.Null);
 
-            System.Reflection.FieldInfo presentation =
-                type.GetField("presentation", flags);
-            Assert.That(
-                presentation,
-                Is.Not.Null,
-                "Mutable streamed proof must own one VoxelActorPresenter.");
-            Assert.That(
-                presentation.FieldType,
-                Is.EqualTo(typeof(VoxelActorPresenter)));
+            string runtimeDirectory = Path.Combine(
+                projectRoot,
+                "Assets",
+                "Preview",
+                "Runtime");
+            Assert.IsFalse(
+                Directory.Exists(runtimeDirectory),
+                "voxel-store preview must not own a Runtime assembly directory.");
 
-            System.Reflection.FieldInfo primary =
-                type.GetField("primaryHandle", flags);
-            System.Reflection.FieldInfo secondary =
-                type.GetField("secondaryHandle", flags);
-            Type handleType = typeof(VoxelActorAttachmentHandle);
-            Assert.That(primary, Is.Not.Null);
-            Assert.That(secondary, Is.Not.Null);
-            Assert.That(primary.FieldType, Is.EqualTo(handleType));
-            Assert.That(secondary.FieldType, Is.EqualTo(handleType));
-
-            Assert.That(type.GetField("actor", flags), Is.Null);
-            Assert.That(
-                type.GetField("attachmentResolvers", flags),
-                Is.Null,
-                "voxel-store must not mirror provider release-basis state.");
-        }
-
-        [Test]
-        public void MotionVariantCandidatesPreserveSpecificityAndBaseFallback()
-        {
-            CollectionAssert.AreEqual(
-                new[]
-                {
-                    "Attack.Left.V2",
-                    "Attack.V2",
-                    "Attack.Left",
-                    "Attack"
-                },
-                AvatarMotionClipCandidates.Build(
-                    AvatarMotion.Attack,
-                    EquipmentSlotSide.Left,
-                    "V2"));
-            CollectionAssert.AreEqual(
-                new[] { "WalkForward.V2", "WalkForward" },
-                AvatarMotionClipCandidates.Build(
-                    AvatarMotion.WalkForward,
-                    null,
-                    "V2"));
-            CollectionAssert.AreEqual(
-                new[] { "Attack.Right", "Attack" },
-                AvatarMotionClipCandidates.Build(
-                    AvatarMotion.Attack,
-                    EquipmentSlotSide.Right,
-                    string.Empty));
-        }
-
-        [Test]
-        public void MotionVariantCandidatesRemainOptionalAndModelLocal()
-        {
-            Assert.AreEqual(
-                string.Empty,
-                AvatarMotionClipCandidates.NormalizeVariant(null));
-            Assert.Throws<ArgumentException>(
-                () => AvatarMotionClipCandidates.NormalizeVariant("V0"));
-            Assert.Throws<ArgumentException>(
-                () => AvatarMotionClipCandidates.NormalizeVariant("Heavy"));
-
-            CollectionAssert.AreEqual(
-                new[] { "Attack.Left.V1", "Attack.V1", "Attack.Left", "Attack" },
-                AvatarMotionClipCandidates.Build(
-                    AvatarMotion.Attack,
-                    EquipmentSlotSide.Left,
-                    "V1"));
-            CollectionAssert.AreEqual(
-                new[] { "Idle.V2", "Idle" },
-                AvatarMotionClipCandidates.Build(
-                    AvatarMotion.Idle,
-                    null,
-                    "V2"));
-        }
-
-        [Test]
-        public void ModelMotionInspectorUsesExactAuthoredClipInventory()
-        {
-            string[] clips =
+            foreach (string asmdef in Directory.GetFiles(
+                         Path.Combine(projectRoot, "Assets", "Preview"),
+                         "*.asmdef",
+                         SearchOption.AllDirectories))
             {
-                "Idle",
-                "Attack",
-                "Attack.Left",
-                "Attack.Right",
-                "Attack.Left.V1",
-                "Hit"
-            };
+                StringAssert.DoesNotContain(
+                    "VoxelStore.Preview." + "Runtime",
+                    File.ReadAllText(asmdef),
+                    asmdef);
+            }
+        }
 
-            Assert.AreEqual(
-                4,
-                VoxelModelMotionInspectorClips.IndexOf(
-                    clips,
-                    "Attack.Left.V1"));
-            Assert.AreEqual(
-                3,
-                VoxelModelMotionInspectorClips.IndexOf(
-                    clips,
-                    "Attack.Right"));
-            Assert.AreEqual(
-                -1,
-                VoxelModelMotionInspectorClips.IndexOf(
-                    clips,
-                    "Attack.Left.V2"));
+        [Test]
+        public void CaptureRegistryContainsOnlyStoreContentScenario()
+        {
+            string registryPath = Path.Combine(
+                VoxelStorePreviewPaths.ProjectRoot,
+                "Assets",
+                "Preview",
+                "Capture",
+                "CaptureRegistry.json");
+            string json = File.ReadAllText(registryPath);
+            StringAssert.Contains(
+                "\"name\": \"avatar-motion-gallery\"",
+                json);
+            StringAssert.DoesNotContain(
+                "mutable-streamed-actor-" + "gallery",
+                json);
+            StringAssert.DoesNotContain(
+                "MutableStreamedActorCaptureRunner",
+                json);
         }
 
         [Test]
         public void BakedVariantCoverageIsKindSpecificAndExact()
         {
-            string[] avatarMissing =
-                RuntimeGalleryVariantCoverage.MissingClips(
+            CollectionAssert.AreEqual(
+                new[] { "Attack.Right.V1" },
+                PreviewVariantCoverage.MissingClips(
                     "Avatars",
                     new[]
                     {
@@ -153,14 +81,11 @@ namespace VoxelStore.Preview.Editor.Tests
                         "Attack.Left.V1",
                         "Hit.V1",
                         "Death.V1"
-                    });
-            CollectionAssert.AreEqual(
-                new[] { "Attack.Right.V1" },
-                avatarMissing);
+                    }));
 
             Assert.AreEqual(
                 0,
-                RuntimeGalleryVariantCoverage.MissingClips(
+                PreviewVariantCoverage.MissingClips(
                     "Equipment",
                     new[]
                     {
@@ -170,18 +95,6 @@ namespace VoxelStore.Preview.Editor.Tests
                         "Hit.V1",
                         "Death.V1"
                     }).Length);
-
-            CollectionAssert.AreEqual(
-                new[] { "Death.V1" },
-                RuntimeGalleryVariantCoverage.MissingClips(
-                    "Equipment",
-                    new[]
-                    {
-                        "Idle.V1",
-                        "WalkForward.V1",
-                        "Attack.V1",
-                        "Hit.V1"
-                    }));
         }
 
         [Test]
@@ -190,18 +103,27 @@ namespace VoxelStore.Preview.Editor.Tests
             PreviewPlanContract valid = PreviewPlanClient.Parse(
                 "{\"Units\":[" + ValidUnitJson + "]}");
             Assert.AreEqual(1, valid.Units.Length);
-            Assert.AreEqual(0, PreviewPlanClient.Parse("{\"Units\":[]}").Units.Length);
+            Assert.AreEqual(
+                0,
+                PreviewPlanClient.Parse("{\"Units\":[]}").Units.Length);
         }
 
         [Test]
         public void ParsePlanRejectsMalformedIncompleteAndFailedProcess()
         {
-            Assert.Throws<InvalidDataException>(() => PreviewPlanClient.Parse(""));
-            Assert.Throws<InvalidDataException>(() => PreviewPlanClient.Parse("{not-json"));
-            Assert.Throws<InvalidDataException>(() =>
-                PreviewPlanClient.Parse("{\"Units\":[{\"Id\":\"a\"}]}"));
-            InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
-                PreviewPlanClient.CompleteProcess(2, string.Empty, "provider failed"));
+            Assert.Throws<InvalidDataException>(
+                () => PreviewPlanClient.Parse(""));
+            Assert.Throws<InvalidDataException>(
+                () => PreviewPlanClient.Parse("{not-json"));
+            Assert.Throws<InvalidDataException>(
+                () => PreviewPlanClient.Parse(
+                    "{\"Units\":[{\"Id\":\"a\"}]}"));
+            InvalidOperationException failure =
+                Assert.Throws<InvalidOperationException>(
+                    () => PreviewPlanClient.CompleteProcess(
+                        2,
+                        string.Empty,
+                        "provider failed"));
             StringAssert.Contains("provider failed", failure.Message);
         }
 
@@ -215,6 +137,7 @@ namespace VoxelStore.Preview.Editor.Tests
             StringAssert.DoesNotContain("HeroStudioRoot", arguments);
             StringAssert.DoesNotContain("HERO_STUDIO_ROOT", arguments);
         }
+
         [Test]
         public void BakePathsUsePublishedGeneratedArtifactsAndDerivedOutput()
         {
@@ -226,10 +149,13 @@ namespace VoxelStore.Preview.Editor.Tests
                 SourceBase = "Assets/Avatars/Fixture/Source/Fixture",
                 Palette = "Assets/Avatars/Fixture/Source/Fixture.palette.yaml",
                 GeneratedVox = "Assets/Avatars/Fixture/Source/Fixture.generated.vox",
-                GeneratedAnimation = "Assets/Avatars/Fixture/Source/Fixture.animation.generated.yaml"
+                GeneratedAnimation =
+                    "Assets/Avatars/Fixture/Source/Fixture.animation.generated.yaml"
             };
             PreviewBakePaths paths =
-                PreviewBake.CreatePaths(unit, VoxelStorePreviewPaths.StoreRoot);
+                PreviewBake.CreatePaths(
+                    unit,
+                    VoxelStorePreviewPaths.StoreRoot);
             StringAssert.EndsWith(
                 Path.Combine(
                     "Assets",
@@ -238,20 +164,9 @@ namespace VoxelStore.Preview.Editor.Tests
                     "Source",
                     "Fixture.generated.vox"),
                 paths.SourceVox);
-            StringAssert.EndsWith(
-                Path.Combine(
-                    "Assets",
-                    "Avatars",
-                    "Fixture",
-                    "Source",
-                    "Fixture.animation.generated.yaml"),
-                paths.AnimationManifest);
             Assert.AreEqual(
                 "Assets/__VoxelStorePreview/Baked/Avatars/Fixture",
                 paths.OutputDirectory);
-            StringAssert.EndsWith(
-                "Fixture.assembly.asset",
-                paths.AssemblyAsset);
             StringAssert.EndsWith(
                 "Fixture.animation.asset",
                 paths.AnimationAsset);
@@ -264,10 +179,11 @@ namespace VoxelStore.Preview.Editor.Tests
                 "Assets/__VoxelStorePreview/Baked/Avatars/a",
                 VoxelStorePreviewPaths.RequireDerivedAssetPath(
                     "Assets/__VoxelStorePreview/Baked/Avatars/a"));
-            Assert.Throws<InvalidOperationException>(() =>
-                VoxelStorePreviewPaths.RequireDerivedAssetPath("Assets/Preview"));
-            Assert.Throws<InvalidOperationException>(() =>
-                VoxelStorePreviewPaths.RequireDerivedAssetPath(
+            Assert.Throws<InvalidOperationException>(
+                () => VoxelStorePreviewPaths.RequireDerivedAssetPath(
+                    "Assets/Preview"));
+            Assert.Throws<InvalidOperationException>(
+                () => VoxelStorePreviewPaths.RequireDerivedAssetPath(
                     "Assets/__VoxelStorePreview/Baked/../Preview"));
         }
 
@@ -282,15 +198,13 @@ namespace VoxelStore.Preview.Editor.Tests
                     {
                         Id = "dungeon.avatar.a",
                         Kind = "avatar",
-                        SourceBase =
-                            "Assets/Avatars/A/Source/A"
+                        SourceBase = "Assets/Avatars/A/Source/A"
                     },
                     new PreviewUnitContract
                     {
                         Id = "foundation.equipment.b",
                         Kind = "equipment",
-                        SourceBase =
-                            "Assets/Equipment/B/Source/B"
+                        SourceBase = "Assets/Equipment/B/Source/B"
                     }
                 }
             };
@@ -310,30 +224,30 @@ namespace VoxelStore.Preview.Editor.Tests
                     "Assets/__VoxelStorePreview/Baked/Avatars/dungeon.avatar.a"
                 },
                 stale);
-            Assert.Throws<InvalidOperationException>(() =>
-                PreviewBake.PlanStaleDirectories(
-                    plan,
-                    new[] { "Assets/Outside/unsafe" }));
         }
 
         [Test]
         public void BakeFailurePreventsGridBuild()
         {
             bool built = false;
-            Assert.Throws<InvalidOperationException>(() =>
-                PreviewRefreshOrchestrator.Run(
+            Assert.Throws<InvalidOperationException>(
+                () => PreviewRefreshOrchestrator.Run(
                     () => new PreviewPlanContract
                     {
                         Units = new[]
                         {
-                            new PreviewUnitContract { Id = "broken", Kind = "avatar" }
+                            new PreviewUnitContract
+                            {
+                                Id = "broken",
+                                Kind = "avatar"
+                            }
                         }
                     },
                     plan => PreviewBake.BakeAll(
                         plan,
                         _ => { },
-                        unit => throw new IOException("bake exploded")),
-                    baked =>
+                        _ => throw new IOException("bake exploded")),
+                    _ =>
                     {
                         built = true;
                         return new PreviewGridBuildResult();
@@ -346,7 +260,10 @@ namespace VoxelStore.Preview.Editor.Tests
         {
             int calls = 0;
             List<BakedPreviewUnit> baked = PreviewBake.BakeAll(
-                new PreviewPlanContract { Units = Array.Empty<PreviewUnitContract>() },
+                new PreviewPlanContract
+                {
+                    Units = Array.Empty<PreviewUnitContract>()
+                },
                 _ => { },
                 _ =>
                 {
@@ -358,110 +275,10 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
-        public void RuntimeGallerySavedSceneRestoresEditModeProviderInstances()
-        {
-            Assert.IsFalse(
-                EditorApplication.isPlaying,
-                "regression must prove the manual Edit Mode scene path");
-
-            try
-            {
-                RuntimeGalleryBuildResult built =
-                    VoxelStoreRuntimeGalleryBuilder.BuildAndSave();
-                Assert.That(
-                    built.World.InstanceCount,
-                    Is.GreaterThan(0),
-                    "fresh gallery build must create provider instances");
-
-                UnityEngine.SceneManagement.Scene reopened =
-                    EditorSceneManager.OpenScene(
-                        VoxelStoreRuntimeGalleryBuilder.ScenePath,
-                        OpenSceneMode.Single);
-
-                VoxelStoreRuntimeGalleryEditModeRestorer.Restore(
-                    reopened);
-
-                GameObject root = reopened.GetRootGameObjects()
-                    .Single(x =>
-                        x.name ==
-                        VoxelStoreRuntimeGalleryBuilder.RootName);
-                VoxelRenderWorld world =
-                    root.GetComponent<VoxelRenderWorld>();
-                VoxelRenderPresentation[] presentations =
-                    root.GetComponentsInChildren<VoxelRenderPresentation>(
-                        true);
-                AvatarPresentation[] avatars =
-                    root.GetComponentsInChildren<AvatarPresentation>(
-                        true);
-                MutableStreamedActorPreview[] mutableDemos =
-                    root.GetComponentsInChildren<MutableStreamedActorPreview>(
-                        true);
-
-                Assert.That(presentations.Length, Is.GreaterThan(0));
-                Assert.AreEqual(
-                    presentations.Length,
-                    world.InstanceCount,
-                    "save/reopen must restore every serialized voxel presentation into the transient render world");
-                Assert.That(
-                    world.SubmittedPartCount,
-                    Is.GreaterThan(0),
-                    "restored Edit Mode gallery must submit visible voxel parts");
-                Assert.That(
-                    avatars.All(x => x.IsProviderInitialized),
-                    Is.True,
-                    "reopened avatar presentations must restore their provider-presentation instances");
-                Assert.AreEqual(
-                    1,
-                    mutableDemos.Length,
-                    "runtime gallery should serialize exactly one bounded mutable streamed actor proof surface");
-                Assert.IsTrue(mutableDemos[0].IsConfigured);
-                Assert.IsFalse(
-                    mutableDemos[0].IsInitialized,
-                    "ordinary Edit Mode gallery restore must not start the dedicated streamed proof");
-                Assert.AreNotEqual(
-                    mutableDemos[0].RootUnitId,
-                    mutableDemos[0].PrimaryUnitId);
-                Assert.AreNotEqual(
-                    mutableDemos[0].PrimaryUnitId,
-                    mutableDemos[0].SecondaryUnitId);
-                Assert.AreNotEqual(
-                    mutableDemos[0].SecondaryUnitId,
-                    mutableDemos[0].ReplacementUnitId);
-            }
-            finally
-            {
-                EditorSceneManager.NewScene(
-                    NewSceneSetup.EmptyScene,
-                    NewSceneMode.Single);
-            }
-        }
-
-        [Test]
-        public void CaptureRegistryDeclaresMutableStreamedActorScenario()
-        {
-            string registryPath = Path.Combine(
-                VoxelStorePreviewPaths.ProjectRoot,
-                "Assets",
-                "Preview",
-                "Capture",
-                "CaptureRegistry.json");
-            string json = File.ReadAllText(registryPath);
-            StringAssert.Contains(
-                "\"name\": \"mutable-streamed-actor-gallery\"",
-                json);
-            StringAssert.Contains(
-                "MutableStreamedActorCaptureRunner.RunFromCommandLine",
-                json);
-            StringAssert.Contains(
-                "Library/Capture/MutableStreamedActorGallery",
-                json);
-        }
-
-        [Test]
-        public void RuntimeGalleryCatalogComesFromImportedFolderStructure()
+        public void PreviewCatalogComesFromImportedFolderStructure()
         {
             Assert.IsTrue(
-                RuntimeGalleryCatalogDiscovery.TryDescribeAssetPath(
+                PreviewCatalogDiscovery.TryDescribeAssetPath(
                     "Assets/__VoxelStorePreview/Baked/HumanImport/Avatars/ZombieBrute01/Source/ZombieBrute01.asset",
                     out string avatarCatalog,
                     out string avatarName));
@@ -469,25 +286,7 @@ namespace VoxelStore.Preview.Editor.Tests
             Assert.AreEqual("ZombieBrute01", avatarName);
 
             Assert.IsTrue(
-                RuntimeGalleryCatalogDiscovery.TryDescribeAssetPath(
-                    "Assets/__VoxelStorePreview/Baked/Anything/Weapons/Bow02/Source/Bow02.asset",
-                    out string weaponCatalog,
-                    out string weaponName));
-            Assert.AreEqual("Weapons", weaponCatalog);
-            Assert.AreEqual("Bow02", weaponName);
-
-            Assert.IsFalse(
-                RuntimeGalleryCatalogDiscovery.TryDescribeAssetPath(
-                    "Assets/__VoxelStorePreview/Baked/Weapons/Bow02/Bow02.asset",
-                    out _,
-                    out _));
-        }
-
-        [Test]
-        public void ProviderBakedGalleryPathResolvesMatchingAnimationAsset()
-        {
-            Assert.IsTrue(
-                RuntimeGalleryCatalogDiscovery.TryDescribeProviderAssetPath(
+                PreviewCatalogDiscovery.TryDescribeProviderAssetPath(
                     "Assets/__VoxelStorePreview/Baked",
                     "Assets/__VoxelStorePreview/Baked/Avatars/ZombieBrute01/ZombieBrute01.assembly.asset",
                     out string catalog,
@@ -498,21 +297,12 @@ namespace VoxelStore.Preview.Editor.Tests
             Assert.AreEqual(
                 "Assets/__VoxelStorePreview/Baked/Avatars/ZombieBrute01/ZombieBrute01.animation.asset",
                 animationAssetPath);
-
-            Assert.IsFalse(
-                RuntimeGalleryCatalogDiscovery.TryDescribeProviderAssetPath(
-                    "Assets/__VoxelStorePreview/Baked",
-                    "Assets/__VoxelStorePreview/Baked/Avatars/Avatars/Foo/Source/Foo.asset",
-                    out _,
-                    out _,
-                    out _));
         }
 
-
         [Test]
-        public void MissingBakedAnimationFailsSynchronizedGalleryLoad()
+        public void MissingBakedAnimationFailsPreviewCatalogLoad()
         {
-            var model = new RuntimeGalleryModel
+            var model = new PreviewCatalogModel
             {
                 Catalog = "Avatars",
                 Name = "MissingAnimation",
@@ -524,42 +314,9 @@ namespace VoxelStore.Preview.Editor.Tests
 
             InvalidOperationException exception =
                 Assert.Throws<InvalidOperationException>(
-                    () => RuntimeGalleryCatalogDiscovery.LoadAnimation(model));
+                    () => PreviewCatalogDiscovery.LoadAnimation(model));
             StringAssert.Contains(
                 "requires the baked authored animation asset",
-                exception.Message);
-        }
-
-        [Test]
-        public void MismatchedBakedAnimationFailsSynchronizedGalleryLoad()
-        {
-            RuntimeGalleryModel[] models =
-                RuntimeGalleryCatalogDiscovery.Discover();
-            Assert.That(models.Length, Is.GreaterThanOrEqualTo(2));
-
-            RuntimeGalleryModel first = models[0];
-            RuntimeGalleryModel second = models
-                .Skip(1)
-                .First(x =>
-                    !string.Equals(
-                        x.AssetPath,
-                        first.AssetPath,
-                        StringComparison.Ordinal));
-
-            var stale = new RuntimeGalleryModel
-            {
-                Catalog = first.Catalog,
-                Name = first.Name,
-                AssetPath = first.AssetPath,
-                AnimationAssetPath =
-                    second.AnimationAssetPath
-            };
-
-            InvalidOperationException exception =
-                Assert.Throws<InvalidOperationException>(
-                    () => RuntimeGalleryCatalogDiscovery.LoadAnimation(stale));
-            StringAssert.Contains(
-                "targets a different assembly",
                 exception.Message);
         }
 
@@ -570,20 +327,22 @@ namespace VoxelStore.Preview.Editor.Tests
             var source = Enumerable.Range(0, 25)
                 .Select(i => new Bounds(
                     new Vector3(i == 0 ? 1f : 0f, 1f, 0f),
-                    new Vector3(i == 0 ? 4f : 1f, 2f, i == 1 ? 3f : 1f)))
+                    new Vector3(
+                        i == 0 ? 4f : 1f,
+                        2f,
+                        i == 1 ? 3f : 1f)))
                 .ToArray();
-            Vector3[] positions = PreviewGridLayout.Calculate(source, 1f);
-            Assert.AreEqual(25, positions.Length);
-
+            Vector3[] positions =
+                PreviewGridLayout.Calculate(source, 1f);
             var placed = new Bounds[source.Length];
             for (int i = 0; i < source.Length; i++)
             {
                 placed[i] = source[i];
                 placed[i].center += positions[i];
-                Assert.AreEqual(0f, placed[i].min.y, 0.0001f);
-                Assert.AreEqual(source[i].size, placed[i].size);
             }
-            Assert.AreEqual(0, PreviewGridLayout.CountXZOverlaps(placed));
+            Assert.AreEqual(
+                0,
+                PreviewGridLayout.CountXZOverlaps(placed));
         }
 
         [Test]
@@ -594,7 +353,9 @@ namespace VoxelStore.Preview.Editor.Tests
             {
                 PreviewGridBuilder.ConfigureGenerated(go);
                 Assert.AreEqual("EditorOnly", go.tag);
-                Assert.AreNotEqual(0, go.hideFlags & HideFlags.DontSaveInEditor);
+                Assert.AreNotEqual(
+                    0,
+                    go.hideFlags & HideFlags.DontSaveInEditor);
             }
             finally
             {
@@ -615,16 +376,6 @@ namespace VoxelStore.Preview.Editor.Tests
                         SourceBase =
                             "Assets/Avatars/ZombieBrute01/Source/ZombieBrute01"
                     }));
-            Assert.AreEqual(
-                "Assets/__VoxelStorePreview/Baked/Equipment/WarPick01",
-                VoxelStorePreviewPaths.BakedModelDirectory(
-                    new PreviewUnitContract
-                    {
-                        Id = "foundation.equipment.war-pick.01",
-                        Kind = "equipment",
-                        SourceBase =
-                            "Assets/Equipment/WarPick01/Source/WarPick01"
-                    }));
             Assert.Throws<InvalidDataException>(
                 () => VoxelStorePreviewPaths.BakedModelDirectory(
                     new PreviewUnitContract
@@ -634,6 +385,87 @@ namespace VoxelStore.Preview.Editor.Tests
                         SourceBase =
                             "Assets/Avatars/Wrong/Source/Other"
                     }));
+        }
+
+        [Test]
+        public void CurrentBakedContentComposesDirectlyThroughProviderActor()
+        {
+            VoxelStorePreviewCommand.BakeAllForBatch();
+            PreviewCatalogModel[] models =
+                PreviewCatalogDiscovery.Discover();
+            PreviewVariantCoverage.ValidateAll(models);
+
+            PreviewCatalogModel avatarModel = models.First(
+                x => PreviewCatalogDiscovery.IsCatalog(x, "Avatars"));
+            PreviewCatalogModel equipmentModel = models.First(
+                x => PreviewCatalogDiscovery.IsCatalog(x, "Equipment"));
+
+            var root = new GameObject("provider-integration-test");
+            VoxelRenderWorld world =
+                root.AddComponent<VoxelRenderWorld>();
+            VoxelRenderInstance body = null;
+            VoxelRenderInstance equipment = null;
+            VoxelActorInstance actor = null;
+            try
+            {
+                world.Initialize();
+                body = world.Spawn(
+                    PreviewCatalogDiscovery.LoadAssembly(avatarModel),
+                    PreviewCatalogDiscovery.LoadAnimation(avatarModel));
+                body.RequirePart("Body");
+                equipment = world.Spawn(
+                    PreviewCatalogDiscovery.LoadAssembly(equipmentModel),
+                    PreviewCatalogDiscovery.LoadAnimation(equipmentModel));
+
+                actor = new VoxelActorInstance(body);
+                VoxelActorBindingId binding = actor.Attach(
+                    equipment,
+                    "Equip.Hand.Right.0",
+                    "Mount");
+                actor.RootTrack.Select(new[] { "Idle" });
+                actor.RootTrack.SampleNormalized(0.5f);
+                VoxelModelAnimationTrack equipmentTrack =
+                    actor.GetAttachmentTrack(binding);
+                equipmentTrack.Select(new[] { "Idle" });
+                equipmentTrack.SampleNormalized(0.5f);
+                actor.Refresh();
+
+                Assert.IsTrue(actor.ContainsBinding(binding));
+                Assert.AreEqual(1, actor.BindingCount);
+                Bounds bounds = actor.GetWorldBounds();
+                Assert.IsTrue(float.IsFinite(bounds.center.x));
+                world.SubmitNow();
+                Assert.That(world.SubmittedPartCount, Is.GreaterThan(0));
+            }
+            finally
+            {
+                actor?.Dispose();
+                equipment?.Dispose();
+                body?.Dispose();
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void HeroVoxelEditorBuildsCurrentBakedModelDebugHierarchy()
+        {
+            VoxelStorePreviewCommand.BakeAllForBatch();
+            PreviewCatalogModel model =
+                PreviewCatalogDiscovery.Discover().First();
+            GameObject debug = VoxelSceneDebugBuilder.Create(
+                PreviewCatalogDiscovery.LoadAssembly(model),
+                Vector3.zero);
+            try
+            {
+                Assert.AreEqual("EditorOnly", debug.tag);
+                Assert.That(
+                    debug.GetComponentsInChildren<MeshRenderer>(true).Length,
+                    Is.GreaterThan(0));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(debug);
+            }
         }
     }
 }

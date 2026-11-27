@@ -597,6 +597,7 @@ namespace VoxelStore.Preview.Editor
     public static class VoxelStorePreviewCommand
     {
 
+        [MenuItem("Voxel Store/Refresh Preview Grid")]
         public static void RefreshAllAndOpenGrid()
         {
             try

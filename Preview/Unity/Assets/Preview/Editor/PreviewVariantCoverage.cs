@@ -5,7 +5,7 @@ using Hero.Voxel.Runtime.Assets;
 
 namespace VoxelStore.Preview.Editor
 {
-    internal static class RuntimeGalleryVariantCoverage
+    internal static class PreviewVariantCoverage
     {
         private static readonly string[] AvatarRequired =
         {
@@ -61,12 +61,12 @@ namespace VoxelStore.Preview.Editor
         }
 
         internal static void ValidateAll(
-            IEnumerable<RuntimeGalleryModel> models)
+            IEnumerable<PreviewCatalogModel> models)
         {
-            foreach (RuntimeGalleryModel model in models)
+            foreach (PreviewCatalogModel model in models)
             {
                 VoxelAnimationAsset animation =
-                    RuntimeGalleryCatalogDiscovery.LoadAnimation(
+                    PreviewCatalogDiscovery.LoadAnimation(
                         model);
                 string[] clipNames = Enumerable
                     .Range(0, animation.ClipCount)
@@ -78,7 +78,7 @@ namespace VoxelStore.Preview.Editor
                     continue;
 
                 throw new InvalidOperationException(
-                    "Runtime gallery baked animation coverage is incomplete for " +
+                    "Preview baked animation coverage is incomplete for " +
                     model.Catalog +
                     "/" +
                     model.Name +

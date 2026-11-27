@@ -116,85 +116,33 @@ git submodule update --init --recursive
 The bootstrap initializes and verifies the exact Hero Studio submodule revision and Hero.Voxel workflow fingerprint, then exposes the **entire** `hero.studio` package through one ignored embedded-package junction at `Preview/Unity/Packages/hero.studio`. The junction points to `Dependencies/hero-studio/src/client/unity/Packages/hero.studio`; it does not select modules, copy provider code, or patch provider-owned shaders.
 Open `Preview/Unity/` with Unity `6000.3.24f1`.
 
-The visible `Voxel Store` menu intentionally exposes only the current manual workflow:
+The visible `Voxel Store` menu exposes one store-owned review action:
 
-- `Voxel Store/Refresh Runtime Gallery Scene`
-- `Voxel Store/Avatar Motion Preview`
+- `Voxel Store/Refresh Preview Grid`
 
-Legacy preview-grid refresh and deterministic motion capture remain internal/batch helpers and are not exposed as normal menu children.
+### Editor preview and content proof
 
-### Runtime gallery sample
+`Voxel Store/Refresh Preview Grid` performs a bake-only provider refresh for every published model and rebuilds the canonical Editor-only grid in `Assets/Preview/VoxelStorePreview.unity`. Baked `VoxelAssemblyAsset` and matching `VoxelAnimationAsset` files live under `Preview/Unity/Assets/__VoxelStorePreview/Baked/<Catalog>/<Model>/`. The grid uses pinned Hero.Voxel Editor `VoxelSceneDebugBuilder` / Scene Debug behavior; voxel-store does not create a runtime presenter, animation player, Actor wrapper, renderer, or model-frame abstraction.
 
-The primary manual evaluation surface is the generated Play Mode gallery:
+Preview bake paths mirror the authoritative model directory, never the asset id. Canonical source `Assets/<Catalog>/<Model>/Source/<Model>` bakes to `Assets/__VoxelStorePreview/Baked/<Catalog>/<Model>/<Model>.assembly.asset` plus sibling `<Model>.animation.asset`. Baked output remains disposable and reconstructable from authoritative voxel-store source.
 
-`Voxel Store/Refresh Runtime Gallery Scene`
+Published avatars own a `Body` part and authored equipment sockets such as `Equip.Hand.Left.0` and `Equip.Hand.Right.0`; equipment owns an exact `Mount` socket. These are content contracts. Generic socket-to-Mount composition, reference influence, model animation tracks, bounds, and render lifetime are Hero Studio responsibilities.
 
-The command does **not** regenerate voxel source. It first performs a **bake-only** provider refresh for every published model, producing current `VoxelAssemblyAsset` + matching `VoxelAnimationAsset` pairs under `Preview/Unity/Assets/__VoxelStorePreview/Baked`; it then rebuilds the ignored local scene `Assets/Preview/VoxelStoreRuntimeGallery.generated.unity`, opens it, and frames all discovered models in the Game camera. It does not build the legacy `[Voxel Store Preview Grid]`, so manual and automated runtime-gallery refresh use the same derived bake authority.
+Published reusable models keep the required authored V1 floor. Interactive clip inspection uses the current baked `VoxelAnimationAsset` through Hero.Voxel's own Inspector / Scene Debug tooling; voxel-store does not maintain a second clip inventory or playback state.
 
-Preview bake paths mirror the authoritative model directory, never the asset id. Canonical source `Assets/<Catalog>/<Model>/Source/<Model>` bakes to `Assets/__VoxelStorePreview/Baked/<Catalog>/<Model>/<Model>.assembly.asset` plus sibling `<Model>.animation.asset`. The same rule applies to every published model, including `Avatars` and `Equipment`; ids such as `dungeon.avatar.*` or `foundation.equipment.*` never appear in the baked filesystem path.
-
-Runtime catalog identity comes from this mirrored folder structure. `Avatars` receives avatar socket/motion composition, `Equipment` is attachable and also shown standalone, and any future catalog may be handled as a general standalone animated model. Preview-bake cleanup recursively removes obsolete generated model directories, including the legacy id-based layout, while all baked output remains disposable and reconstructable from authoritative voxel-store sources.
-
-The runtime gallery realizes the complete baked part hierarchy and uses Hero.Voxel authored sockets and animation assets directly.
-
-Avatar entries use the preview-only presentation hierarchy:
-
-```text
-Avatar | ...
-├─ AvatarPresentation
-└─ PresentationRoot
-   ├─ Body
-   │  └─ Body [VoxelRenderPresentation + VoxelModelMotionPlayer]
-   ├─ Equipment | ...
-   │  └─ Model [VoxelRenderPresentation + VoxelModelMotionPlayer]
-   │     └─ <equipment part>
-   └─ Equipment | ...
-      └─ Model [VoxelRenderPresentation + VoxelModelMotionPlayer]
-         └─ <equipment part>
-```
-Current published avatars have one authored part named `Body`. They do **not** have authored Torso, Shoulder, Arm, or Hand parts. Physical equipment attachment is represented by side-aware Body sockets such as `Equip.Hand.Left.0` and `Equip.Hand.Right.0`. `AvatarPresentation` remains the preview semantic owner but delegates generic root/attachment visual composition to the pinned Hero.Voxel `VoxelActorInstance`; it supplies only the Body/equipment instances plus current socket and `Mount` choices. Canonical directions remain local Right `+X`, Up `+Y`, and Forward `-Z`; `VoxelStoreModelFrame` remains the preview-owned implementation point for that semantic basis and for the pinned Hero.Voxel source-vector mapping `(x,y,z) -> (x,z,y)`.
-
-Each equipment manifest declares a reusable attachment capability and side policy, while each equipment VoxelSpec owns an exact `Mount` socket. Current published equipment is one-part, so `Mount` is authored at that part's bind pivot. The provider Actor owns logical attachment identity, the current socket-to-bind-`Mount` reference, the retained release basis, and final visual-root composition. The selected equipment clip independently exposes sampled `referenceInfluence`: `1` follows the current reference, `0` preserves the provider Actor's last fully influenced/release basis, and intermediate values blend decomposed world TRS from that retained basis toward the current reference. High-level attachment identity does not change when influence changes.
-
-`VoxelRenderPresentation` is the preview Unity scene/lifecycle bridge for one caller-owned baked render instance. Standalone models may use its local provider-backed `VoxelModelAnimationTrack`; composed avatars adopt the exact root/attachment tracks owned by `VoxelActorInstance`, so `VoxelModelMotionPlayer` drives the same canonical provider track used for generic visual composition. Current body clips animate only the real `Body` part; left/right variants therefore mean distinct whole-Body motion, not invented limb articulation. One-part equipment clips may independently author finite position, rotation, scale, and clip-level reference influence. Position/rotation/scale curves own the model-local part trajectory; reference influence only controls contribution from the current attachment reference. Translation does **not** imply release, rotation-only animation may release, and the evaluated animated `Mount` is evidence of model-local motion rather than an inverse root-solving input.
-
-Each `VoxelModelMotionPlayer` resolves semantic clip candidates independently. The supported semantic motions are:
-- `Idle`
-- `WalkForward`
-- `Attack`, with body-side resolution `Attack.Left` / `Attack.Right` when authored
-- `Hit`
-- `Death`
-
-Every semantic motion may additionally author model-local take variants with canonical suffix `V<n>` (`n > 0`), for example `Idle.V1`, `WalkForward.V2`, `Death.V3`, or side-qualified `Attack.Left.V2`. Variant counts are independent per motion and per model: `V2` has no global choreography or gameplay meaning. Variants inherit their base semantic loop policy: Idle/WalkForward variants loop; Attack/Hit/Death variants do not.
-
-Published reusable models have a minimum authored V1 floor in addition to the baseline set. Every avatar publishes `Idle.V1`, `WalkForward.V1`, `Attack.Left.V1`, `Attack.Right.V1`, `Hit.V1`, and `Death.V1`; every equipment model publishes `Idle.V1`, `WalkForward.V1`, `Attack.V1`, `Hit.V1`, and `Death.V1`. Each required V1 must compile to animation content different from its direct fallback clip; an exact alias does not satisfy publication. Higher variants such as V2/V3 remain optional and model-local.
-
-Variant selection is explicit consumer presentation context, never voxel-store randomness or gameplay state. For one model instance, requested motion `M`, physical side `S`, and variant `V` resolve in order `M.S.V -> M.V -> M.S -> M`. The body and each equipment instance may request different model-local variants, phases, speeds, loop states, and play/stop/reset lifecycles.
-
-Each model track owns its own preview wall-clock cadence and normalized phase. Consumers may intentionally command the same phase to multiple tracks for a capture checkpoint, but that is caller choreography rather than an actor-wide shared clock. The selected physical slot supplies side context only; it does not command attachment animation. `VoxelModelMotionPlayer` does not own combat results, damage timing, AI, inventory occupancy, variant-selection policy, or production locomotion.
-
-Canonical animation proof is command-driven from the repository root:
+Canonical composed-content proof remains command-driven from the repository root:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\capture-game-view.ps1 -Scenario avatar-motion-gallery
 ```
 
-The pinned streamed-actor provider is also exercised by one bounded preview-only consumer proof:
+The capture runner performs the bake-only refresh, enters an empty Play Mode scene, discovers current baked avatar/equipment assets, then creates a temporary Hero.Voxel `VoxelRenderWorld`, caller-owned render instances, and one direct `VoxelActorInstance` per avatar. Voxel-store supplies only selected store assets, socket/`Mount`, exact authored clip names, deterministic phases, camera/layout, checkpoints, and visual acceptance. Provider runtime state is scenario-local and disposed when capture completes.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File tools\capture-game-view.ps1 -Scenario mutable-streamed-actor-gallery
-```
+Voxel-store does not own or re-prove streamed Actor pooling, attach/detach/rebind/replace transactionality, activation-handle staleness, warm reacquire, or provider track lifecycle. Those are Hero Studio contracts. A missing provider capability fails closed and is evaluated separately; it is not recreated in voxel-store.
 
-The generated runtime gallery serializes one `Mutable Streamed Actor Proof` configuration from the sorted baked catalogs but does not initialize it during ordinary gallery playback/capture. The dedicated scenario builds the existing `VoxelStreamingService -> VoxelPresenterPool -> VoxelActorPresenterPool` resource/topology pools, then acquires one composite-capable `VoxelActorPresenter` with a root and no current mutable attachments. Voxel-store supplies semantic unit/socket/`Mount` choices and deterministic phases only; the streamed Actor owns activation-scoped attachment handles, generic release/reference-influence visual state, mutation refresh, and warm-activation reset. The scenario attaches two equipment instances, proves release while the root moves, rebinds the same high-level handle, moves the root again while early/late samples converge toward rejoin, detaches one handle, transactionally replaces the other with fresh provider track state, releases/reacquires the warm Actor presenter to prove prior activation handles and runtime attachment state are absent, and reattaches equipment. Every composed checkpoint validates current high-level membership, finite model world transforms, and sampled influence before provider-attested Game View capture. This remains preview/evidence infrastructure and does not define a production loadout API or gameplay semantics.
+`CAPTURE_ATTESTED` proves acquisition integrity only. Inspect the PNGs to verify authored content: baseline/V1 takes remain readable, Left/Right body Attack remains distinct where authored, equipment shows its independently authored motion, and socket/Mount composition is visually valid through release/return trajectories.
 
-The command bootstraps/verifies the pinned Hero Studio package, resolves `Preview/Unity`, performs the bake-only provider refresh so current assembly/animation assets exist, builds only `[Voxel Store Runtime Gallery]`, resolves the schema-v2 capture registry, launches one owned **graphical** Unity Editor, invokes the registered `Capture.Editor` runner internally, survives Play Mode/domain reload through `SessionState`, samples deterministic authored baseline plus representative `V1` checkpoints for `Idle`, `WalkForward`, side-aware `Attack`, `Hit`, and `Death`, and captures composed runtime pixels through `Hero.Consumer.Editor.GameViewCapture`. Before capture, the runner rejects any live renderer outside `[Voxel Store Runtime Gallery]` and validates renderer/mesh/material/shader integrity, preventing the legacy debug grid from contaminating proof pixels. Accepted output lives under `Preview/Unity/Library/Capture/AvatarMotionGallery/` and must include current `game-view-capture.json` provider attestation.
-
-`CAPTURE_ATTESTED` proves acquisition integrity only. Inspect the attested PNGs to verify the actual authored presentation: baseline and selected V1 takes must be visibly distinguishable where authored, Left- and Right-driven Attack must preserve side-aware body response, equipment must show its independently resolved authored motion, and logical attachment/reference identity must remain valid even when an authored equipment take visibly departs from the socket. Idle/Walk looping poses plus Hit/Death non-looping presentation must remain semantically readable.
-
-`Voxel Store/Avatar Motion Preview` remains optional interactive exploration. It drives the same independent `VoxelModelMotionPlayer` tracks used by the runtime gallery and exposes separate Body Variant and Equipment Variant selections; clearing either returns that model to ordinary side/base fallback. Each `VoxelModelMotionPlayer` Inspector enumerates exact clip names from that model's bound baked `VoxelAnimationAsset` and parses a selected name back into semantic motion, physical side, and optional variant state; it does not maintain a hard-coded clip/variant list. Individual `EquipmentPresentation` components retain only their preview semantic socket/side plus the provider Actor binding id; generic release/reference state belongs to the provider Actor, so different attachments may be inspected with different takes without creating a shared actor clock. Opening the window, pressing buttons, selecting hierarchy objects, or editing the Inspector is not a completion gate.
-
-The runtime gallery's direct camera/RenderTexture screenshot remains diagnostic-only for static framing. It is not canonical animation proof. Generated scenes, materials, captures, and reports remain ignored preview state; refreshing the gallery recreates derived scene/evidence without changing authoritative voxel source.
-
+Generated preview scenes, baked Unity assets, reports, and captures remain derived evidence. They never become voxel-store authoring, publication, compatibility, or runtime authority.
 
 ## Finalization
 - Run the applicable deterministic validation and Tool tests when the pinned provider is available.
