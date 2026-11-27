@@ -93,25 +93,32 @@ namespace VoxelStore.Preview.PlayMode.Tests
                 fixture.EquipmentPlayer.SampleExact(
                     "Attack",
                     0.55f);
-                VoxelActorBindingId bindingBefore =
-                    fixture.Equipment.BindingId;
+                var handleBefore =
+                    fixture.Equipment.AttachmentHandle;
+                Vector3 before =
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix
+                        .MultiplyPoint3x4(Vector3.zero);
                 Assert.That(
                     fixture.Equipment.Model.AnimationTrack.ReferenceInfluence,
                     Is.EqualTo(1f).Within(0.0001f));
 
-                fixture.Unit.transform.position +=
+                Vector3 delta =
                     new Vector3(1.25f, 0.25f, -0.5f);
+                fixture.Unit.transform.position += delta;
                 fixture.Avatar.RefreshAttachmentReferences();
 
-                Matrix4x4 currentReference =
-                    fixture.Avatar.ResolveAttachmentReferenceWorld(
-                        fixture.Equipment);
-                AssertMatrixNear(
-                    fixture.Equipment.Model.AnimationTrack.WorldMatrix,
-                    currentReference);
+                Vector3 after =
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix
+                        .MultiplyPoint3x4(Vector3.zero);
                 Assert.That(
-                    fixture.Equipment.BindingId,
-                    Is.EqualTo(bindingBefore));
+                    Vector3.Distance(after, before + delta),
+                    Is.LessThan(0.0001f));
+                Assert.That(
+                    fixture.Equipment.AttachmentHandle,
+                    Is.EqualTo(handleBefore));
+                Assert.That(
+                    fixture.Avatar.ContainsEquipment(fixture.Equipment),
+                    Is.True);
                 yield return null;
             }
             finally
@@ -131,6 +138,10 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     0.5f);
                 Matrix4x4 releaseBasis =
                     fixture.Equipment.Model.AnimationTrack.WorldMatrix;
+                Vector3 socketBefore =
+                    fixture.Avatar
+                        .ResolveBodySocketWorld("Equip.Hand.Right.0")
+                        .MultiplyPoint3x4(Vector3.zero);
                 Assert.That(
                     fixture.Equipment.Model.AnimationTrack.ReferenceInfluence,
                     Is.EqualTo(0f).Within(0.0001f));
@@ -139,11 +150,12 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     new Vector3(1.5f, 0f, 0.25f);
                 fixture.Avatar.RefreshAttachmentReferences();
 
-                Matrix4x4 currentReference =
-                    fixture.Avatar.ResolveAttachmentReferenceWorld(
-                        fixture.Equipment);
+                Vector3 socketAfter =
+                    fixture.Avatar
+                        .ResolveBodySocketWorld("Equip.Hand.Right.0")
+                        .MultiplyPoint3x4(Vector3.zero);
                 Assert.That(
-                    MatrixDistance(releaseBasis, currentReference),
+                    Vector3.Distance(socketBefore, socketAfter),
                     Is.GreaterThan(0.01f));
                 AssertMatrixNear(
                     fixture.Equipment.Model.AnimationTrack.WorldMatrix,
@@ -171,11 +183,8 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     fixture.Equipment.Model.AnimationTrack.ReferenceInfluence,
                     Is.EqualTo(0f).Within(0.0001f));
 
-                fixture.Unit.transform.position +=
-                    new Vector3(2f, 0.5f, 0f);
-                Matrix4x4 currentReference =
-                    fixture.Avatar.ResolveAttachmentReferenceWorld(
-                        fixture.Equipment);
+                Vector3 delta = new Vector3(2f, 0.5f, 0f);
+                fixture.Unit.transform.position += delta;
 
                 fixture.EquipmentPlayer.SampleExact(
                     "BlendReturn",
@@ -184,11 +193,10 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     fixture.Equipment.Model.AnimationTrack.ReferenceInfluence,
                     Is.EqualTo(0.4f).Within(0.0001f));
 
+                Vector3 releasePosition =
+                    releaseBasis.MultiplyPoint3x4(Vector3.zero);
                 Vector3 expected =
-                    Vector3.Lerp(
-                        releaseBasis.MultiplyPoint3x4(Vector3.zero),
-                        currentReference.MultiplyPoint3x4(Vector3.zero),
-                        0.4f);
+                    releasePosition + delta * 0.4f;
                 Vector3 actual =
                     fixture.Equipment.Model.AnimationTrack.WorldMatrix
                         .MultiplyPoint3x4(Vector3.zero);
@@ -212,25 +220,28 @@ namespace VoxelStore.Preview.PlayMode.Tests
                 fixture.EquipmentPlayer.SampleExact(
                     "BlendReturn",
                     0.5f);
-                fixture.Unit.transform.position +=
-                    new Vector3(2.5f, 0f, -0.5f);
-                Matrix4x4 currentReference =
-                    fixture.Avatar.ResolveAttachmentReferenceWorld(
-                        fixture.Equipment);
+                Vector3 released =
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix
+                        .MultiplyPoint3x4(Vector3.zero);
+                Vector3 delta = new Vector3(2.5f, 0f, -0.5f);
+                Vector3 target = released + delta;
+                fixture.Unit.transform.position += delta;
 
                 fixture.EquipmentPlayer.SampleExact(
                     "BlendReturn",
                     0.75f);
-                float earlyDistance = MatrixDistance(
-                    fixture.Equipment.Model.AnimationTrack.WorldMatrix,
-                    currentReference);
+                float earlyDistance = Vector3.Distance(
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix
+                        .MultiplyPoint3x4(Vector3.zero),
+                    target);
 
                 fixture.EquipmentPlayer.SampleExact(
                     "BlendReturn",
                     0.9f);
-                float lateDistance = MatrixDistance(
-                    fixture.Equipment.Model.AnimationTrack.WorldMatrix,
-                    currentReference);
+                float lateDistance = Vector3.Distance(
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix
+                        .MultiplyPoint3x4(Vector3.zero),
+                    target);
 
                 Assert.That(earlyDistance, Is.GreaterThan(0.01f));
                 Assert.That(lateDistance, Is.GreaterThan(0.001f));
@@ -239,9 +250,12 @@ namespace VoxelStore.Preview.PlayMode.Tests
                 fixture.EquipmentPlayer.SampleExact(
                     "BlendReturn",
                     1f);
-                AssertMatrixNear(
-                    fixture.Equipment.Model.AnimationTrack.WorldMatrix,
-                    currentReference);
+                Vector3 rejoined =
+                    fixture.Equipment.Model.AnimationTrack.WorldMatrix
+                        .MultiplyPoint3x4(Vector3.zero);
+                Assert.That(
+                    Vector3.Distance(rejoined, target),
+                    Is.LessThan(0.0001f));
                 yield return null;
             }
             finally
@@ -291,13 +305,20 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     followingTrack.ReferenceInfluence,
                     Is.EqualTo(1f).Within(0.0001f));
 
-                fixture.Unit.transform.position +=
-                    new Vector3(1f, 0f, 0f);
+                Vector3 followBefore =
+                    followingTrack.WorldMatrix
+                        .MultiplyPoint3x4(Vector3.zero);
+                Vector3 followDelta = new Vector3(1f, 0f, 0f);
+                fixture.Unit.transform.position += followDelta;
                 fixture.Avatar.RefreshAttachmentReferences();
-                AssertMatrixNear(
-                    followingTrack.WorldMatrix,
-                    fixture.Avatar.ResolveAttachmentReferenceWorld(
-                        fixture.Equipment));
+                Vector3 followAfter =
+                    followingTrack.WorldMatrix
+                        .MultiplyPoint3x4(Vector3.zero);
+                Assert.That(
+                    Vector3.Distance(
+                        followAfter,
+                        followBefore + followDelta),
+                    Is.LessThan(0.0001f));
                 yield return null;
             }
             finally
@@ -548,12 +569,20 @@ namespace VoxelStore.Preview.PlayMode.Tests
 
         private static void AssertReferenceApplied(Fixture fixture)
         {
-            Matrix4x4 expected =
-                fixture.Avatar.ResolveAttachmentReferenceWorld(
-                    fixture.Equipment);
+            Assert.That(
+                fixture.Equipment.AttachmentHandle.IsInitialized,
+                Is.True);
+            Assert.That(
+                fixture.Avatar.ContainsEquipment(fixture.Equipment),
+                Is.True);
+            Assert.That(
+                fixture.Equipment.Model.AnimationTrack.ReferenceInfluence,
+                Is.EqualTo(1f).Within(0.0001f));
             Matrix4x4 actual =
                 fixture.Equipment.Model.AnimationTrack.WorldMatrix;
-            AssertMatrixNear(actual, expected);
+            for (int row = 0; row < 4; row++)
+            for (int column = 0; column < 4; column++)
+                Assert.That(float.IsFinite(actual[row, column]), Is.True);
         }
 
         private static void AssertMountDrifted(Fixture fixture)

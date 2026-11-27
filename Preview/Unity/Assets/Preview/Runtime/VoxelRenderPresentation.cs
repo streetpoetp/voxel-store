@@ -17,6 +17,7 @@ namespace VoxelStore.Preview.Runtime
 
         private VoxelRenderInstance instance;
         private VoxelModelAnimationTrack animationTrack;
+        private bool animationTrackExternallyOwned;
 
         public VoxelRenderWorld World => world;
         public Transform ModelRoot => modelRoot;
@@ -82,6 +83,7 @@ namespace VoxelStore.Preview.Runtime
             {
                 instance = world.Spawn(assembly, animationAsset);
                 animationTrack = new VoxelModelAnimationTrack(instance);
+                animationTrackExternallyOwned = false;
                 created = true;
             }
 
@@ -93,7 +95,29 @@ namespace VoxelStore.Preview.Runtime
         public VoxelModelAnimationTrack EnsureAnimationTrack()
         {
             EnsureInstance();
+            if (animationTrack == null)
+            {
+                animationTrack = new VoxelModelAnimationTrack(instance);
+                animationTrackExternallyOwned = false;
+            }
             return animationTrack;
+        }
+
+        internal void AdoptAnimationTrack(VoxelModelAnimationTrack track)
+        {
+            EnsureInstance();
+            animationTrack = track ??
+                throw new ArgumentNullException(nameof(track));
+            animationTrackExternallyOwned = true;
+        }
+
+        internal void ClearAdoptedAnimationTrack()
+        {
+            if (!animationTrackExternallyOwned)
+                return;
+
+            animationTrack = null;
+            animationTrackExternallyOwned = false;
         }
 
         public void SyncWorldMatrix()
@@ -106,8 +130,7 @@ namespace VoxelStore.Preview.Runtime
 
         public Bounds GetWorldBounds()
         {
-            VoxelRenderInstance current = EnsureInstance();
-            return CalculateWorldBounds(current);
+            return EnsureInstance().GetWorldBounds();
         }
 
         public void ReleaseInstance()
@@ -116,50 +139,9 @@ namespace VoxelStore.Preview.Runtime
                 return;
 
             animationTrack = null;
+            animationTrackExternallyOwned = false;
             instance.Dispose();
             instance = null;
-        }
-
-        public static Bounds CalculateWorldBounds(
-            VoxelRenderInstance renderInstance)
-        {
-            if (renderInstance == null || !renderInstance.IsValid)
-                throw new ArgumentNullException(nameof(renderInstance));
-
-            VoxelAssemblyAsset source = renderInstance.Assembly;
-            if (source.PartCount == 0)
-            {
-                throw new InvalidOperationException(
-                    "Voxel render presentation requires at least one part.");
-            }
-
-            bool initialized = false;
-            Bounds result = default;
-            for (int i = 0; i < source.PartCount; i++)
-            {
-                VoxelAssemblyPart part = source.GetPart(i);
-                if (part.Mesh == null)
-                {
-                    throw new InvalidOperationException(
-                        "Voxel render presentation part is missing its baked mesh: " +
-                        source.AssemblyName + "/" + part.Name);
-                }
-
-                Bounds transformed = TransformBounds(
-                    part.Mesh.bounds,
-                    renderInstance.GetPartWorldMatrix(i));
-                if (!initialized)
-                {
-                    result = transformed;
-                    initialized = true;
-                }
-                else
-                {
-                    result.Encapsulate(transformed);
-                }
-            }
-
-            return result;
         }
 
         private void OnEnable()
@@ -210,23 +192,5 @@ namespace VoxelStore.Preview.Runtime
             }
         }
 
-        private static Bounds TransformBounds(
-            Bounds local,
-            Matrix4x4 matrix)
-        {
-            Vector3 center = matrix.MultiplyPoint3x4(local.center);
-            Vector3 extents = local.extents;
-            Vector3 worldExtents = new Vector3(
-                Mathf.Abs(matrix.m00) * extents.x +
-                Mathf.Abs(matrix.m01) * extents.y +
-                Mathf.Abs(matrix.m02) * extents.z,
-                Mathf.Abs(matrix.m10) * extents.x +
-                Mathf.Abs(matrix.m11) * extents.y +
-                Mathf.Abs(matrix.m12) * extents.z,
-                Mathf.Abs(matrix.m20) * extents.x +
-                Mathf.Abs(matrix.m21) * extents.y +
-                Mathf.Abs(matrix.m22) * extents.z);
-            return new Bounds(center, worldExtents * 2f);
-        }
     }
 }

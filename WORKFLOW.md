@@ -9,67 +9,52 @@
 
 Repository domain roots are explicit: `Assets` is reusable product content; `Styles` is visual authority; `Collections` is desired coverage; `Store` is global policy/history; `Catalog` is derived state. Reusable avatar/equipment compatibility is defined by the global rigid-Body composition contract rather than a separate profile domain.
 
-## Create a new model
+## Canonical asset pipeline
 
-Use `.agents/skills/voxel-store-create-model/SKILL.md` for production creation requests such as `design and create an axe` or `create voxel model`.
+`.agents/skills/voxel-store-pipeline/SKILL.md` is the single end-to-end coordinator for one asset job.
+
+- A direct request such as `create an axe` enters through `voxel-store-create-model`, which establishes exactly one new-production intent and delegates that same job to the pipeline at **Intent**.
+- Autonomous maintenance enters through `voxel-store-maintain`, which runs deterministic Tool scan/plan, claims only the first asset/current gate, and delegates that same job to the corresponding pipeline stage.
+- Neither entrypoint owns a second lifecycle. Detailed validity remains with the Tool, OpenSpec specs, `voxel-store-product-target`, store policy, and the pinned Hero.Voxel workflow.
 
 ```text
-COLLECTION / USER INTENT
-  -> DISTINCT ASSET IDENTITY
-  -> SHARED STYLE GRAMMAR
-  -> ACQUIRE / ACCEPT PRODUCT TARGET
-  -> COMPOSITION / PARTS
+INTENT
+  -> PRODUCT TARGET
+  -> CONSTRUCTION
   -> DENSITY
-  -> VOXELSPEC + PALETTE
-  -> PROOF / ITERATE
-  -> COMPATIBILITY
-  -> PUBLISH
-```
-
-Creation has no template-asset or generator/provider dependency. `Styles/**` supplies shared grammar; the accepted Product Target supplies asset-specific visual authority. If Product Target authority cannot be established, production stops before construction/source; there is no alternate authoring lane.
-
-## Lifecycle
-
-The maintenance workflow has one primary path:
-
-```text
-PLAN
-  -> REFERENCE
   -> SOURCE
-  -> PROOF
+  -> GENERATE
+  -> RUNTIME PRESENTATION PROOF
+  -> COMPATIBILITY
+  -> SEAL
   -> PUBLISH
 ```
 
-These are navigation stages only. Existing Tool gates, OpenSpec contracts, policy, and Hero.Voxel rules remain authoritative.
+The pipeline always evaluates that order for the same asset. A stage is not applicable only when its owning contract explicitly permits that result.
 
-### 1. Plan
+Stage ownership is deliberately delegated:
 
-Run deterministic scan/plan state and claim only the first asset-scoped job plus its earliest unresolved/current gate.
+- **Intent:** explicit user intent or deterministic Collection/Tool selection plus current store identity/style contracts.
+- **Product Target:** `voxel-store-product-target` plus current target/style/provenance contracts.
+- **Construction:** the pinned Hero.Voxel `voxel-art-workflow.md` plus target/style fidelity contracts.
+- **Density:** `reference-density-selection`, active policy, and deterministic Tool evaluation when applicable.
+- **Source:** pinned Hero.Voxel authoring semantics plus deterministic Tool/source validation.
+- **Generate:** Tool/Hero.Voxel generation plus the current proof contracts for derived output.
+- **Runtime Presentation Proof:** `unity-baked-preview` and current proof/compatibility contracts when they require provider-backed runtime evidence.
+- **Compatibility:** `asset-compatibility` plus Tool evaluation.
+- **Seal:** current accepted reference/proof evidence plus Tool sealing commands.
+- **Publish:** `asset-publication` plus Tool scan/verify and derived publication state.
+
+### Maintenance selection
+
+Maintenance planning is a preface to the shared pipeline, not a second lifecycle. Run deterministic scan/plan state and claim only the first asset-scoped job plus its earliest unresolved/current gate.
 
 - If no job exists, the store is healthy: stop.
 - Never skip an earlier unresolved gate to work on a later stage.
 - One maintenance invocation owns only that selected asset.
+- After any stage progress, re-derive Tool state for that same asset before advancing.
 
-### 2. Reference
-
-Reference work establishes accepted visual/construction authority for the current asset.
-
-- Product Target acquisition, visual acceptance, freezing, and provenance handoff are owned by `.agents/skills/voxel-store-product-target/SKILL.md`; no particular generator/provider is required.
-- End-to-end new production model creation is owned by `.agents/skills/voxel-store-create-model/SKILL.md`.
-- Style and target fidelity are owned by `openspec/specs/reference-style-authority/spec.md` and `openspec/specs/reference-target-fidelity/spec.md`.
-- Composition/Part construction semantics are owned by the pinned Hero.Voxel `voxel-art-workflow.md`.
-- New or intentionally redesigned assets use the target-driven flow selected by current contracts.
-- Compatibility exception: an unchanged legacy v2 repair may preserve its existing reference flow when the Tool selects that work; do not migrate it merely to follow the primary diagram.
-
-### 3. Source
-
-Source work turns accepted reference authority into implementation source.
-
-- If the current asset requires reference-driven density, run the density gate first; `openspec/specs/reference-density-selection/spec.md` and `Store/vpu-ruler.yaml` own that behavior.
-- Author/repair VoxelSpec only after upstream gates pass.
-- Hero.Voxel owns VoxelSpec parsing/compilation and canonical voxel-authoring semantics.
-
-#### Rigid avatar and equipment composition
+### Rigid avatar and equipment composition
 
 Published reusable avatars use exactly one authored rigid part named `Body`.
 
@@ -80,31 +65,27 @@ Published reusable avatars use exactly one authored rigid part named `Body`.
 - Multiple equipment instances are an ordered consumer presentation list of independent `{ equipmentId, offsetRatio }` values. Adding another equipment instance does not change avatar source.
 - Primary/secondary, left/right, weapon class, inventory occupancy, damage, and attack behavior are consumer gameplay semantics and are not voxel-store metadata.
 
-### 4. Proof
+### Proof evidence notes
 
-Generate deterministic output and proof for the current source, visually inspect the required evidence, and seal only accepted proof. `front.png` is semantic-frame evidence: its camera stands on Unity `-Z` and looks toward `+Z`, so a conforming model's outward semantic Forward points toward the viewer at Unity `-Z`.
-The generated Hero.Voxel `Proof/.../front.png` owns this semantic-frame proof. A `FRONT` label embedded in `Reference/Parts/*.png` is reference/product-target evidence and is not, by itself, model-frame authority; for ranged equipment it may intentionally show a broad side view while the generated semantic front is muzzle/target-facing.
+Generated deterministic proof remains downstream evidence. `front.png` is semantic-frame evidence: its camera stands on Unity `-Z` and looks toward `+Z`, so a conforming model's outward semantic Forward points toward the viewer at Unity `-Z`.
+The generated Hero.Voxel `Proof/.../front.png` owns this semantic-frame proof. A `FRONT` label embedded in `Reference/Parts/*.png` is reference/Product Target evidence and is not, by itself, model-frame authority; for ranged equipment it may intentionally show a broad side view while the generated semantic front is muzzle/target-facing.
 
-Compilation is not visual acceptance. If proof fails, repair the same current asset/gate.
-
-### 5. Publish
-
-Re-scan and verify derived state after the asset passes its upstream gates. Compatibility, budget, derived catalog, selected-collection coverage, and publication remain Tool/spec/domain-contract-owned.
-
-Commit only verified repository-owned work. Push only when a real upstream remote and usable authentication exist.
+Compilation is not visual acceptance. If evidence fails its owning proof contract, repair the same asset/stage.
 
 ## Gate loop
 
-After every gate:
+After every stage for the same asset:
 
 ```text
-PASS    -> re-derive Tool state for the same asset and follow its next gate
-FAIL    -> repair the same gate on the same asset
-BLOCKED -> report the blocking authority/evidence/dependency and stop
-HEALTHY -> stop
+PASS           -> re-derive authoritative state and continue
+NOT APPLICABLE -> continue only when the stage owner permits it
+FAIL           -> repair the same stage
+BLOCKED        -> report the blocking authority/evidence/dependency and stop
+PUBLISHED      -> stop
 ```
 
-Do not maintain a second manual stage tracker beside deterministic Tool state.
+Do not maintain a second manual stage tracker or validation checklist beside deterministic Tool state and the owning contracts.
+
 
 ## Common commands
 
@@ -171,11 +152,11 @@ Avatar | ...
       └─ Model [VoxelRenderPresentation + VoxelModelMotionPlayer]
          └─ <equipment part>
 ```
-Current published avatars have one authored part named `Body`. They do **not** have authored Torso, Shoulder, Arm, or Hand parts. Physical equipment attachment is represented by side-aware Body sockets such as `Equip.Hand.Left.0` and `Equip.Hand.Right.0`. `AvatarPresentation` owns preview composition and resolves those current animated socket frames through Hero.Voxel. Canonical directions remain local Right `+X`, Up `+Y`, and Forward `-Z`; `VoxelStoreModelFrame` remains the preview-owned implementation point for that semantic basis and for the pinned Hero.Voxel source-vector mapping `(x,y,z) -> (x,z,y)`.
+Current published avatars have one authored part named `Body`. They do **not** have authored Torso, Shoulder, Arm, or Hand parts. Physical equipment attachment is represented by side-aware Body sockets such as `Equip.Hand.Left.0` and `Equip.Hand.Right.0`. `AvatarPresentation` remains the preview semantic owner but delegates generic root/attachment visual composition to the pinned Hero.Voxel `VoxelPresentation`; it supplies only the Body/equipment instances plus current socket and `Mount` choices. Canonical directions remain local Right `+X`, Up `+Y`, and Forward `-Z`; `VoxelStoreModelFrame` remains the preview-owned implementation point for that semantic basis and for the pinned Hero.Voxel source-vector mapping `(x,y,z) -> (x,z,y)`.
 
-Each equipment manifest declares a reusable attachment capability and side policy, while each equipment VoxelSpec owns an exact `Mount` socket. Current published equipment is one-part, so `Mount` is authored at that part's bind pivot. The provider binding keeps logical attachment identity and exposes the current attachment reference `body socket * inverse(bind Mount)`. The selected equipment clip independently exposes sampled `referenceInfluence`: `1` follows the current reference, `0` preserves the preview resolver's last fully influenced/release basis, and intermediate values blend decomposed world TRS from that retained basis toward the current reference. Binding identity/topology does not change when influence changes.
+Each equipment manifest declares a reusable attachment capability and side policy, while each equipment VoxelSpec owns an exact `Mount` socket. Current published equipment is one-part, so `Mount` is authored at that part's bind pivot. The provider presentation owns logical attachment identity, the current socket-to-bind-`Mount` reference, the retained release basis, and final visual-root composition. The selected equipment clip independently exposes sampled `referenceInfluence`: `1` follows the current reference, `0` preserves the provider presentation's last fully influenced/release basis, and intermediate values blend decomposed world TRS from that retained basis toward the current reference. High-level attachment identity does not change when influence changes.
 
-`VoxelRenderPresentation` and its provider-backed `VoxelModelAnimationTrack` own runtime realization for one baked model, while `VoxelModelMotionPlayer` owns that model's preview selection/play/advance/reset cadence. Current body clips animate only the real `Body` part; left/right variants therefore mean distinct whole-Body motion, not invented limb articulation. One-part equipment clips may independently author finite position, rotation, scale, and clip-level reference influence. Position/rotation/scale curves own the model-local part trajectory; reference influence only controls contribution from the current attachment reference. Translation does **not** imply release, rotation-only animation may release, and the evaluated animated `Mount` is evidence of model-local motion rather than an inverse root-solving input.
+`VoxelRenderPresentation` is the preview Unity scene/lifecycle bridge for one caller-owned baked render instance. Standalone models may use its local provider-backed `VoxelModelAnimationTrack`; composed avatars adopt the exact root/attachment tracks owned by `VoxelPresentation`, so `VoxelModelMotionPlayer` drives the same canonical provider track used for generic visual composition. Current body clips animate only the real `Body` part; left/right variants therefore mean distinct whole-Body motion, not invented limb articulation. One-part equipment clips may independently author finite position, rotation, scale, and clip-level reference influence. Position/rotation/scale curves own the model-local part trajectory; reference influence only controls contribution from the current attachment reference. Translation does **not** imply release, rotation-only animation may release, and the evaluated animated `Mount` is evidence of model-local motion rather than an inverse root-solving input.
 
 Each `VoxelModelMotionPlayer` resolves semantic clip candidates independently. The supported semantic motions are:
 - `Idle`
@@ -204,13 +185,13 @@ The pinned streamed-actor provider is also exercised by one bounded preview-only
 powershell -ExecutionPolicy Bypass -File tools\capture-game-view.ps1 -Scenario mutable-streamed-actor-gallery
 ```
 
-The generated runtime gallery serializes one `Mutable Streamed Actor Proof` configuration from the sorted baked catalogs but does not initialize it during ordinary gallery playback/capture. The dedicated scenario acquires a root-only streamed avatar through `VoxelStreamingService -> VoxelPresenterPool -> VoxelActorPresenterPool`, attaches two equipment instances by opaque handles, samples each attachment's provider-authored reference influence, moves the actor while one attachment is released, rebinds without discarding the retained release basis, detaches one handle, transactionally replaces the other with fresh resolver state, releases/reacquires the warm actor to prove prior resolver/loadout state is absent, and reattaches equipment. Every composed checkpoint validates current handle membership, finite current attachment reference, sampled influence, and the shared preview resolver output before provider-attested Game View capture; it does not require the evaluated animated Mount to remain coincident with the socket. This remains preview/evidence infrastructure and does not define a production loadout API or gameplay semantics.
+The generated runtime gallery serializes one `Mutable Streamed Actor Proof` configuration from the sorted baked catalogs but does not initialize it during ordinary gallery playback/capture. The dedicated scenario builds the existing `VoxelStreamingService -> VoxelPresenterPool -> VoxelActorPresenterPool` resource/topology pools, then acquires one composite-capable `VoxelStreamedPresentation` with a root and no current mutable attachments. Voxel-store supplies semantic unit/socket/`Mount` choices and deterministic phases only; the provider presentation owns activation-scoped high-level handles, generic release/reference-influence visual state, mutation refresh, and warm-activation reset. The scenario attaches two equipment instances, proves release while the root moves, rebinds the same high-level handle, moves the root again while early/late samples converge toward rejoin, detaches one handle, transactionally replaces the other with fresh provider track state, releases/reacquires the warm presentation to prove prior activation handles and runtime attachment state are absent, and reattaches equipment. Every composed checkpoint validates current high-level membership, finite model world transforms, and sampled influence before provider-attested Game View capture. This remains preview/evidence infrastructure and does not define a production loadout API or gameplay semantics.
 
 The command bootstraps/verifies the pinned Hero Studio package, resolves `Preview/Unity`, performs the bake-only provider refresh so current assembly/animation assets exist, builds only `[Voxel Store Runtime Gallery]`, resolves the schema-v2 capture registry, launches one owned **graphical** Unity Editor, invokes the registered `Capture.Editor` runner internally, survives Play Mode/domain reload through `SessionState`, samples deterministic authored baseline plus representative `V1` checkpoints for `Idle`, `WalkForward`, side-aware `Attack`, `Hit`, and `Death`, and captures composed runtime pixels through `Hero.Consumer.Editor.GameViewCapture`. Before capture, the runner rejects any live renderer outside `[Voxel Store Runtime Gallery]` and validates renderer/mesh/material/shader integrity, preventing the legacy debug grid from contaminating proof pixels. Accepted output lives under `Preview/Unity/Library/Capture/AvatarMotionGallery/` and must include current `game-view-capture.json` provider attestation.
 
 `CAPTURE_ATTESTED` proves acquisition integrity only. Inspect the attested PNGs to verify the actual authored presentation: baseline and selected V1 takes must be visibly distinguishable where authored, Left- and Right-driven Attack must preserve side-aware body response, equipment must show its independently resolved authored motion, and logical attachment/reference identity must remain valid even when an authored equipment take visibly departs from the socket. Idle/Walk looping poses plus Hit/Death non-looping presentation must remain semantically readable.
 
-`Voxel Store/Avatar Motion Preview` remains optional interactive exploration. It drives the same independent `VoxelModelMotionPlayer` tracks used by the runtime gallery and exposes separate Body Variant and Equipment Variant selections; clearing either returns that model to ordinary side/base fallback. Each `VoxelModelMotionPlayer` Inspector enumerates exact clip names from that model's bound baked `VoxelAnimationAsset` and parses a selected name back into semantic motion, physical side, and optional variant state; it does not maintain a hard-coded clip/variant list. Individual `EquipmentPresentation` components keep model-local variant and reference-resolver state, so different attachments may be inspected with different takes without creating a shared actor clock. Opening the window, pressing buttons, selecting hierarchy objects, or editing the Inspector is not a completion gate.
+`Voxel Store/Avatar Motion Preview` remains optional interactive exploration. It drives the same independent `VoxelModelMotionPlayer` tracks used by the runtime gallery and exposes separate Body Variant and Equipment Variant selections; clearing either returns that model to ordinary side/base fallback. Each `VoxelModelMotionPlayer` Inspector enumerates exact clip names from that model's bound baked `VoxelAnimationAsset` and parses a selected name back into semantic motion, physical side, and optional variant state; it does not maintain a hard-coded clip/variant list. Individual `EquipmentPresentation` components retain only their preview semantic socket/side plus the provider presentation handle; generic release/reference state belongs to the provider presentation, so different attachments may be inspected with different takes without creating a shared actor clock. Opening the window, pressing buttons, selecting hierarchy objects, or editing the Inspector is not a completion gate.
 
 The runtime gallery's direct camera/RenderTexture screenshot remains diagnostic-only for static framing. It is not canonical animation proof. Generated scenes, materials, captures, and reports remain ignored preview state; refreshing the gallery recreates derived scene/evidence without changing authoritative voxel source.
 

@@ -144,23 +144,38 @@ The runtime gallery SHALL discover human-imported `VoxelAssemblyAsset` models un
 - **WHEN** the gallery needs carried equipment to exercise avatar composition
 - **THEN** it chooses deterministic samples from the sorted Equipment catalog and treats that pairing as preview-only comparison data with no gameplay/loadout semantics
 
+### Requirement: Preview delegates generic attachment presentation to pinned provider
+The Unity preview SHALL delegate generic attachment reference-influence composition, retained release-basis state, high-level attachment visual lifecycle, and streamed activation reset behavior to the pinned Hero Studio general presentation capability. Voxel-store SHALL retain only preview/product semantics such as model selection, socket/anchor names, motion candidates, phases, capture checkpoints, and visual acceptance.
+
+#### Scenario: Direct avatar equipment is composed
+- **WHEN** the runtime gallery composes a Body with one or more equipment instances
+- **THEN** the pinned provider owns generic attachment visual composition and the preview does not maintain a second reference-influence resolver or release-basis state
+
+#### Scenario: Streamed mutable equipment is composed
+- **WHEN** the mutable streamed proof attaches, rebinds, replaces, detaches, releases, or reacquires equipment
+- **THEN** high-level attachment identity and visual-state reset come from the pinned provider presentation contract while voxel-store retains only current semantic proof inputs and checkpoints
+
+#### Scenario: Provider presentation capability is unavailable
+- **WHEN** the pinned Hero Studio revision lacks the required direct or streamed general presentation capability
+- **THEN** preview adoption fails closed rather than copying provider presentation logic back into voxel-store
+
 ### Requirement: Runtime gallery uses shared provider realization
-The runtime gallery SHALL realize standalone models and composed avatars through pinned Hero Studio render/actor mechanisms, without a consumer-owned voxel evaluator, attachment solver, or fallback renderer. The actor SHALL own composition while model animation tracks remain independent.
+The runtime gallery SHALL realize standalone models through pinned Hero Studio render mechanisms and composed avatars through the pinned general presentation capability layered over provider actor/render mechanisms. Voxel-store SHALL NOT own a voxel evaluator, generic attachment solver, release-basis resolver, fallback renderer, or competing presentation lifetime.
 
 #### Scenario: Gallery realizes a multipart model
-- **WHEN** an imported baked model is displayed
+- **WHEN** an imported baked model is displayed standalone
 - **THEN** all its authored parts are realized by the provider render instance at authored scale and the gallery frames it from provider-evaluated geometry
 
 #### Scenario: Gallery realizes composed avatars
 - **WHEN** an avatar has zero or more carried equipment instances
-- **THEN** each model has its own provider render instance and model-local playback state while the shared actor coordinates only physical bindings/composition
+- **THEN** each model uses provider-owned model-local playback and the provider presentation capability coordinates generic root/attachment visual composition while voxel-store supplies only its semantic socket/anchor and motion choices
 
 #### Scenario: Gallery is rebuilt or unloaded
 - **WHEN** preview instances are replaced or the gallery exits
-- **THEN** the preview releases its owned actors, model tracks, and render instances without stale submissions or duplicate realization
+- **THEN** the preview releases its provider presentation owner and caller-owned render instances without stale submissions, duplicate realization, or retained attachment visual state
 
 #### Scenario: Provider contract is unavailable
-- **WHEN** the published pinned dependency lacks required independent-track actor/render capabilities
+- **WHEN** the published pinned dependency lacks the required general presentation, independent-track actor/render, or streamed-presentation capabilities
 - **THEN** adoption is blocked rather than copying provider code or retaining a parallel runtime
 
 ### Requirement: Preview retains consumer semantic selection
@@ -179,7 +194,7 @@ The preview SHALL own model-local motion vocabulary and ordered exact clip candi
 - **THEN** preview reports the missing required clip for that model and does not substitute procedural motion or alter another track
 
 ### Requirement: Shared preview execution preserves playback controls
-The interactive preview and registered capture SHALL drive the same provider-backed per-model animation path. Explicit speed, loop, direct phase, reset, lifecycle, and model-local visual transform controls SHALL remain observable independently for every model track.
+The interactive preview and registered capture SHALL drive the same provider-owned per-model playback tracks used by general presentation. Explicit speed, loop, direct phase, reset, lifecycle, and model-local visual transform controls SHALL remain observable independently for every model track.
 
 #### Scenario: Playback loop differs from authored default
 - **WHEN** the user explicitly selects looping or non-looping playback for one model
@@ -187,11 +202,11 @@ The interactive preview and registered capture SHALL drive the same provider-bac
 
 #### Scenario: Capture samples a phase
 - **WHEN** the registered runner requests deterministic checkpoints
-- **THEN** it samples the declared body state, resolves each current attachment reference, explicitly applies that reference through the attachment model track when socket-relative presentation is desired, samples each declared attachment phase, and submits render state before acquiring attested Game View pixels
+- **THEN** it samples the declared root and attachment model tracks at their requested phases, asks the provider presentation to refresh final attachment composition, submits render state, and only then acquires attested Game View pixels
 
 #### Scenario: Preview stops or switches motion
 - **WHEN** playback is stopped, reset, or switched on one model track
-- **THEN** that track changes without stale pose or visual transform state influencing it and without resetting unrelated tracks
+- **THEN** that provider-owned track changes without stale pose or attachment visual state influencing it and without resetting unrelated tracks
 
 ### Requirement: Runtime avatar composition uses explicit presentation ownership
 The Play Mode preview SHALL represent each composed avatar through one composition owner exposing root/bounds/orientation/attachment identities while delegating physical binding and independent model-local animation playback to the pinned provider.
@@ -442,34 +457,34 @@ Provider-attested preview proof SHALL demonstrate a moving Body together with an
 - **THEN** its authored position/rotation trajectory remains observably distinct while both takes use the same generic reference-influence contract
 
 ### Requirement: Runtime gallery provides bounded mutable streamed actor proof
-The Unity preview SHALL provide one bounded preview-only proof that realizes current baked avatar/equipment assets through the pinned mutable streamed actor API while preserving independent model playback.
+The Unity preview SHALL provide one bounded preview-only proof that realizes current baked avatar/equipment assets through the pinned general streamed presentation capability over the existing resource and presenter pools while preserving independent model playback.
 
 #### Scenario: Streamed proof initializes
 - **WHEN** the dedicated mutable-streamed capture scenario starts
-- **THEN** it acquires one root-only actor through the current streaming/presenter pools using current baked store assets and no parallel renderer/cache
+- **THEN** it acquires one composite-capable streamed presentation with a root and zero current mutable attachments through the existing pools, without a parallel renderer, cache, pool, or resolver
 
 #### Scenario: Attachments mutate during one activation
-- **WHEN** the proof adds, detaches, rebinds, or replaces equipment while tracks are playing
-- **THEN** opaque attachment handles and stale-handle rules remain correct while body and unaffected attachment playback continue unchanged
+- **WHEN** the proof adds, detaches, rebinds, or replaces equipment while tracks are active
+- **THEN** high-level opaque attachment identities and stale-handle rules remain correct while root and unaffected attachment playback continue unchanged
 
 #### Scenario: Actor is released and reacquired
-- **WHEN** the proof releases the actor to its warm pool and reacquires it
-- **THEN** runtime-added attachments and their playback state are absent, prior handles fail closed, root presentation remains reusable, and new attachments can be added normally
+- **WHEN** the proof releases the streamed presentation to its warm pool and reacquires it
+- **THEN** prior runtime-added attachments and activation-local playback/visual state are absent, prior high-level handles fail closed, root presentation remains reusable, and new attachments can be added normally
 
 #### Scenario: Existing gallery verification runs
 - **WHEN** ordinary runtime-gallery or avatar-motion verification runs
 - **THEN** the mutable proof surface does not alter model counts, render-instance assertions, composition behavior, or independent track semantics
 
 ### Requirement: Graphical capture proves mutable streamed composition
-The preview capture registry SHALL expose a provider-attested `mutable-streamed-actor-gallery` scenario that captures deterministic mutable-composition checkpoints from the generated runtime gallery.
+The preview capture registry SHALL expose a provider-attested `mutable-streamed-actor-gallery` scenario that captures deterministic high-level mutable-presentation checkpoints from the generated runtime gallery.
 
 #### Scenario: Mutable capture runs
 - **WHEN** `tools/capture-game-view.ps1 -Scenario mutable-streamed-actor-gallery` completes
-- **THEN** attested Game View images cover initial multi-attachment composition, detach, replacement, root-only warm reacquire, and post-reacquire attachment
+- **THEN** attested Game View images cover initial multi-attachment composition, released root movement, continuous recovery, rebind, detach, replacement, root-only warm reacquire, and post-reacquire attachment
 
 #### Scenario: A composed checkpoint is captured
 - **WHEN** one or more equipment attachments are active
-- **THEN** the runner samples independently declared model states, verifies current opaque attachment membership plus finite current attachment references, applies any declared socket-relative reference through the attachment track, submits provider render state, and only then acquires Game View pixels
+- **THEN** the runner samples independently declared provider model tracks, verifies current high-level attachment membership and finite visual transforms, refreshes provider presentation composition, submits provider render state, and only then acquires Game View pixels
 
 ### Requirement: Preview motion state supports model-local animation variants
 The runtime preview SHALL allow optional model-local variant selection independently for the body and each attached equipment instance without coupling their semantic motion or playback phase.
@@ -637,27 +652,27 @@ The interactive preview SHALL treat each provider-backed model animation track a
 - **THEN** those values may be retained as preview configuration, but actual runtime playback status remains whatever the provider track reports
 
 ### Requirement: Streamed presenter is the sole mutable topology authority
-The mutable streamed preview SHALL treat the active streamed presenter as the sole authority for attachment membership, counts, identity, and topology revision. Preview code SHALL retain opaque handles only as identities and SHALL NOT mirror current membership in independent booleans or positional state.
+The lower streamed presenter SHALL remain the sole provider authority for logical mutable topology, while voxel-store consumes only the general streamed presentation's activation-scoped opaque identities, current membership/counts, model tracks, and high-level mutation operations. Preview proof SHALL NOT require lower topology revision or maintain parallel membership, resolver, or release-basis state.
 
 #### Scenario: Attachment is added
-- **WHEN** the preview successfully attaches equipment during one presenter activation
-- **THEN** current membership and counts are read from presenter queries and topology revision advances from its prior value
+- **WHEN** the preview successfully attaches equipment during one streamed presentation activation
+- **THEN** the high-level attachment identity becomes current, attachment count reflects the new model, and no voxel-store topology or resolver shadow is created
 
 #### Scenario: Attachment is detached
 - **WHEN** one mutable attachment is detached
-- **THEN** presenter membership no longer contains its handle, the old handle fails closed, topology revision advances, and unaffected tracks preserve their state
+- **THEN** high-level membership no longer contains its identity, the old identity fails closed, and unaffected model tracks preserve their state
 
 #### Scenario: Attachment is rebound
 - **WHEN** an active attachment is rebound to another valid socket
-- **THEN** the same handle remains current, topology revision advances, and the attachment track/playback state is preserved
+- **THEN** the same high-level identity and model track remain current while subsequent provider-owned visual composition uses the rebound reference
 
 #### Scenario: Attachment is replaced
 - **WHEN** an active attachment is transactionally replaced
-- **THEN** the same public handle identifies the replacement, topology revision advances, the replacement receives provider-defined fresh playback state, and root/unrelated attachment tracks remain unchanged
+- **THEN** the same high-level identity identifies the replacement, the replacement receives fresh provider-defined playback/visual state, and root/unrelated attachment tracks remain unchanged
 
 #### Scenario: Presenter is released and reacquired
-- **WHEN** the proof releases the presenter to its warm pool and reacquires it
-- **THEN** prior activation handles fail closed, provider-reported mutable membership is empty, provider-defined retained track state is reset, and no preview membership shadow requires manual synchronization
+- **WHEN** the proof releases the streamed presentation to its warm pool and reacquires it
+- **THEN** prior activation identities fail closed, current attachment count returns to the configured baseline, provider-defined retained track/visual state is reset, and no preview membership or resolver shadow requires synchronization
 
 ### Requirement: Preview proof demonstrates animation-authored equipment spatial variants
 The canonical preview proof SHALL include current equipment content whose baseline and variant takes produce observably different authored spatial trajectories without a separate placement-mode state machine.

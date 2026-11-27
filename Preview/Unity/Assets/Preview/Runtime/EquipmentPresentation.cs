@@ -1,5 +1,5 @@
 using System;
-using Hero.Voxel.Actor.Runtime.Unity;
+using Hero.Voxel.Presentation.Runtime.Unity;
 using UnityEngine;
 
 namespace VoxelStore.Preview.Runtime
@@ -18,15 +18,14 @@ namespace VoxelStore.Preview.Runtime
         [SerializeField] private string socketName;
         [SerializeField] private EquipmentSlotSide side;
 
-        private VoxelActorBindingId bindingId;
-        private readonly AttachmentReferenceInfluenceResolver
-            referenceResolver = new AttachmentReferenceInfluenceResolver();
+        private VoxelPresentationAttachmentHandle attachmentHandle;
 
         public Transform PlacementRoot => transform;
         public VoxelRenderPresentation Model => model;
         public string SocketName => socketName;
         public EquipmentSlotSide Side => side;
-        public VoxelActorBindingId BindingId => bindingId;
+        public VoxelPresentationAttachmentHandle AttachmentHandle =>
+            attachmentHandle;
         public Vector3 LocalRight => CanonicalLocalRight;
         public Vector3 LocalUp => CanonicalLocalUp;
         public Vector3 LocalForward => CanonicalLocalForward;
@@ -49,31 +48,25 @@ namespace VoxelStore.Preview.Runtime
             model.SetExternallyOwnedLifecycle(true);
             socketName = avatarSocketName;
             side = slotSide;
-            bindingId = default;
-            referenceResolver.Reset();
+            attachmentHandle = default;
         }
 
-        internal void SetBinding(VoxelActorBindingId id)
+        internal void SetAttachmentHandle(
+            VoxelPresentationAttachmentHandle handle)
         {
-            if (!id.IsValid)
-                throw new ArgumentException("A valid actor binding is required.", nameof(id));
-            bindingId = id;
-            referenceResolver.Reset();
+            if (!handle.IsInitialized)
+            {
+                throw new ArgumentException(
+                    "An initialized presentation attachment handle is required.",
+                    nameof(handle));
+            }
+
+            attachmentHandle = handle;
         }
 
-        internal void ClearBinding()
+        internal void ClearAttachmentHandle()
         {
-            bindingId = default;
-            referenceResolver.Reset();
-        }
-
-        internal Matrix4x4 ResolveReferenceWorld(
-            Matrix4x4 currentReferenceWorld,
-            float referenceInfluence)
-        {
-            return referenceResolver.Resolve(
-                currentReferenceWorld,
-                referenceInfluence);
+            attachmentHandle = default;
         }
 
         internal void RequireConfigured()

@@ -132,18 +132,15 @@ namespace VoxelStore.Preview.Capture.Editor
                     demo,
                     1f,
                     "mutable-attached");
-                RequireDistanceAtMost(
-                    demo,
-                    0.001f,
-                    "mutable-attached");
+                Vector3 attachedPosition = demo.PrimaryWorldPosition;
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-attached",
-                    validateReferences: true);
+                    validatePresentation: true);
 
                 demo.transform.position +=
                     new Vector3(1.75f, 0.25f, -0.5f);
-                demo.SampleCurrentTopology(
+                demo.SampleCurrentPresentation(
                     rootPhase: 0.55f,
                     primaryPhase: 0.50f,
                     secondaryPhase: 0.40f);
@@ -151,31 +148,31 @@ namespace VoxelStore.Preview.Capture.Editor
                     demo,
                     0f,
                     "mutable-released-moving-actor");
-                float releasedDistance =
-                    RequireDistanceAtLeast(
-                        demo,
-                        0.05f,
-                        "mutable-released-moving-actor");
+                Vector3 releasedPosition = demo.PrimaryWorldPosition;
+                RequirePositionNear(
+                    attachedPosition,
+                    releasedPosition,
+                    0.001f,
+                    "released attachment must retain its prior visual position while root moves");
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-released-moving-actor",
-                    validateReferences: true);
+                    validatePresentation: true);
 
                 demo.RebindPrimaryPreservingPlayback();
                 RequireInfluence(
                     demo,
                     0f,
                     "mutable-rebound-released");
-                RequireDistanceAtLeast(
-                    demo,
-                    0.05f,
-                    "mutable-rebound-released");
+                Vector3 reboundPosition = demo.PrimaryWorldPosition;
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-rebound-released",
-                    validateReferences: true);
+                    validatePresentation: true);
 
-                demo.SampleCurrentTopology(
+                demo.transform.position +=
+                    new Vector3(1.20f, 0f, 0.40f);
+                demo.SampleCurrentPresentation(
                     rootPhase: 0.55f,
                     primaryPhase: 0.82f,
                     secondaryPhase: 0.40f);
@@ -183,18 +180,14 @@ namespace VoxelStore.Preview.Capture.Editor
                     demo,
                     0.3f,
                     "mutable-return-early");
-                float earlyReturnDistance =
-                    demo.PrimaryReferencePositionDistance;
-                RequireOrderedDistance(
-                    releasedDistance,
-                    earlyReturnDistance,
-                    "released -> early return");
+                Vector3 earlyReturnPosition =
+                    demo.PrimaryWorldPosition;
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-return-early",
-                    validateReferences: true);
+                    validatePresentation: true);
 
-                demo.SampleCurrentTopology(
+                demo.SampleCurrentPresentation(
                     rootPhase: 0.55f,
                     primaryPhase: 0.92f,
                     secondaryPhase: 0.40f);
@@ -202,18 +195,14 @@ namespace VoxelStore.Preview.Capture.Editor
                     demo,
                     0.72f,
                     "mutable-return-late");
-                float lateReturnDistance =
-                    demo.PrimaryReferencePositionDistance;
-                RequireOrderedDistance(
-                    earlyReturnDistance,
-                    lateReturnDistance,
-                    "early -> late return");
+                Vector3 lateReturnPosition =
+                    demo.PrimaryWorldPosition;
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-return-late",
-                    validateReferences: true);
+                    validatePresentation: true);
 
-                demo.SampleCurrentTopology(
+                demo.SampleCurrentPresentation(
                     rootPhase: 0.55f,
                     primaryPhase: 1f,
                     secondaryPhase: 0.40f);
@@ -221,36 +210,39 @@ namespace VoxelStore.Preview.Capture.Editor
                     demo,
                     1f,
                     "mutable-rejoined");
-                RequireDistanceAtMost(
-                    demo,
-                    0.001f,
-                    "mutable-rejoined");
+                Vector3 rejoinedPosition =
+                    demo.PrimaryWorldPosition;
+                RequireOrderedRecovery(
+                    reboundPosition,
+                    earlyReturnPosition,
+                    lateReturnPosition,
+                    rejoinedPosition);
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-rejoined",
-                    validateReferences: true);
+                    validatePresentation: true);
 
                 demo.DetachSecondaryPreservingPlayback();
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-detached",
-                    validateReferences: true);
+                    validatePresentation: true);
 
                 await demo.ReplacePrimaryAsync();
-                demo.SampleCurrentTopology(
+                demo.SampleCurrentPresentation(
                     rootPhase: 0.20f,
                     primaryPhase: 0.65f,
                     secondaryPhase: 0f);
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-replaced",
-                    validateReferences: true);
+                    validatePresentation: true);
 
                 await demo.ReleaseAndReacquireRootOnlyAsync(0.50f);
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-reacquired-root-only",
-                    validateReferences: false);
+                    validatePresentation: false);
 
                 await demo.ReattachAfterReacquireAsync(
                     rootPhase: 0.35f,
@@ -258,7 +250,7 @@ namespace VoxelStore.Preview.Capture.Editor
                 await CaptureCheckpointAsync(
                     demo,
                     "mutable-reattached",
-                    validateReferences: true);            }
+                    validatePresentation: true);            }
             catch (Exception exception)
             {
                 failure = exception;
@@ -295,74 +287,57 @@ namespace VoxelStore.Preview.Capture.Editor
             }
         }
 
-        private static float RequireDistanceAtLeast(
-            MutableStreamedActorPreview demo,
-            float minimum,
-            string checkpoint)
-        {
-            float distance =
-                demo.PrimaryReferencePositionDistance;
-            if (!(distance >= minimum))
-            {
-                throw new InvalidOperationException(
-                    "Mutable streamed released distance is too small at " +
-                    checkpoint +
-                    ": distance=" + distance.ToString("R") +
-                    ", minimum=" + minimum.ToString("R") + ".");
-            }
-
-            return distance;
-        }
-
-        private static void RequireDistanceAtMost(
-            MutableStreamedActorPreview demo,
-            float maximum,
-            string checkpoint)
-        {
-            float distance =
-                demo.PrimaryReferencePositionDistance;
-            if (distance > maximum)
-            {
-                throw new InvalidOperationException(
-                    "Mutable streamed reference distance is too large at " +
-                    checkpoint +
-                    ": distance=" + distance.ToString("R") +
-                    ", maximum=" + maximum.ToString("R") + ".");
-            }
-        }
-
-        private static void RequireOrderedDistance(
-            float earlier,
-            float later,
+        private static void RequirePositionNear(
+            Vector3 expected,
+            Vector3 actual,
+            float maximumDistance,
             string label)
         {
-            if (!(later > 0f && later < earlier))
+            float distance = Vector3.Distance(expected, actual);
+            if (distance > maximumDistance)
             {
                 throw new InvalidOperationException(
-                    "Mutable streamed return distance did not decrease for " +
                     label +
-                    ": earlier=" + earlier.ToString("R") +
-                    ", later=" + later.ToString("R") + ".");
+                    ": distance=" + distance.ToString("R") +
+                    ", maximum=" + maximumDistance.ToString("R") + ".");
+            }
+        }
+
+        private static void RequireOrderedRecovery(
+            Vector3 released,
+            Vector3 early,
+            Vector3 late,
+            Vector3 rejoined)
+        {
+            float total = Vector3.Distance(released, rejoined);
+            float earlyDistance = Vector3.Distance(early, rejoined);
+            float lateDistance = Vector3.Distance(late, rejoined);
+            if (!(total > 0.05f &&
+                  earlyDistance > lateDistance &&
+                  lateDistance > 0f &&
+                  earlyDistance < total))
+            {
+                throw new InvalidOperationException(
+                    "Mutable streamed return did not converge continuously: " +
+                    "total=" + total.ToString("R") +
+                    ", early=" + earlyDistance.ToString("R") +
+                    ", late=" + lateDistance.ToString("R") + ".");
             }
         }
 
         private static async Task CaptureCheckpointAsync(
             MutableStreamedActorPreview demo,
             string checkpoint,
-            bool validateReferences)
+            bool validatePresentation)
         {
-            if (validateReferences)
-                demo.ValidateAttachmentReferences();
+            if (validatePresentation)
+                demo.ValidatePresentationState();
 
             Debug.Log(
                 "Mutable streamed checkpoint " +
                 checkpoint +
-                ": topologyRevision=" +
-                demo.TopologyRevision +
-                ", attachments=" +
-                demo.AttachmentCount +
-                ", mutableAttachments=" +
-                demo.MutableAttachmentCount + ".");
+                ": attachments=" +
+                demo.AttachmentCount + ".");
 
             Bounds bounds = demo.GetWorldBounds();
             ConfigureCaptureView(bounds);

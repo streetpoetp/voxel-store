@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Hero.Voxel.Actor.Runtime.Unity;
+using Hero.Voxel.Presentation.Runtime.Unity;
 using Hero.Voxel.Render.Runtime.Unity;
 using Hero.Voxel.Runtime.Assets;
 using UnityEngine;
@@ -24,7 +24,7 @@ namespace VoxelStore.Preview.Runtime
         [SerializeField] private EquipmentPresentation[] equipment =
             Array.Empty<EquipmentPresentation>();
 
-        private VoxelActorInstance actor;
+        private VoxelPresentation presentation;
 
         public Transform UnitRoot => unitRoot;
         public Transform PresentationRoot => presentationRoot;
@@ -40,7 +40,7 @@ namespace VoxelStore.Preview.Runtime
             presentationRoot != null &&
             body != null;
         public bool IsProviderInitialized =>
-            actor != null &&
+            presentation != null &&
             body != null &&
             body.IsInitialized;
         public VoxelRenderWorld World =>
@@ -53,7 +53,7 @@ namespace VoxelStore.Preview.Runtime
 
         public void Configure(
             Transform authoritativeUnitRoot,
-            Transform presentation,
+            Transform presentationTransform,
             VoxelRenderPresentation bodyPresentation,
             IReadOnlyList<EquipmentPresentation> attachedEquipment)
         {
@@ -62,9 +62,9 @@ namespace VoxelStore.Preview.Runtime
             unitRoot = authoritativeUnitRoot != null
                 ? authoritativeUnitRoot
                 : throw new ArgumentNullException(nameof(authoritativeUnitRoot));
-            presentationRoot = presentation != null
-                ? presentation
-                : throw new ArgumentNullException(nameof(presentation));
+            presentationRoot = presentationTransform != null
+                ? presentationTransform
+                : throw new ArgumentNullException(nameof(presentationTransform));
             body = bodyPresentation != null
                 ? bodyPresentation
                 : throw new ArgumentNullException(nameof(bodyPresentation));
@@ -93,9 +93,12 @@ namespace VoxelStore.Preview.Runtime
             RequireConfigured();
 
             if (IsProviderInitialized &&
-                equipment.All(x => x.Model.IsInitialized && x.BindingId.IsValid))
+                equipment.All(x =>
+                    x.Model.IsInitialized &&
+                    x.AttachmentHandle.IsInitialized &&
+                    presentation.ContainsAttachment(x.AttachmentHandle)))
             {
-                body.SyncWorldMatrix();
+                SyncWorldTransform();
                 return;
             }
 
@@ -103,18 +106,22 @@ namespace VoxelStore.Preview.Runtime
             body.SetExternallyOwnedLifecycle(true);
             VoxelRenderInstance rootInstance = body.EnsureInstance();
             rootInstance.RequirePart("Body");
-            actor = new VoxelActorInstance(rootInstance);
+            presentation = new VoxelPresentation(rootInstance);
+            body.AdoptAnimationTrack(presentation.RootTrack);
 
             foreach (EquipmentPresentation item in equipment)
             {
                 item.RequireConfigured();
                 item.Model.SetExternallyOwnedLifecycle(true);
                 VoxelRenderInstance child = item.Model.EnsureInstance();
-                VoxelActorBindingId binding = actor.Attach(
-                    child,
-                    item.SocketName,
-                    "Mount");
-                item.SetBinding(binding);
+                VoxelPresentationAttachmentHandle handle =
+                    presentation.Attach(
+                        child,
+                        item.SocketName,
+                        "Mount");
+                item.SetAttachmentHandle(handle);
+                item.Model.AdoptAnimationTrack(
+                    presentation.GetAttachmentTrack(handle));
             }
 
             SyncWorldTransform();
@@ -126,9 +133,7 @@ namespace VoxelStore.Preview.Runtime
                 return;
 
             InitializeProvider();
-            body.EnsureAnimationTrack().Reset();
-            foreach (EquipmentPresentation item in equipment)
-                item.Model.EnsureAnimationTrack().Reset();
+            presentation.Reset();
             SyncWorldTransform();
         }
 
@@ -138,26 +143,20 @@ namespace VoxelStore.Preview.Runtime
             SyncWorldTransform();
         }
 
-        public Matrix4x4 ResolveAttachmentReferenceWorld(
-            EquipmentPresentation item)
+        public bool ContainsEquipment(EquipmentPresentation item)
         {
-            if (item == null)
-                throw new ArgumentNullException(nameof(item));
-            InitializeProvider();
-            body.SyncWorldMatrix();
-            RequireCurrentEquipment(item);
-            return actor.GetAttachmentReferenceWorldMatrix(item.BindingId);
-        }
+            if (item == null ||
+                presentation == null ||
+                equipment == null ||
+                !equipment.Contains(item))
+            {
+                return false;
+            }
 
-        public void ApplyAttachmentReference(
-            EquipmentPresentation item)
-        {
-            if (item == null)
-                throw new ArgumentNullException(nameof(item));
-            InitializeProvider();
-            body.SyncWorldMatrix();
-            RequireCurrentEquipment(item);
-            ApplyAttachmentReferenceCurrent(item);
+            VoxelPresentationAttachmentHandle handle =
+                item.AttachmentHandle;
+            return handle.IsInitialized &&
+                presentation.ContainsAttachment(handle);
         }
 
         public bool IsBodyModel(VoxelRenderPresentation model)
@@ -194,11 +193,7 @@ namespace VoxelStore.Preview.Runtime
         {
             InitializeProvider();
             SyncWorldTransform();
-
-            Bounds bounds = body.GetWorldBounds();
-            foreach (EquipmentPresentation item in equipment)
-                bounds.Encapsulate(item.Model.GetWorldBounds());
-            return bounds;
+            return presentation.GetWorldBounds();
         }
 
         public void SubmitNow()
@@ -210,10 +205,21 @@ namespace VoxelStore.Preview.Runtime
 
         public void ReleaseProvider()
         {
-            if (actor != null)
+            if (equipment != null)
             {
-                actor.Dispose();
-                actor = null;
+                foreach (EquipmentPresentation item in equipment)
+                {
+                    if (item == null)
+                        continue;
+                    item.Model?.ClearAdoptedAnimationTrack();
+                }
+            }
+            body?.ClearAdoptedAnimationTrack();
+
+            if (presentation != null)
+            {
+                presentation.Dispose();
+                presentation = null;
             }
 
             if (equipment != null)
@@ -222,7 +228,7 @@ namespace VoxelStore.Preview.Runtime
                 {
                     if (item == null)
                         continue;
-                    item.ClearBinding();
+                    item.ClearAttachmentHandle();
                     item.Model?.ReleaseInstance();
                 }
             }
@@ -232,38 +238,12 @@ namespace VoxelStore.Preview.Runtime
 
         private void SyncWorldTransform()
         {
-            if (actor == null)
+            if (presentation == null)
                 return;
 
-            body.SyncWorldMatrix();
-            foreach (EquipmentPresentation item in equipment)
-                ApplyAttachmentReferenceCurrent(item);
-        }
-
-        private void ApplyAttachmentReferenceCurrent(
-            EquipmentPresentation item)
-        {
-            Matrix4x4 reference =
-                actor.GetAttachmentReferenceWorldMatrix(item.BindingId);
-            VoxelModelAnimationTrack track =
-                item.Model.EnsureAnimationTrack();
-            Matrix4x4 resolved =
-                item.ResolveReferenceWorld(
-                    reference,
-                    track.ReferenceInfluence);
-            track.SetWorldMatrix(resolved);
-        }
-
-        private void RequireCurrentEquipment(
-            EquipmentPresentation item)
-        {
-            if (!item.BindingId.IsValid ||
-                equipment == null ||
-                !equipment.Contains(item))
-            {
-                throw new InvalidOperationException(
-                    "Equipment is not a current attachment of this avatar presentation.");
-            }
+            presentation.RootTrack.SetWorldMatrix(
+                body.ModelRoot.localToWorldMatrix);
+            presentation.Refresh();
         }
 
         private void Awake()
@@ -316,6 +296,5 @@ namespace VoxelStore.Preview.Runtime
                     "AvatarPresentation Body is not configured.");
             }
         }
-
     }
 }

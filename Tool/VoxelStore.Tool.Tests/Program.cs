@@ -4872,6 +4872,175 @@ Require(
         StringComparison.OrdinalIgnoreCase),
     "maintenance skill must enforce one claimed job per invocation");
 
+
+string pipelineSkillPath = Path.Combine(
+    repositoryRoot,
+    ".agents",
+    "skills",
+    "voxel-store-pipeline",
+    "SKILL.md");
+Require(
+    File.Exists(pipelineSkillPath),
+    "voxel-store-pipeline skill must exist");
+string pipelineSkill = File.ReadAllText(pipelineSkillPath);
+string[] pipelineStages =
+{
+    "**Intent**",
+    "**Product Target**",
+    "**Construction**",
+    "**Density**",
+    "**Source**",
+    "**Generate**",
+    "**Runtime Presentation Proof**",
+    "**Compatibility**",
+    "**Seal**",
+    "**Publish**"
+};
+int previousPipelineStage = -1;
+foreach (string stage in pipelineStages)
+{
+    int currentPipelineStage = pipelineSkill.IndexOf(
+        stage,
+        StringComparison.Ordinal);
+    Require(
+        currentPipelineStage > previousPipelineStage,
+        "voxel-store-pipeline must declare canonical stage order through " + stage);
+    previousPipelineStage = currentPipelineStage;
+}
+Require(
+    pipelineSkill.Contains(
+        "exactly one asset-scoped job",
+        StringComparison.OrdinalIgnoreCase) &&
+    pipelineSkill.Contains(
+        "Do not select a second asset",
+        StringComparison.OrdinalIgnoreCase),
+    "voxel-store-pipeline must keep one asset owner per invocation");
+Require(
+    pipelineSkill.Contains(
+        "voxel-store-product-target",
+        StringComparison.Ordinal) &&
+    pipelineSkill.Contains(
+        "voxel-art-workflow.md",
+        StringComparison.Ordinal) &&
+    pipelineSkill.Contains(
+        "asset-compatibility",
+        StringComparison.Ordinal) &&
+    pipelineSkill.Contains(
+        "asset-publication",
+        StringComparison.Ordinal),
+    "voxel-store-pipeline must delegate stages to existing authorities");
+Require(
+    pipelineSkill.Contains(
+        "not applicable",
+        StringComparison.OrdinalIgnoreCase) &&
+    pipelineSkill.Contains(
+        "owning contract",
+        StringComparison.OrdinalIgnoreCase),
+    "pipeline applicability must be decided by the owning contract");
+
+
+string createSkill = File.ReadAllText(
+    Path.Combine(
+        repositoryRoot,
+        ".agents",
+        "skills",
+        "voxel-store-create-model",
+        "SKILL.md"));
+Require(
+    createSkill.Contains(
+        "voxel-store-pipeline",
+        StringComparison.Ordinal) &&
+    createSkill.Contains(
+        "starting at **Intent**",
+        StringComparison.Ordinal),
+    "create-model must be an Intent compatibility entrypoint into voxel-store-pipeline");
+Require(
+    skill.Contains(
+        "voxel-store-pipeline",
+        StringComparison.Ordinal) &&
+    skill.Contains(
+        "deterministic scan/plan",
+        StringComparison.OrdinalIgnoreCase),
+    "maintenance must select deterministically before delegating to voxel-store-pipeline");
+string[] retiredCreateFlowHeadings =
+{
+    "Acquire and accept Product Target",
+    "Create construction authority",
+    "Select density",
+    "Compatibility and publication"
+};
+Require(
+    retiredCreateFlowHeadings.All(
+        heading => !createSkill.Contains(
+            heading,
+            StringComparison.OrdinalIgnoreCase)),
+    "create-model must not retain a second end-to-end stage definition");
+Require(
+    !skill.Contains(
+        "Reference repair/redesign",
+        StringComparison.OrdinalIgnoreCase) &&
+    !skill.Contains(
+        "use `voxel-store-create-model`",
+        StringComparison.OrdinalIgnoreCase),
+    "maintenance must delegate the selected job directly to the shared pipeline");
+
+string workflowText = File.ReadAllText(
+    Path.Combine(repositoryRoot, "WORKFLOW.md"));
+Require(
+    workflowText.Contains(
+        "## Canonical asset pipeline",
+        StringComparison.Ordinal) &&
+    workflowText.Contains(
+        "RUNTIME PRESENTATION PROOF",
+        StringComparison.Ordinal) &&
+    workflowText.Contains(
+        "voxel-store-pipeline",
+        StringComparison.Ordinal),
+    "WORKFLOW must expose the one canonical asset pipeline");
+Require(
+    !workflowText.Contains(
+        "COLLECTION / USER INTENT",
+        StringComparison.Ordinal) &&
+    !workflowText.Contains(
+        "PLAN\n  -> REFERENCE",
+        StringComparison.Ordinal),
+    "WORKFLOW must not retain the retired competing creation/maintenance diagrams");
+
+
+string productTargetSkill = File.ReadAllText(
+    Path.Combine(
+        repositoryRoot,
+        ".agents",
+        "skills",
+        "voxel-store-product-target",
+        "SKILL.md"));
+Require(
+    productTargetSkill.Contains(
+        "owns Product Target acquisition and visual acceptance",
+        StringComparison.OrdinalIgnoreCase),
+    "voxel-store-product-target must remain the specialized Product Target authority");
+
+string[] specializedChecklistDetails =
+{
+    "targetSha256",
+    "target.provenance.json",
+    "RequiredParts",
+    "Store/vpu-ruler.yaml",
+    "lowest sufficient VPU",
+    "occupied source voxels",
+    "seal-reference",
+    "compatibility rows"
+};
+foreach (string detail in specializedChecklistDetails)
+{
+    Require(
+        !pipelineSkill.Contains(
+            detail,
+            StringComparison.OrdinalIgnoreCase),
+        "voxel-store-pipeline must delegate rather than copy specialized checklist detail: " +
+        detail);
+}
+
 string sampleIsolationRoot = TempRoot();
 try
 {

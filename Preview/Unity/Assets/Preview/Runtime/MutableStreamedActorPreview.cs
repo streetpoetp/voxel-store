@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using Hero.Voxel.Actor.Runtime.Unity;
 using Hero.Voxel.Actor.Streaming.Runtime.Unity;
+using Hero.Voxel.Presentation.Streaming.Runtime.Unity;
 using Hero.Voxel.Render.Runtime.Unity;
 using Hero.Voxel.Render.Streaming.Runtime.Unity;
 using Hero.Voxel.Runtime.Assets;
@@ -37,15 +38,9 @@ namespace VoxelStore.Preview.Runtime
         private VoxelStreamingService streaming;
         private VoxelPresenterPool presenters;
         private VoxelActorPresenterPool actors;
-        private VoxelActorPresenter actor;
-        private VoxelActorAttachmentHandle primaryHandle;
-        private VoxelActorAttachmentHandle secondaryHandle;
-        private readonly Dictionary<
-            VoxelActorAttachmentHandle,
-            AttachmentReferenceInfluenceResolver> attachmentResolvers =
-                new Dictionary<
-                    VoxelActorAttachmentHandle,
-                    AttachmentReferenceInfluenceResolver>();
+        private VoxelStreamedPresentation presentation;
+        private VoxelStreamedPresentationAttachmentHandle primaryHandle;
+        private VoxelStreamedPresentationAttachmentHandle secondaryHandle;
 
         public bool IsConfigured =>
             world != null &&
@@ -58,20 +53,21 @@ namespace VoxelStore.Preview.Runtime
             replacementAssembly != null &&
             replacementAnimation != null;
 
-        public bool IsInitialized => actor != null && actor.IsActive;
-        public int AttachmentCount => IsInitialized ? actor.AttachmentCount : 0;
-        public int MutableAttachmentCount =>
-            IsInitialized ? actor.MutableAttachmentCount : 0;
-        public int TopologyRevision =>
-            IsInitialized ? actor.TopologyRevision : 0;
+        public bool IsInitialized => presentation != null;
+        public int AttachmentCount =>
+            IsInitialized ? presentation.AttachmentCount : 0;
         public bool HasPrimaryAttachment =>
             IsCurrentAttachment(primaryHandle);
         public bool HasSecondaryAttachment =>
             IsCurrentAttachment(secondaryHandle);
-        public VoxelUnitId RootUnitId => rootAssembly != null ? rootAssembly.UnitId : default;
-        public VoxelUnitId PrimaryUnitId => primaryAssembly != null ? primaryAssembly.UnitId : default;
-        public VoxelUnitId SecondaryUnitId => secondaryAssembly != null ? secondaryAssembly.UnitId : default;
-        public VoxelUnitId ReplacementUnitId => replacementAssembly != null ? replacementAssembly.UnitId : default;
+        public VoxelUnitId RootUnitId =>
+            rootAssembly != null ? rootAssembly.UnitId : default;
+        public VoxelUnitId PrimaryUnitId =>
+            primaryAssembly != null ? primaryAssembly.UnitId : default;
+        public VoxelUnitId SecondaryUnitId =>
+            secondaryAssembly != null ? secondaryAssembly.UnitId : default;
+        public VoxelUnitId ReplacementUnitId =>
+            replacementAssembly != null ? replacementAssembly.UnitId : default;
 
         public float PrimaryReferenceInfluence
         {
@@ -80,25 +76,20 @@ namespace VoxelStore.Preview.Runtime
                 RequireCurrentAttachment(
                     primaryHandle,
                     "primary influence");
-                return actor.GetAttachmentTrack(primaryHandle)
+                return presentation.GetAttachmentTrack(primaryHandle)
                     .ReferenceInfluence;
             }
         }
 
-        public float PrimaryReferencePositionDistance
+        public Vector3 PrimaryWorldPosition
         {
             get
             {
                 RequireCurrentAttachment(
                     primaryHandle,
-                    "primary reference distance");
-                Matrix4x4 reference =
-                    actor.GetAttachmentReferenceWorldMatrix(primaryHandle);
-                Matrix4x4 actual =
-                    actor.GetAttachmentTrack(primaryHandle).WorldMatrix;
-                return Vector3.Distance(
-                    reference.MultiplyPoint3x4(Vector3.zero),
-                    actual.MultiplyPoint3x4(Vector3.zero));
+                    "primary world position");
+                return presentation.GetAttachmentTrack(primaryHandle)
+                    .WorldMatrix.MultiplyPoint3x4(Vector3.zero);
             }
         }
 
@@ -173,15 +164,19 @@ namespace VoxelStore.Preview.Runtime
                 maxPresenters: 1,
                 maxIdlePresenters: 1);
 
-            actor = await actors.AcquireAsync().AsTask();
+            presentation =
+                await VoxelStreamedPresentation
+                    .AcquireCompositeAsync(actors)
+                    .AsTask();
             primaryHandle = default;
             secondaryHandle = default;
-            if (actor.MutableAttachmentCount != 0)
+            if (!presentation.IsComposite ||
+                presentation.AttachmentCount != 0)
             {
                 throw new InvalidOperationException(
-                    "Fresh streamed proof actor must not contain mutable attachments.");
+                    "Fresh streamed proof must be composite-capable and root-only.");
             }
-            ApplyTransformAndVisibility();
+
             SampleRootOnly(0.5f);
         }
 
@@ -194,53 +189,44 @@ namespace VoxelStore.Preview.Runtime
             RequireNormalizedPhase(rootPhase);
             RequireNormalizedPhase(primaryPhase);
             RequireNormalizedPhase(secondaryPhase);
-            if (actor.AttachmentCount != 0)
+            if (presentation.AttachmentCount != 0)
             {
                 throw new InvalidOperationException(
-                    "Initial streamed proof requires a root-only actor.");
+                    "Initial streamed proof requires a root-only presentation.");
             }
 
-            int beforePrimaryAttach = actor.TopologyRevision;
-            primaryHandle = await actor.AttachAsync(
-                primaryAssembly.UnitId,
-                RightSocket,
-                MountAnchor).AsTask();
-            RequireTopologyAdvanced(
-                beforePrimaryAttach,
-                "attach primary");
+            primaryHandle = await presentation.AttachAsync(
+                AttachmentDescriptor(
+                    primaryAssembly.UnitId,
+                    RightSocket)).AsTask();
             RequireCurrentAttachment(
                 primaryHandle,
                 "primary after attach");
-            if (actor.MutableAttachmentCount != 1)
+            if (presentation.AttachmentCount != 1)
             {
                 throw new InvalidOperationException(
-                    "Primary attach did not produce exactly one mutable attachment.");
+                    "Primary attach did not produce exactly one attachment.");
             }
 
-            int beforeSecondaryAttach = actor.TopologyRevision;
-            secondaryHandle = await actor.AttachAsync(
-                secondaryAssembly.UnitId,
-                LeftSocket,
-                MountAnchor).AsTask();
-            RequireTopologyAdvanced(
-                beforeSecondaryAttach,
-                "attach secondary");
+            secondaryHandle = await presentation.AttachAsync(
+                AttachmentDescriptor(
+                    secondaryAssembly.UnitId,
+                    LeftSocket)).AsTask();
             RequireCurrentAttachment(
                 secondaryHandle,
                 "secondary after attach");
-            if (actor.MutableAttachmentCount != 2)
+            if (presentation.AttachmentCount != 2)
             {
                 throw new InvalidOperationException(
-                    "Secondary attach did not produce exactly two mutable attachments.");
+                    "Secondary attach did not produce exactly two attachments.");
             }
-
             if (primaryHandle == secondaryHandle)
             {
                 throw new InvalidOperationException(
                     "Distinct mutable attachments must receive distinct handles.");
             }
 
-            SampleCurrentTopology(
+            SampleCurrentPresentation(
                 rootPhase,
                 primaryPhase,
                 secondaryPhase);
@@ -256,46 +242,34 @@ namespace VoxelStore.Preview.Runtime
                 secondaryHandle,
                 "secondary before detach");
 
-            VoxelModelAnimationTrack rootTrack = actor.RootTrack;
+            VoxelModelAnimationTrack rootTrack = presentation.RootTrack;
             VoxelModelAnimationTrack primaryTrack =
-                actor.GetAttachmentTrack(primaryHandle);
+                presentation.GetAttachmentTrack(primaryHandle);
             float rootPhase = rootTrack.NormalizedPhase;
             float primaryPhase = primaryTrack.NormalizedPhase;
-            VoxelActorAttachmentHandle stale = secondaryHandle;
-            int beforeDetach = actor.TopologyRevision;
-            actor.Detach(secondaryHandle);
-            RequireTopologyAdvanced(
-                beforeDetach,
-                "detach secondary");
-            attachmentResolvers.Remove(stale);
-            if (attachmentResolvers.ContainsKey(stale))
-            {
-                throw new InvalidOperationException(
-                    "Detached streamed attachment retained resolver state.");
-            }
+            VoxelStreamedPresentationAttachmentHandle stale =
+                secondaryHandle;
+
+            presentation.Detach(secondaryHandle);
+            secondaryHandle = default;
             RequireStaleHandle(stale, "detached secondary");
-            if (actor.MutableAttachmentCount != 1)
+            if (presentation.AttachmentCount != 1)
             {
                 throw new InvalidOperationException(
-                    "Secondary detach did not leave exactly one mutable attachment.");
+                    "Secondary detach did not leave exactly one attachment.");
             }
-            if (!ReferenceEquals(rootTrack, actor.RootTrack) ||
-                !ReferenceEquals(
-                    primaryTrack,
-                    actor.GetAttachmentTrack(primaryHandle)) ||
-                !Mathf.Approximately(
-                    rootPhase,
-                    actor.RootTrack.NormalizedPhase) ||
-                !Mathf.Approximately(
-                    primaryPhase,
-                    actor.GetAttachmentTrack(primaryHandle)
-                        .NormalizedPhase))
-            {
-                throw new InvalidOperationException(
-                    "Detaching one streamed attachment changed unaffected model playback.");
-            }
+            RequireUnchangedTrack(
+                rootTrack,
+                presentation.RootTrack,
+                rootPhase,
+                "root during secondary detach");
+            RequireUnchangedTrack(
+                primaryTrack,
+                presentation.GetAttachmentTrack(primaryHandle),
+                primaryPhase,
+                "primary during secondary detach");
+
             ApplyTransformAndVisibility();
-            ApplyCurrentAttachmentReferences();
         }
 
         public void RebindPrimaryPreservingPlayback()
@@ -305,12 +279,14 @@ namespace VoxelStore.Preview.Runtime
                 primaryHandle,
                 "primary before rebind");
 
-            VoxelModelAnimationTrack rootTrack = actor.RootTrack;
+            VoxelStreamedPresentationAttachmentHandle preservedHandle =
+                primaryHandle;
+            VoxelModelAnimationTrack rootTrack = presentation.RootTrack;
             VoxelModelAnimationTrack primaryTrack =
-                actor.GetAttachmentTrack(primaryHandle);
+                presentation.GetAttachmentTrack(primaryHandle);
             VoxelModelAnimationTrack secondaryTrack =
                 IsCurrentAttachment(secondaryHandle)
-                    ? actor.GetAttachmentTrack(secondaryHandle)
+                    ? presentation.GetAttachmentTrack(secondaryHandle)
                     : null;
             float rootPhase = rootTrack.NormalizedPhase;
             float primaryPhase = primaryTrack.NormalizedPhase;
@@ -319,56 +295,53 @@ namespace VoxelStore.Preview.Runtime
                     ? secondaryTrack.NormalizedPhase
                     : 0f;
 
-            int beforeLeftRebind = actor.TopologyRevision;
-            actor.Rebind(
+            presentation.Rebind(
                 primaryHandle,
                 LeftSocket,
                 MountAnchor);
-            RequireTopologyAdvanced(
-                beforeLeftRebind,
-                "rebind primary left");
             RequireCurrentAttachment(
                 primaryHandle,
                 "primary after left rebind");
-            ApplyAttachmentReference(primaryHandle);
-            ValidateReference(primaryHandle, 0.001f);
+            if (primaryHandle != preservedHandle)
+                throw new InvalidOperationException(
+                    "Rebind changed the high-level attachment handle.");
             RequireUnchangedTrack(
                 rootTrack,
-                actor.RootTrack,
+                presentation.RootTrack,
                 rootPhase,
                 "root during primary rebind");
             RequireUnchangedTrack(
                 primaryTrack,
-                actor.GetAttachmentTrack(primaryHandle),
+                presentation.GetAttachmentTrack(primaryHandle),
                 primaryPhase,
-                "primary during rebind");
+                "primary during left rebind");
             if (secondaryTrack != null)
             {
                 RequireUnchangedTrack(
                     secondaryTrack,
-                    actor.GetAttachmentTrack(secondaryHandle),
+                    presentation.GetAttachmentTrack(secondaryHandle),
                     secondaryPhase,
                     "secondary during primary rebind");
             }
 
-            int beforeRightRebind = actor.TopologyRevision;
-            actor.Rebind(
+            presentation.Rebind(
                 primaryHandle,
                 RightSocket,
                 MountAnchor);
-            RequireTopologyAdvanced(
-                beforeRightRebind,
-                "rebind primary right");
-            ApplyAttachmentReference(primaryHandle);
-            ValidateReference(primaryHandle, 0.001f);
+            RequireCurrentAttachment(
+                primaryHandle,
+                "primary after right rebind");
+            if (primaryHandle != preservedHandle)
+                throw new InvalidOperationException(
+                    "Second rebind changed the high-level attachment handle.");
             RequireUnchangedTrack(
                 rootTrack,
-                actor.RootTrack,
+                presentation.RootTrack,
                 rootPhase,
                 "root after primary rebind");
             RequireUnchangedTrack(
                 primaryTrack,
-                actor.GetAttachmentTrack(primaryHandle),
+                presentation.GetAttachmentTrack(primaryHandle),
                 primaryPhase,
                 "primary after rebind");
         }
@@ -380,63 +353,36 @@ namespace VoxelStore.Preview.Runtime
                 primaryHandle,
                 "primary before replacement");
 
-            VoxelActorAttachmentHandle preservedHandle = primaryHandle;
-            VoxelModelAnimationTrack rootTrack = actor.RootTrack;
+            VoxelStreamedPresentationAttachmentHandle preservedHandle =
+                primaryHandle;
+            VoxelModelAnimationTrack rootTrack = presentation.RootTrack;
             VoxelModelAnimationTrack oldPrimaryTrack =
-                actor.GetAttachmentTrack(primaryHandle);
+                presentation.GetAttachmentTrack(primaryHandle);
             VoxelModelAnimationTrack secondaryTrack =
                 IsCurrentAttachment(secondaryHandle)
-                    ? actor.GetAttachmentTrack(secondaryHandle)
+                    ? presentation.GetAttachmentTrack(secondaryHandle)
                     : null;
             float rootPhase = rootTrack.NormalizedPhase;
             float secondaryPhase =
                 secondaryTrack != null
                     ? secondaryTrack.NormalizedPhase
                     : 0f;
-            if (!actor.TryGetAttachmentInfo(
-                    primaryHandle,
-                    out VoxelActorAttachmentInfo before))
-            {
-                throw new InvalidOperationException(
-                    "Primary attachment handle is not current before replacement.");
-            }
 
-            VoxelUnitId beforeUnit = before.UnitId;
-
-            AttachmentReferenceInfluenceResolver previousResolver = null;
-            attachmentResolvers.TryGetValue(
+            await presentation.ReplaceAsync(
                 primaryHandle,
-                out previousResolver);
+                AttachmentDescriptor(
+                    replacementAssembly.UnitId,
+                    RightSocket)).AsTask();
 
-            int beforeReplace = actor.TopologyRevision;
-            await actor.ReplaceAsync(
-                primaryHandle,
-                replacementAssembly.UnitId,
-                RightSocket,
-                MountAnchor).AsTask();
-            RequireTopologyAdvanced(
-                beforeReplace,
-                "replace primary");
-
-            if (primaryHandle != preservedHandle)
+            if (primaryHandle != preservedHandle ||
+                !presentation.ContainsAttachment(primaryHandle))
             {
                 throw new InvalidOperationException(
-                    "Successful replacement changed the public attachment handle.");
-            }
-
-            if (!actor.TryGetAttachmentInfo(
-                    primaryHandle,
-                    out VoxelActorAttachmentInfo after) ||
-                after.UnitId != replacementAssembly.UnitId ||
-                after.UnitId == beforeUnit)
-            {
-                throw new InvalidOperationException(
-                    "Replacement handle did not resolve the replacement equipment unit.");
+                    "Successful replacement changed or invalidated the public attachment handle.");
             }
 
             VoxelModelAnimationTrack replacementTrack =
-                actor.GetAttachmentTrack(primaryHandle);
-            attachmentResolvers.Remove(primaryHandle);
+                presentation.GetAttachmentTrack(primaryHandle);
             if (ReferenceEquals(oldPrimaryTrack, replacementTrack) ||
                 replacementTrack.HasSelection)
             {
@@ -444,69 +390,65 @@ namespace VoxelStore.Preview.Runtime
                     "Replacement did not reset only the replacement model track.");
             }
 
-            if (!ReferenceEquals(rootTrack, actor.RootTrack) ||
-                !Mathf.Approximately(
-                    rootPhase,
-                    actor.RootTrack.NormalizedPhase))
-            {
-                throw new InvalidOperationException(
-                    "Replacing one attachment changed root playback.");
-            }
+            RequireUnchangedTrack(
+                rootTrack,
+                presentation.RootTrack,
+                rootPhase,
+                "root during primary replacement");
             if (secondaryTrack != null)
             {
                 RequireUnchangedTrack(
                     secondaryTrack,
-                    actor.GetAttachmentTrack(secondaryHandle),
+                    presentation.GetAttachmentTrack(secondaryHandle),
                     secondaryPhase,
                     "secondary during primary replacement");
             }
+
             ApplyTransformAndVisibility();
-            ApplyCurrentAttachmentReferences();
-            if (previousResolver != null &&
-                ReferenceEquals(
-                    previousResolver,
-                    RequireAttachmentResolver(primaryHandle)))
-            {
-                throw new InvalidOperationException(
-                    "Replacement reused stale attachment resolver state.");
-            }
         }
 
-        public async Task ReleaseAndReacquireRootOnlyAsync(float normalizedPhase)
+        public async Task ReleaseAndReacquireRootOnlyAsync(
+            float normalizedPhase)
         {
             RequireInitialized();
             RequireNormalizedPhase(normalizedPhase);
 
-            VoxelActorAttachmentHandle stalePrimary = primaryHandle;
-            VoxelActorAttachmentHandle staleSecondary = secondaryHandle;
-            actors.Release(actor);
-            actor = await actors.AcquireAsync().AsTask();
-            attachmentResolvers.Clear();
-            if (attachmentResolvers.Count != 0)
-            {
-                throw new InvalidOperationException(
-                    "Warm streamed actor release retained attachment resolver state.");
-            }
+            VoxelStreamedPresentationAttachmentHandle stalePrimary =
+                primaryHandle;
+            VoxelStreamedPresentationAttachmentHandle staleSecondary =
+                secondaryHandle;
 
-            if (actor.MutableAttachmentCount != 0 ||
-                actor.AttachmentCount != 0)
+            presentation.Dispose();
+            presentation =
+                await VoxelStreamedPresentation
+                    .AcquireCompositeAsync(actors)
+                    .AsTask();
+
+            if (!presentation.IsComposite ||
+                presentation.AttachmentCount != 0)
             {
                 throw new InvalidOperationException(
                     "Warm reacquisition inherited runtime-added attachments.");
             }
-            if (actor.RootTrack.HasSelection ||
-                actor.RootTrack.IsPlaying)
+            if (presentation.RootTrack.HasSelection ||
+                presentation.RootTrack.IsPlaying)
             {
                 throw new InvalidOperationException(
                     "Warm reacquisition inherited root playback state.");
             }
 
-            RequireStaleHandle(stalePrimary, "pre-release primary");
+            RequireStaleHandle(
+                stalePrimary,
+                "pre-release primary");
             if (staleSecondary.IsInitialized)
+            {
                 RequireStaleHandle(
                     staleSecondary,
                     "pre-release secondary");
-            ApplyTransformAndVisibility();
+            }
+
+            primaryHandle = default;
+            secondaryHandle = default;
             SampleRootOnly(normalizedPhase);
         }
 
@@ -517,45 +459,56 @@ namespace VoxelStore.Preview.Runtime
             RequireInitialized();
             RequireNormalizedPhase(rootPhase);
             RequireNormalizedPhase(primaryPhase);
-            if (actor.AttachmentCount != 0)
+            if (presentation.AttachmentCount != 0)
             {
                 throw new InvalidOperationException(
-                    "Post-reacquire proof expected a root-only actor.");
+                    "Post-reacquire proof expected a root-only presentation.");
             }
 
-            int beforeAttach = actor.TopologyRevision;
-            primaryHandle = await actor.AttachAsync(
-                replacementAssembly.UnitId,
-                RightSocket,
-                MountAnchor).AsTask();
-            RequireTopologyAdvanced(
-                beforeAttach,
-                "reattach primary after reacquire");
+            primaryHandle = await presentation.AttachAsync(
+                AttachmentDescriptor(
+                    replacementAssembly.UnitId,
+                    RightSocket)).AsTask();
             RequireCurrentAttachment(
                 primaryHandle,
                 "primary after reacquire attach");
-            SampleCurrentTopology(
+            SampleCurrentPresentation(
                 rootPhase,
                 primaryPhase,
                 secondaryPhase: 0f);
         }
 
-        public void ValidateAttachmentReferences(float tolerance = 0.001f)
+        public void ValidatePresentationState()
         {
             RequireInitialized();
-            if (tolerance < 0f || float.IsNaN(tolerance) || float.IsInfinity(tolerance))
-                throw new ArgumentOutOfRangeException(nameof(tolerance));
 
+            int expectedCount = 0;
             if (IsCurrentAttachment(primaryHandle))
-                ValidateReference(primaryHandle, tolerance);
+            {
+                ValidateAttachmentTrack(
+                    primaryHandle,
+                    "primary");
+                expectedCount++;
+            }
             if (IsCurrentAttachment(secondaryHandle))
-                ValidateReference(secondaryHandle, tolerance);
+            {
+                ValidateAttachmentTrack(
+                    secondaryHandle,
+                    "secondary");
+                expectedCount++;
+            }
+
+            if (presentation.AttachmentCount != expectedCount)
+            {
+                throw new InvalidOperationException(
+                    "Mutable streamed presentation membership is inconsistent with current high-level handles.");
+            }
         }
 
         public Bounds GetWorldBounds()
         {
             RequireInitialized();
-            return actor.GetWorldBounds();
+            return presentation.GetWorldBounds();
         }
 
         public void SubmitNow()
@@ -566,10 +519,10 @@ namespace VoxelStore.Preview.Runtime
 
         public void DisposeProviderState()
         {
-            actor = null;
+            presentation?.Dispose();
+            presentation = null;
             primaryHandle = default;
             secondaryHandle = default;
-            attachmentResolvers.Clear();
 
             actors?.Dispose();
             actors = null;
@@ -580,7 +533,7 @@ namespace VoxelStore.Preview.Runtime
             provider = null;
         }
 
-        public void SampleCurrentTopology(
+        public void SampleCurrentPresentation(
             float rootPhase,
             float primaryPhase,
             float secondaryPhase)
@@ -589,8 +542,8 @@ namespace VoxelStore.Preview.Runtime
             RequireNormalizedPhase(rootPhase);
             RequireNormalizedPhase(primaryPhase);
             RequireNormalizedPhase(secondaryPhase);
-            ApplyTransformAndVisibility();
-            VoxelModelAnimationTrack rootTrack = actor.RootTrack;
+
+            VoxelModelAnimationTrack rootTrack = presentation.RootTrack;
             rootTrack.Select(
                 AttackCandidates(EquipmentSlotSide.Right));
             rootTrack.SampleNormalized(rootPhase);
@@ -598,7 +551,7 @@ namespace VoxelStore.Preview.Runtime
             if (IsCurrentAttachment(primaryHandle))
             {
                 VoxelModelAnimationTrack primaryTrack =
-                    actor.GetAttachmentTrack(primaryHandle);
+                    presentation.GetAttachmentTrack(primaryHandle);
                 primaryTrack.Select(
                     AttackCandidates(EquipmentSlotSide.Right));
                 primaryTrack.SampleNormalized(primaryPhase);
@@ -607,22 +560,23 @@ namespace VoxelStore.Preview.Runtime
             if (IsCurrentAttachment(secondaryHandle))
             {
                 VoxelModelAnimationTrack secondaryTrack =
-                    actor.GetAttachmentTrack(secondaryHandle);
+                    presentation.GetAttachmentTrack(secondaryHandle);
                 secondaryTrack.Select(
                     AttackCandidates(EquipmentSlotSide.Left));
                 secondaryTrack.SampleNormalized(secondaryPhase);
             }
 
-            ApplyCurrentAttachmentReferences();
+            ApplyTransformAndVisibility();
+            presentation.Refresh();
         }
 
         private void SampleRootOnly(float normalizedPhase)
         {
-            ApplyTransformAndVisibility();
-            VoxelModelAnimationTrack rootTrack = actor.RootTrack;
+            VoxelModelAnimationTrack rootTrack = presentation.RootTrack;
             rootTrack.Select(
                 AttackCandidates(EquipmentSlotSide.Right));
             rootTrack.SampleNormalized(normalizedPhase);
+            ApplyTransformAndVisibility();
         }
 
         private static IReadOnlyList<string> AttackCandidates(
@@ -636,89 +590,41 @@ namespace VoxelStore.Preview.Runtime
 
         private void ApplyTransformAndVisibility()
         {
-            actor.SetWorldTransform(
+            presentation.SetWorldTransform(
                 transform.position,
                 transform.rotation,
                 transform.lossyScale);
-            actor.SetVisible(true);
+            presentation.SetVisible(true);
         }
 
-        private void ApplyCurrentAttachmentReferences()
+        private static VoxelActorAttachmentDescriptor
+            AttachmentDescriptor(
+                VoxelUnitId unitId,
+                string parentSocketName)
         {
-            if (IsCurrentAttachment(primaryHandle))
-                ApplyAttachmentReference(primaryHandle);
-            if (IsCurrentAttachment(secondaryHandle))
-                ApplyAttachmentReference(secondaryHandle);
+            return new VoxelActorAttachmentDescriptor(
+                unitId,
+                parentSocketName,
+                MountAnchor);
         }
 
-        private void ApplyAttachmentReference(
-            VoxelActorAttachmentHandle handle)
+        private void ValidateAttachmentTrack(
+            VoxelStreamedPresentationAttachmentHandle handle,
+            string label)
         {
-            RequireCurrentAttachment(
-                handle,
-                "apply attachment reference");
+            RequireCurrentAttachment(handle, label);
             VoxelModelAnimationTrack track =
-                actor.GetAttachmentTrack(handle);
-            Matrix4x4 reference =
-                actor.GetAttachmentReferenceWorldMatrix(handle);
-            AttachmentReferenceInfluenceResolver resolver =
-                RequireAttachmentResolver(handle);
-            track.SetWorldMatrix(
-                resolver.Resolve(
-                    reference,
-                    track.ReferenceInfluence));
-        }
-
-        private AttachmentReferenceInfluenceResolver
-            RequireAttachmentResolver(
-                VoxelActorAttachmentHandle handle)
-        {
-            if (!attachmentResolvers.TryGetValue(
-                    handle,
-                    out AttachmentReferenceInfluenceResolver resolver))
-            {
-                resolver =
-                    new AttachmentReferenceInfluenceResolver();
-                attachmentResolvers.Add(handle, resolver);
-            }
-
-            return resolver;
-        }
-
-        private void ValidateReference(
-            VoxelActorAttachmentHandle handle,
-            float tolerance)
-        {
-            RequireCurrentAttachment(
-                handle,
-                "validate attachment reference");
-            Matrix4x4 reference =
-                actor.GetAttachmentReferenceWorldMatrix(handle);
-            VoxelModelAnimationTrack track =
-                actor.GetAttachmentTrack(handle);
-            Matrix4x4 actual = track.WorldMatrix;
+                presentation.GetAttachmentTrack(handle);
+            Matrix4x4 worldMatrix = track.WorldMatrix;
             float influence = track.ReferenceInfluence;
-            if (!IsFinite(reference) ||
-                !IsFinite(actual) ||
+            if (!IsFinite(worldMatrix) ||
                 !float.IsFinite(influence) ||
                 influence < 0f ||
                 influence > 1f)
             {
                 throw new InvalidOperationException(
-                    "Mutable streamed attachment reference state is not finite or valid.");
-            }
-
-            Matrix4x4 expected =
-                RequireAttachmentResolver(handle)
-                    .Resolve(reference, influence);
-            float error = MaxMatrixDelta(expected, actual);
-            if (error > tolerance)
-            {
-                throw new InvalidOperationException(
-                    "Mutable streamed attachment track does not match resolved presentation: " +
-                    "influence=" + influence.ToString("R") +
-                    ", error=" + error.ToString("R") +
-                    ", tolerance=" + tolerance.ToString("R") + ".");
+                    "Mutable streamed presentation state is not finite or valid: " +
+                    label + ".");
             }
         }
 
@@ -734,68 +640,35 @@ namespace VoxelStore.Preview.Runtime
             return true;
         }
 
-        private static float MaxMatrixDelta(
-            Matrix4x4 left,
-            Matrix4x4 right)
-        {
-            float max = 0f;
-            for (int row = 0; row < 4; row++)
-            for (int column = 0; column < 4; column++)
-            {
-                max = Mathf.Max(
-                    max,
-                    Mathf.Abs(left[row, column] - right[row, column]));
-            }
-
-            return max;
-        }
-
         private void RequireStaleHandle(
-            VoxelActorAttachmentHandle handle,
+            VoxelStreamedPresentationAttachmentHandle handle,
             string label)
         {
-            if (actor.ContainsAttachment(handle) ||
-                actor.TryGetAttachmentInfo(handle, out _))
+            if (presentation.ContainsAttachment(handle))
             {
                 throw new InvalidOperationException(
-                    "Expected stale mutable attachment handle to fail closed: " +
+                    "Expected stale streamed presentation handle to fail closed: " +
                     label + ".");
             }
         }
 
         private bool IsCurrentAttachment(
-            VoxelActorAttachmentHandle handle)
+            VoxelStreamedPresentationAttachmentHandle handle)
         {
             return IsInitialized &&
                 handle.IsInitialized &&
-                actor.ContainsAttachment(handle);
+                presentation.ContainsAttachment(handle);
         }
 
         private void RequireCurrentAttachment(
-            VoxelActorAttachmentHandle handle,
+            VoxelStreamedPresentationAttachmentHandle handle,
             string label)
         {
-            if (!handle.IsInitialized ||
-                !actor.ContainsAttachment(handle) ||
-                !actor.TryGetAttachmentInfo(handle, out _))
+            if (!IsCurrentAttachment(handle))
             {
                 throw new InvalidOperationException(
-                    "Expected current mutable attachment handle: " +
+                    "Expected current streamed presentation handle: " +
                     label + ".");
-            }
-        }
-
-        private void RequireTopologyAdvanced(
-            int beforeRevision,
-            string label)
-        {
-            if (actor.TopologyRevision <= beforeRevision)
-            {
-                throw new InvalidOperationException(
-                    "Mutable streamed actor topology revision did not advance for " +
-                    label +
-                    ". before=" + beforeRevision +
-                    ", after=" + actor.TopologyRevision + ".");
             }
         }
 
@@ -811,7 +684,7 @@ namespace VoxelStore.Preview.Runtime
                     actualTrack.NormalizedPhase))
             {
                 throw new InvalidOperationException(
-                    "Mutable streamed actor changed unaffected playback: " +
+                    "Mutable streamed presentation changed unaffected playback: " +
                     label + ".");
             }
         }
@@ -819,8 +692,10 @@ namespace VoxelStore.Preview.Runtime
         private void RequireConfigured()
         {
             if (!IsConfigured)
+            {
                 throw new InvalidOperationException(
                     "Mutable streamed actor preview is not configured.");
+            }
             RequireDistinctUnitIds();
         }
 
@@ -828,8 +703,10 @@ namespace VoxelStore.Preview.Runtime
         {
             RequireConfigured();
             if (!IsInitialized)
+            {
                 throw new InvalidOperationException(
                     "Mutable streamed actor preview is not initialized.");
+            }
         }
 
         private void RequireDistinctUnitIds()
@@ -902,14 +779,17 @@ namespace VoxelStore.Preview.Runtime
 
                 foreach (VoxelUnitAssets unit in assets)
                 {
-                    if (unit.Assembly == null || !unit.Assembly.UnitId.IsValid)
+                    if (unit.Assembly == null ||
+                        !unit.Assembly.UnitId.IsValid)
                     {
                         throw new InvalidOperationException(
                             "Preview streamed provider requires stable assembly identity.");
                     }
 
                     if (unit.Animation == null ||
-                        !ReferenceEquals(unit.Animation.Assembly, unit.Assembly))
+                        !ReferenceEquals(
+                            unit.Animation.Assembly,
+                            unit.Assembly))
                     {
                         throw new InvalidOperationException(
                             "Preview streamed provider requires matching animation assets.");
@@ -919,25 +799,30 @@ namespace VoxelStore.Preview.Runtime
                 }
             }
 
-            public UniTask<IVoxelResourceHandle<VoxelUnitAssets>> LoadUnitAsync(
-                VoxelUnitId id,
-                CancellationToken cancellationToken)
+            public UniTask<IVoxelResourceHandle<VoxelUnitAssets>>
+                LoadUnitAsync(
+                    VoxelUnitId id,
+                    CancellationToken cancellationToken)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!units.TryGetValue(id, out VoxelUnitAssets assets))
+                if (!units.TryGetValue(
+                        id,
+                        out VoxelUnitAssets assets))
                 {
                     throw new InvalidOperationException(
                         "Preview streamed provider does not contain unit id " +
                         id.Value + ".");
                 }
 
-                return UniTask.FromResult<IVoxelResourceHandle<VoxelUnitAssets>>(
-                    new StaticHandle<VoxelUnitAssets>(assets));
+                return UniTask.FromResult<
+                    IVoxelResourceHandle<VoxelUnitAssets>>(
+                        new StaticHandle<VoxelUnitAssets>(assets));
             }
 
-            public UniTask<IVoxelResourceHandle<VoxelThemeAsset>> LoadThemeAsync(
-                VoxelThemeId id,
-                CancellationToken cancellationToken)
+            public UniTask<IVoxelResourceHandle<VoxelThemeAsset>>
+                LoadThemeAsync(
+                    VoxelThemeId id,
+                    CancellationToken cancellationToken)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 throw new NotSupportedException(
@@ -945,7 +830,8 @@ namespace VoxelStore.Preview.Runtime
             }
         }
 
-        private sealed class StaticHandle<T> : IVoxelResourceHandle<T>
+        private sealed class StaticHandle<T> :
+            IVoxelResourceHandle<T>
         {
             public StaticHandle(T value)
             {

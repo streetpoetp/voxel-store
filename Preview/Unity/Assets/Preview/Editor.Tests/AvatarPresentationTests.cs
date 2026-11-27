@@ -1,4 +1,6 @@
 using System;
+using Hero.Voxel.Actor.Runtime.Unity;
+using Hero.Voxel.Presentation.Runtime.Unity;
 using Hero.Voxel.Render.Runtime.Unity;
 using Hero.Voxel.Runtime.Animation;
 using Hero.Voxel.Runtime.Assets;
@@ -28,6 +30,92 @@ namespace VoxelStore.Preview.Editor.Tests
             Assert.AreEqual(Vector3.back, AvatarPresentation.CanonicalLocalForward);
         }
 
+
+        [Test]
+        public void ComposedAvatarUsesGeneralPresentationAndCanonicalTracks()
+        {
+            using Fixture fixture = CreateFixture(includeSecondEquipment: true);
+
+            VoxelPresentation presentation =
+                RequireProviderPresentation(fixture.Avatar);
+            VoxelPresentationAttachmentHandle primary =
+                RequirePresentationHandle(fixture.Primary);
+            VoxelPresentationAttachmentHandle secondary =
+                RequirePresentationHandle(fixture.Secondary);
+
+            Assert.That(presentation.IsComposite, Is.True);
+            Assert.That(presentation.AttachmentCount, Is.EqualTo(2));
+            Assert.That(primary.IsInitialized, Is.True);
+            Assert.That(secondary.IsInitialized, Is.True);
+            Assert.That(primary, Is.Not.EqualTo(secondary));
+            Assert.That(presentation.ContainsAttachment(primary), Is.True);
+            Assert.That(presentation.ContainsAttachment(secondary), Is.True);
+            Assert.That(
+                fixture.BodyModel.AnimationTrack,
+                Is.SameAs(presentation.RootTrack));
+            Assert.That(
+                fixture.Primary.Model.AnimationTrack,
+                Is.SameAs(presentation.GetAttachmentTrack(primary)));
+            Assert.That(
+                fixture.Secondary.Model.AnimationTrack,
+                Is.SameAs(presentation.GetAttachmentTrack(secondary)));
+        }
+
+        [Test]
+        public void AvatarWithoutEquipmentUsesRootOnlyGeneralPresentation()
+        {
+            using Fixture fixture =
+                CreateFixture(includePrimaryEquipment: false);
+
+            VoxelPresentation presentation =
+                RequireProviderPresentation(fixture.Avatar);
+
+            Assert.That(presentation.IsComposite, Is.False);
+            Assert.That(presentation.AttachmentCount, Is.Zero);
+            Assert.That(
+                fixture.BodyModel.AnimationTrack,
+                Is.SameAs(presentation.RootTrack));
+            Assert.That(fixture.World.InstanceCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ProviderPresentationOwnsReleaseAndRecovery()
+        {
+            using Fixture fixture = CreateFixture();
+
+            VoxelPresentation presentation =
+                RequireProviderPresentation(fixture.Avatar);
+            VoxelPresentationAttachmentHandle handle =
+                RequirePresentationHandle(fixture.Primary);
+            VoxelModelAnimationTrack track =
+                presentation.GetAttachmentTrack(handle);
+
+            track.Select(new[] { "ReleaseProbe" });
+            track.SampleNormalized(0f);
+            fixture.Avatar.RefreshAttachmentReferences();
+            Vector3 attached =
+                track.WorldMatrix.MultiplyPoint3x4(Vector3.zero);
+
+            track.SampleNormalized(0.5f);
+            fixture.Avatar.RefreshAttachmentReferences();
+            fixture.Unit.transform.position += new Vector3(3f, 0f, 0f);
+            fixture.Avatar.RefreshAttachmentReferences();
+            Vector3 released =
+                track.WorldMatrix.MultiplyPoint3x4(Vector3.zero);
+
+            track.SampleNormalized(1f);
+            fixture.Avatar.RefreshAttachmentReferences();
+            Vector3 rejoined =
+                track.WorldMatrix.MultiplyPoint3x4(Vector3.zero);
+
+            Assert.That(
+                Vector3.Distance(attached, released),
+                Is.LessThan(0.0001f));
+            Assert.That(
+                rejoined.x - attached.x,
+                Is.EqualTo(3f).Within(0.0001f));
+        }
+
         [Test]
         public void DistinctBindingsCanReuseSameEquipmentAsset()
         {
@@ -40,8 +128,8 @@ namespace VoxelStore.Preview.Editor.Tests
                 fixture.Primary.Model.Instance,
                 fixture.Secondary.Model.Instance);
             Assert.AreNotEqual(
-                fixture.Primary.BindingId,
-                fixture.Secondary.BindingId);
+                fixture.Primary.AttachmentHandle,
+                fixture.Secondary.AttachmentHandle);
 
             Vector3 primary = SocketPosition(
                 fixture.Primary.Model.Instance,
@@ -539,6 +627,43 @@ namespace VoxelStore.Preview.Editor.Tests
             return fixture;
         }
 
+
+        private static VoxelPresentation RequireProviderPresentation(
+            AvatarPresentation avatar)
+        {
+            System.Reflection.FieldInfo field =
+                typeof(AvatarPresentation).GetField(
+                    "presentation",
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic);
+            Assert.That(
+                field,
+                Is.Not.Null,
+                "AvatarPresentation must own one provider VoxelPresentation.");
+            var value = field.GetValue(avatar) as VoxelPresentation;
+            Assert.That(value, Is.Not.Null);
+            return value;
+        }
+
+        private static VoxelPresentationAttachmentHandle
+            RequirePresentationHandle(EquipmentPresentation equipment)
+        {
+            System.Reflection.FieldInfo field =
+                typeof(EquipmentPresentation).GetField(
+                    "attachmentHandle",
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic);
+            Assert.That(
+                field,
+                Is.Not.Null,
+                "EquipmentPresentation must retain the provider presentation handle only.");
+            object value = field.GetValue(equipment);
+            Assert.That(
+                value,
+                Is.TypeOf<VoxelPresentationAttachmentHandle>());
+            return (VoxelPresentationAttachmentHandle)value;
+        }
+
         private static EquipmentPresentation CreateEquipment(
             Transform presentationRoot,
             Fixture fixture,
@@ -670,7 +795,8 @@ namespace VoxelStore.Preview.Editor.Tests
                     "Hit",
                     false,
                     Quaternion.Euler(0f, 0f, 12f),
-                    0.8f)
+                    0.8f),
+                InfluenceClip("ReleaseProbe", 1f)
             };
             if (!omitDeath)
             {
@@ -685,6 +811,33 @@ namespace VoxelStore.Preview.Editor.Tests
             return VoxelAnimationAsset.Create(
                 assembly,
                 clips.ToArray());
+        }
+
+
+        private static VoxelAnimationClip InfluenceClip(
+            string name,
+            float duration)
+        {
+            return new VoxelAnimationClip(
+                name,
+                duration,
+                false,
+                new[]
+                {
+                    new VoxelAnimationTrack(
+                        0,
+                        null,
+                        null,
+                        null)
+                },
+                new VoxelScalarChannel(
+                    VoxelAnimationInterpolation.Linear,
+                    new[]
+                    {
+                        new VoxelScalarKey(0f, 1f),
+                        new VoxelScalarKey(0.5f, 0f),
+                        new VoxelScalarKey(1f, 1f)
+                    }));
         }
 
         private static VoxelAnimationClip PositionClip(

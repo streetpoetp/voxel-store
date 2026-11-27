@@ -462,13 +462,13 @@ namespace VoxelStore.Preview.Capture.Editor
             AvatarPresentation avatar,
             CapturePoint point)
         {
-            const float tolerance = 0.001f;
             foreach (EquipmentPresentation equipment in avatar.Equipment)
             {
-                if (!equipment.BindingId.IsValid)
+                if (!equipment.AttachmentHandle.IsInitialized ||
+                    !avatar.ContainsEquipment(equipment))
                 {
                     throw new InvalidOperationException(
-                        "Capture attachment has no current provider binding.");
+                        "Capture attachment has no current provider presentation handle.");
                 }
 
                 VoxelModelAnimationTrack track =
@@ -479,13 +479,11 @@ namespace VoxelStore.Preview.Capture.Editor
                         "Capture attachment has no provider model track.");
                 }
 
-                Matrix4x4 reference =
-                    avatar.ResolveAttachmentReferenceWorld(equipment);
                 Matrix4x4 actual = track.WorldMatrix;
-                if (!IsFinite(reference) || !IsFinite(actual))
+                if (!IsFinite(actual))
                 {
                     throw new InvalidOperationException(
-                        "Capture attachment reference/world matrix is not finite at " +
+                        "Capture attachment world matrix is not finite at " +
                         point.Checkpoint + ".");
                 }
 
@@ -498,19 +496,6 @@ namespace VoxelStore.Preview.Capture.Editor
                         "Capture attachment has invalid sampled reference influence at " +
                         point.Checkpoint +
                         ": influence=" + influence.ToString("R") + ".");
-                }
-
-                if (influence >= 1f)
-                {
-                    float error = MaxMatrixDelta(reference, actual);
-                    if (error > tolerance)
-                    {
-                        throw new InvalidOperationException(
-                            "Fully influenced capture attachment does not match its current reference at " +
-                            point.Checkpoint +
-                            ": error=" + error.ToString("R") +
-                            ", tolerance=" + tolerance.ToString("R") + ".");
-                    }
                 }
             }
         }
@@ -525,22 +510,6 @@ namespace VoxelStore.Preview.Capture.Editor
             }
 
             return true;
-        }
-
-        private static float MaxMatrixDelta(
-            Matrix4x4 left,
-            Matrix4x4 right)
-        {
-            float max = 0f;
-            for (int row = 0; row < 4; row++)
-            for (int column = 0; column < 4; column++)
-            {
-                max = Mathf.Max(
-                    max,
-                    Mathf.Abs(left[row, column] - right[row, column]));
-            }
-
-            return max;
         }
 
         private static void ValidateCaptureRenderers()

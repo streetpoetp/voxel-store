@@ -19,6 +19,46 @@ namespace VoxelStore.Preview.Editor.Tests
             "\"GeneratedVox\":\"Assets/A/Source/A.generated.vox\"," +
             "\"GeneratedAnimation\":\"Assets/A/Source/A.animation.generated.yaml\"}";
 
+
+        [Test]
+        public void MutableStreamedProofUsesGeneralPresentationWithoutResolverShadow()
+        {
+            Type type = typeof(MutableStreamedActorPreview);
+            const System.Reflection.BindingFlags flags =
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic;
+
+            System.Reflection.FieldInfo presentation =
+                type.GetField("presentation", flags);
+            Assert.That(
+                presentation,
+                Is.Not.Null,
+                "Mutable streamed proof must own one VoxelStreamedPresentation.");
+            Assert.That(
+                presentation.FieldType,
+                Is.EqualTo(typeof(
+                    Hero.Voxel.Presentation.Streaming.Runtime.Unity
+                        .VoxelStreamedPresentation)));
+
+            System.Reflection.FieldInfo primary =
+                type.GetField("primaryHandle", flags);
+            System.Reflection.FieldInfo secondary =
+                type.GetField("secondaryHandle", flags);
+            Type handleType = typeof(
+                Hero.Voxel.Presentation.Streaming.Runtime.Unity
+                    .VoxelStreamedPresentationAttachmentHandle);
+            Assert.That(primary, Is.Not.Null);
+            Assert.That(secondary, Is.Not.Null);
+            Assert.That(primary.FieldType, Is.EqualTo(handleType));
+            Assert.That(secondary.FieldType, Is.EqualTo(handleType));
+
+            Assert.That(type.GetField("actor", flags), Is.Null);
+            Assert.That(
+                type.GetField("attachmentResolvers", flags),
+                Is.Null,
+                "voxel-store must not mirror provider release-basis state.");
+        }
+
         [Test]
         public void MotionVariantCandidatesPreserveSpecificityAndBaseFallback()
         {
@@ -372,7 +412,7 @@ namespace VoxelStore.Preview.Editor.Tests
                 Assert.That(
                     avatars.All(x => x.IsProviderInitialized),
                     Is.True,
-                    "reopened avatar presentations must restore their actor-owned provider instances");
+                    "reopened avatar presentations must restore their provider-presentation instances");
                 Assert.AreEqual(
                     1,
                     mutableDemos.Length,
