@@ -55,6 +55,7 @@ namespace VoxelStore.Preview.Editor
         public string[] EntryIds = Array.Empty<string>();
         public Bounds[] WorldBounds = Array.Empty<Bounds>();
         public int AnimationCount;
+        public int CarriedEquipmentCount;
     }
 
     internal static class VoxelStorePreviewPaths
@@ -503,7 +504,17 @@ namespace VoxelStore.Preview.Editor
 
             var entries = new List<GameObject>(units.Count);
             var measured = new List<Bounds>(units.Count);
+            BakedPreviewUnit[] equipmentUnits = units
+                .Where(x => IsKind(x, "equipment"))
+                .OrderBy(ModelName, StringComparer.Ordinal)
+                .ToArray();
+            Dictionary<string, int> avatarOrder = units
+                .Where(x => IsKind(x, "avatar"))
+                .OrderBy(ModelName, StringComparer.Ordinal)
+                .Select((x, i) => new { x.Unit.Id, Index = i })
+                .ToDictionary(x => x.Id, x => x.Index, StringComparer.Ordinal);
             int animationCount = 0;
+            int carriedEquipmentCount = 0;
             foreach (BakedPreviewUnit baked in units)
             {
                 var entry = new GameObject(baked.Unit.Id);
@@ -534,6 +545,36 @@ namespace VoxelStore.Preview.Editor
                     animation);
                 if (animation != null)
                     animationCount++;
+
+                if (IsKind(baked, "avatar") && equipmentUnits.Length > 0)
+                {
+                    int avatarIndex = avatarOrder[baked.Unit.Id];
+                    int primaryIndex = avatarIndex % equipmentUnits.Length;
+                    AttachEquipmentDebug(
+                        entry,
+                        debug,
+                        equipmentUnits[primaryIndex],
+                        "Equip.Hand.Right.0");
+                    carriedEquipmentCount++;
+
+                    if (equipmentUnits.Length > 1)
+                    {
+                        int secondaryIndex =
+                            (avatarIndex + Math.Max(1, equipmentUnits.Length / 2)) %
+                            equipmentUnits.Length;
+                        if (secondaryIndex == primaryIndex)
+                            secondaryIndex =
+                                (primaryIndex + 1) % equipmentUnits.Length;
+
+                        AttachEquipmentDebug(
+                            entry,
+                            debug,
+                            equipmentUnits[secondaryIndex],
+                            "Equip.Hand.Left.0");
+                        carriedEquipmentCount++;
+                    }
+                }
+
                 Renderer[] renderers = debug.GetComponentsInChildren<Renderer>(true);
                 if (renderers.Length == 0)
                     throw new InvalidOperationException(
@@ -575,8 +616,145 @@ namespace VoxelStore.Preview.Editor
                 Grid = grid,
                 EntryIds = units.Select(x => x.Unit.Id).ToArray(),
                 WorldBounds = finalBounds,
-                AnimationCount = animationCount
+                AnimationCount = animationCount,
+                CarriedEquipmentCount = carriedEquipmentCount
             };
+        }
+
+        private static bool IsKind(
+            BakedPreviewUnit unit,
+            string kind) =>
+            unit?.Unit != null &&
+            string.Equals(
+                unit.Unit.Kind,
+                kind,
+                StringComparison.Ordinal);
+
+        private static string ModelName(BakedPreviewUnit unit)
+        {
+            string sourceBase = unit?.Unit?.SourceBase;
+            if (string.IsNullOrWhiteSpace(sourceBase))
+                return unit?.Unit?.Id ?? string.Empty;
+
+            string normalized = sourceBase.Replace('\\', '/').TrimEnd('/');
+            int slash = normalized.LastIndexOf('/');
+            return slash >= 0 && slash + 1 < normalized.Length
+                ? normalized[(slash + 1)..]
+                : normalized;
+        }
+
+        private static void AttachEquipmentDebug(
+            GameObject entry,
+            GameObject avatarDebug,
+            BakedPreviewUnit equipment,
+            string avatarSocketName)
+        {
+            if (entry == null)
+                throw new ArgumentNullException(nameof(entry));
+            if (avatarDebug == null)
+                throw new ArgumentNullException(nameof(avatarDebug));
+            if (equipment?.Unit == null)
+                throw new ArgumentNullException(nameof(equipment));
+
+            PreviewBakePaths paths = PreviewBake.CreatePaths(
+                equipment.Unit,
+                VoxelStorePreviewPaths.StoreRoot);
+            VoxelAssemblyAsset assembly =
+                AssetDatabase.LoadAssetAtPath<VoxelAssemblyAsset>(
+                    paths.AssemblyAsset);
+            if (assembly == null)
+            {
+                throw new InvalidOperationException(
+                    "Baked equipment assembly could not be reloaded after scene open: " +
+                    equipment.Unit.Id);
+            }
+
+            VoxelAnimationAsset animation = null;
+            if (!string.IsNullOrWhiteSpace(equipment.Unit.GeneratedAnimation))
+            {
+                animation = AssetDatabase.LoadAssetAtPath<VoxelAnimationAsset>(
+                    paths.AnimationAsset);
+            }
+
+            Transform avatarSocket = RequireSocket(
+                avatarDebug,
+                avatarSocketName);
+            GameObject equipmentDebug = VoxelSceneDebugBuilder.Create(
+                assembly,
+                Vector3.zero);
+            Transform mount = RequireSocket(
+                equipmentDebug,
+                "Mount");
+
+            Matrix4x4 mountLocalToEquipment =
+                equipmentDebug.transform.worldToLocalMatrix *
+                mount.localToWorldMatrix;
+            Matrix4x4 equipmentLocalToSocket =
+                mountLocalToEquipment.inverse;
+
+            equipmentDebug.transform.SetParent(
+                avatarSocket,
+                false);
+            equipmentDebug.transform.localPosition =
+                equipmentLocalToSocket.GetColumn(3);
+            equipmentDebug.transform.localRotation =
+                equipmentLocalToSocket.rotation;
+            equipmentDebug.transform.localScale =
+                equipmentLocalToSocket.lossyScale;
+
+            VoxelSceneDebugController.Register(
+                equipmentDebug,
+                assembly,
+                animation);
+
+            float positionError = Vector3.Distance(
+                mount.position,
+                avatarSocket.position);
+            float rotationError = Quaternion.Angle(
+                mount.rotation,
+                avatarSocket.rotation);
+            if (positionError > 0.0001f || rotationError > 0.01f)
+            {
+                throw new InvalidOperationException(
+                    "Carried equipment Mount did not align with avatar socket. " +
+                    "avatar=" + entry.name +
+                    " equipment=" + equipment.Unit.Id +
+                    " socket=" + avatarSocketName +
+                    " positionError=" + positionError +
+                    " rotationError=" + rotationError);
+            }
+        }
+
+        private static Transform RequireSocket(
+            GameObject root,
+            string socketName)
+        {
+            string expected =
+                VoxelSceneDebugBuilder.SocketPrefix + socketName;
+            Transform match = null;
+            foreach (Transform candidate in
+                     root.GetComponentsInChildren<Transform>(true))
+            {
+                if (!string.Equals(
+                        candidate.name,
+                        expected,
+                        StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (match != null)
+                {
+                    throw new InvalidOperationException(
+                        "Preview composition found duplicate socket '" +
+                        socketName + "' under " + root.name + ".");
+                }
+                match = candidate;
+            }
+
+            return match ?? throw new InvalidOperationException(
+                "Preview composition requires socket '" +
+                socketName + "' under " + root.name + ".");
         }
     }
 
@@ -658,6 +836,7 @@ namespace VoxelStore.Preview.Editor
                 GridCount = result.EntryIds.Length,
                 UnitIds = result.EntryIds,
                 AnimationCount = result.AnimationCount,
+                CarriedEquipmentCount = result.CarriedEquipmentCount,
                 OverlapCount = PreviewGridLayout.CountXZOverlaps(result.WorldBounds),
                 NonUnitScaleCount = result.Grid.transform
                     .Cast<Transform>()
@@ -681,6 +860,21 @@ namespace VoxelStore.Preview.Editor
             if (report.NonUnitScaleCount != 0)
                 throw new InvalidOperationException(
                     "Preview grid normalized one or more unit scales.");
+
+            int avatarCount = plan.Units.Count(x =>
+                string.Equals(x.Kind, "avatar", StringComparison.Ordinal));
+            int equipmentCount = plan.Units.Count(x =>
+                string.Equals(x.Kind, "equipment", StringComparison.Ordinal));
+            int expectedCarriedEquipment =
+                avatarCount * Math.Min(2, equipmentCount);
+            if (report.CarriedEquipmentCount != expectedCarriedEquipment)
+            {
+                throw new InvalidOperationException(
+                    "Preview grid carried-equipment count mismatch. expected=" +
+                    expectedCarriedEquipment +
+                    " actual=" +
+                    report.CarriedEquipmentCount);
+            }
         }
 
         public static void CaptureCurrentGridSceneViewForBatch()
@@ -797,6 +991,7 @@ namespace VoxelStore.Preview.Editor
             public int GridCount;
             public string[] UnitIds;
             public int AnimationCount;
+            public int CarriedEquipmentCount;
             public int OverlapCount;
             public int NonUnitScaleCount;
         }

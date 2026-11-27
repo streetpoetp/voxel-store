@@ -191,18 +191,22 @@ Canonical animation proof SHALL run through `tools/capture-game-view.ps1`, backe
 - **THEN** registered Game View capture remains fully executable and does not lose coverage
 
 ### Requirement: Preview composes equipment from baked socket frames
-The Unity preview SHALL resolve carried equipment from the selected avatar equipment socket and the equipment's baked Mount socket.
+The Unity preview SHALL resolve carried equipment from the selected avatar equipment socket and the equipment's baked Mount socket. When published equipment exists, every avatar entry in the canonical Editor grid SHALL visibly include deterministic carried equipment while published equipment remains independently visible in its own grid entries.
 
-#### Scenario: Equipment is attached in the runtime gallery
-- **WHEN** the gallery composes an avatar and equipment pair
+#### Scenario: Equipment is attached in the canonical grid
+- **WHEN** the canonical Editor grid contains published avatars and equipment
 - **THEN** it resolves a compatible `Equip.<Capability>.<Side>.<Instance>` socket and aligns the equipment's `Mount` frame without a Body-ratio placement offset
+
+#### Scenario: Avatar remains visibly armed
+- **WHEN** at least one published equipment model is available
+- **THEN** every avatar grid entry carries one deterministic right-hand equipment model, and when at least two equipment models are available it also carries a deterministic left-hand equipment model, while standalone equipment entries remain present
 
 #### Scenario: Attachment cannot be solved
 - **WHEN** required socket/Mount data is missing, singular, or requires pair-specific correction
 - **THEN** preview composition fails visibly instead of falling back to the prior Body-ratio path
 
 ### Requirement: Preview loads authored animation for every composed model
-The runtime gallery SHALL load the Hero.Voxel baked animation asset associated with each discovered body and equipment assembly so every model can own independent playback.
+The Editor preview SHALL load the Hero.Voxel baked animation asset associated with each discovered body and equipment assembly so every composed model can own independent Scene Debug playback.
 
 #### Scenario: Avatar and weapon are composed
 - **WHEN** both models have required baked semantic clips

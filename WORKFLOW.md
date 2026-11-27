@@ -123,6 +123,8 @@ The visible `Voxel Store` menu exposes one store-owned review action:
 
 `Voxel Store/Refresh Preview Grid` performs a bake-only provider refresh for every published model and rebuilds the canonical Editor-only grid in `Assets/Preview/VoxelStorePreview.unity`. Baked `VoxelAssemblyAsset` and matching `VoxelAnimationAsset` files live under `Preview/Unity/Assets/__VoxelStorePreview/Baked/<Catalog>/<Model>/`. The grid uses pinned Hero.Voxel Editor `VoxelSceneDebugBuilder` / Scene Debug behavior; voxel-store does not create a runtime presenter, animation player, Actor wrapper, renderer, or model-frame abstraction.
 
+Avatar grid entries also show deterministic carried equipment for composition review: the first selected equipment is aligned `Mount -> Equip.Hand.Right.0`, and when more than one equipment model exists a second deterministic equipment model is aligned `Mount -> Equip.Hand.Left.0`. Equipment models still keep their own standalone grid entries, so the grid remains a complete published-content review surface.
+
 Preview bake paths mirror the authoritative model directory, never the asset id. Canonical source `Assets/<Catalog>/<Model>/Source/<Model>` bakes to `Assets/__VoxelStorePreview/Baked/<Catalog>/<Model>/<Model>.assembly.asset` plus sibling `<Model>.animation.asset`. Baked output remains disposable and reconstructable from authoritative voxel-store source.
 
 Published avatars own a `Body` part and authored equipment sockets such as `Equip.Hand.Left.0` and `Equip.Hand.Right.0`; equipment owns an exact `Mount` socket. These are content contracts. Generic socket-to-Mount composition, reference influence, model animation tracks, bounds, and render lifetime are Hero Studio responsibilities.
