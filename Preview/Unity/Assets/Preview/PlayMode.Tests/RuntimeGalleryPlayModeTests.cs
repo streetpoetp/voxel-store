@@ -94,7 +94,7 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     "Attack",
                     0.55f);
                 var handleBefore =
-                    fixture.Equipment.AttachmentHandle;
+                    fixture.Equipment.BindingId;
                 Vector3 before =
                     fixture.Equipment.Model.AnimationTrack.WorldMatrix
                         .MultiplyPoint3x4(Vector3.zero);
@@ -114,7 +114,7 @@ namespace VoxelStore.Preview.PlayMode.Tests
                     Vector3.Distance(after, before + delta),
                     Is.LessThan(0.0001f));
                 Assert.That(
-                    fixture.Equipment.AttachmentHandle,
+                    fixture.Equipment.BindingId,
                     Is.EqualTo(handleBefore));
                 Assert.That(
                     fixture.Avatar.ContainsEquipment(fixture.Equipment),
@@ -570,7 +570,7 @@ namespace VoxelStore.Preview.PlayMode.Tests
         private static void AssertReferenceApplied(Fixture fixture)
         {
             Assert.That(
-                fixture.Equipment.AttachmentHandle.IsInitialized,
+                fixture.Equipment.BindingId.IsValid,
                 Is.True);
             Assert.That(
                 fixture.Avatar.ContainsEquipment(fixture.Equipment),

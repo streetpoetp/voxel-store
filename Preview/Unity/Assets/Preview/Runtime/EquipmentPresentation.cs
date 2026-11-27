@@ -1,5 +1,5 @@
 using System;
-using Hero.Voxel.Presentation.Runtime.Unity;
+using Hero.Voxel.Actor.Runtime.Unity;
 using UnityEngine;
 
 namespace VoxelStore.Preview.Runtime
@@ -18,14 +18,14 @@ namespace VoxelStore.Preview.Runtime
         [SerializeField] private string socketName;
         [SerializeField] private EquipmentSlotSide side;
 
-        private VoxelPresentationAttachmentHandle attachmentHandle;
+        private VoxelActorBindingId bindingId;
 
         public Transform PlacementRoot => transform;
         public VoxelRenderPresentation Model => model;
         public string SocketName => socketName;
         public EquipmentSlotSide Side => side;
-        public VoxelPresentationAttachmentHandle AttachmentHandle =>
-            attachmentHandle;
+        public VoxelActorBindingId BindingId =>
+            bindingId;
         public Vector3 LocalRight => CanonicalLocalRight;
         public Vector3 LocalUp => CanonicalLocalUp;
         public Vector3 LocalForward => CanonicalLocalForward;
@@ -48,25 +48,25 @@ namespace VoxelStore.Preview.Runtime
             model.SetExternallyOwnedLifecycle(true);
             socketName = avatarSocketName;
             side = slotSide;
-            attachmentHandle = default;
+            bindingId = default;
         }
 
-        internal void SetAttachmentHandle(
-            VoxelPresentationAttachmentHandle handle)
+        internal void SetBindingId(
+            VoxelActorBindingId id)
         {
-            if (!handle.IsInitialized)
+            if (!id.IsValid)
             {
                 throw new ArgumentException(
-                    "An initialized presentation attachment handle is required.",
-                    nameof(handle));
+                    "A valid voxel actor binding id is required.",
+                    nameof(id));
             }
 
-            attachmentHandle = handle;
+            bindingId = id;
         }
 
-        internal void ClearAttachmentHandle()
+        internal void ClearBindingId()
         {
-            attachmentHandle = default;
+            bindingId = default;
         }
 
         internal void RequireConfigured()

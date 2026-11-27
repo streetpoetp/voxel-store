@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using Hero.Voxel.Actor.Streaming.Runtime.Unity;
 using Hero.Voxel.Render.Runtime.Unity;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -21,7 +22,7 @@ namespace VoxelStore.Preview.Editor.Tests
 
 
         [Test]
-        public void MutableStreamedProofUsesGeneralPresentationWithoutResolverShadow()
+        public void MutableStreamedProofUsesActorPresenterWithoutResolverShadow()
         {
             Type type = typeof(MutableStreamedActorPreview);
             const System.Reflection.BindingFlags flags =
@@ -33,20 +34,16 @@ namespace VoxelStore.Preview.Editor.Tests
             Assert.That(
                 presentation,
                 Is.Not.Null,
-                "Mutable streamed proof must own one VoxelStreamedPresentation.");
+                "Mutable streamed proof must own one VoxelActorPresenter.");
             Assert.That(
                 presentation.FieldType,
-                Is.EqualTo(typeof(
-                    Hero.Voxel.Presentation.Streaming.Runtime.Unity
-                        .VoxelStreamedPresentation)));
+                Is.EqualTo(typeof(VoxelActorPresenter)));
 
             System.Reflection.FieldInfo primary =
                 type.GetField("primaryHandle", flags);
             System.Reflection.FieldInfo secondary =
                 type.GetField("secondaryHandle", flags);
-            Type handleType = typeof(
-                Hero.Voxel.Presentation.Streaming.Runtime.Unity
-                    .VoxelStreamedPresentationAttachmentHandle);
+            Type handleType = typeof(VoxelActorAttachmentHandle);
             Assert.That(primary, Is.Not.Null);
             Assert.That(secondary, Is.Not.Null);
             Assert.That(primary.FieldType, Is.EqualTo(handleType));

@@ -464,11 +464,11 @@ namespace VoxelStore.Preview.Capture.Editor
         {
             foreach (EquipmentPresentation equipment in avatar.Equipment)
             {
-                if (!equipment.AttachmentHandle.IsInitialized ||
+                if (!equipment.BindingId.IsValid ||
                     !avatar.ContainsEquipment(equipment))
                 {
                     throw new InvalidOperationException(
-                        "Capture attachment has no current provider presentation handle.");
+                        "Capture attachment has no current provider actor binding.");
                 }
 
                 VoxelModelAnimationTrack track =

@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using Hero.Voxel.Actor.Runtime.Unity;
 using Hero.Voxel.Actor.Streaming.Runtime.Unity;
-using Hero.Voxel.Presentation.Streaming.Runtime.Unity;
 using Hero.Voxel.Render.Runtime.Unity;
 using Hero.Voxel.Render.Streaming.Runtime.Unity;
 using Hero.Voxel.Runtime.Assets;
@@ -38,9 +37,9 @@ namespace VoxelStore.Preview.Runtime
         private VoxelStreamingService streaming;
         private VoxelPresenterPool presenters;
         private VoxelActorPresenterPool actors;
-        private VoxelStreamedPresentation presentation;
-        private VoxelStreamedPresentationAttachmentHandle primaryHandle;
-        private VoxelStreamedPresentationAttachmentHandle secondaryHandle;
+        private VoxelActorPresenter presentation;
+        private VoxelActorAttachmentHandle primaryHandle;
+        private VoxelActorAttachmentHandle secondaryHandle;
 
         public bool IsConfigured =>
             world != null &&
@@ -160,18 +159,14 @@ namespace VoxelStore.Preview.Runtime
                 maxIdlePresenters: 8);
             actors = new VoxelActorPresenterPool(
                 presenters,
-                new VoxelActorPresentationDescriptor(rootAssembly.UnitId),
+                new VoxelActorDescriptor(rootAssembly.UnitId),
                 maxPresenters: 1,
                 maxIdlePresenters: 1);
 
-            presentation =
-                await VoxelStreamedPresentation
-                    .AcquireCompositeAsync(actors)
-                    .AsTask();
+            presentation = await actors.AcquireAsync().AsTask();
             primaryHandle = default;
             secondaryHandle = default;
-            if (!presentation.IsComposite ||
-                presentation.AttachmentCount != 0)
+            if (presentation.AttachmentCount != 0)
             {
                 throw new InvalidOperationException(
                     "Fresh streamed proof must be composite-capable and root-only.");
@@ -247,7 +242,7 @@ namespace VoxelStore.Preview.Runtime
                 presentation.GetAttachmentTrack(primaryHandle);
             float rootPhase = rootTrack.NormalizedPhase;
             float primaryPhase = primaryTrack.NormalizedPhase;
-            VoxelStreamedPresentationAttachmentHandle stale =
+            VoxelActorAttachmentHandle stale =
                 secondaryHandle;
 
             presentation.Detach(secondaryHandle);
@@ -279,7 +274,7 @@ namespace VoxelStore.Preview.Runtime
                 primaryHandle,
                 "primary before rebind");
 
-            VoxelStreamedPresentationAttachmentHandle preservedHandle =
+            VoxelActorAttachmentHandle preservedHandle =
                 primaryHandle;
             VoxelModelAnimationTrack rootTrack = presentation.RootTrack;
             VoxelModelAnimationTrack primaryTrack =
@@ -353,7 +348,7 @@ namespace VoxelStore.Preview.Runtime
                 primaryHandle,
                 "primary before replacement");
 
-            VoxelStreamedPresentationAttachmentHandle preservedHandle =
+            VoxelActorAttachmentHandle preservedHandle =
                 primaryHandle;
             VoxelModelAnimationTrack rootTrack = presentation.RootTrack;
             VoxelModelAnimationTrack oldPrimaryTrack =
@@ -413,19 +408,15 @@ namespace VoxelStore.Preview.Runtime
             RequireInitialized();
             RequireNormalizedPhase(normalizedPhase);
 
-            VoxelStreamedPresentationAttachmentHandle stalePrimary =
+            VoxelActorAttachmentHandle stalePrimary =
                 primaryHandle;
-            VoxelStreamedPresentationAttachmentHandle staleSecondary =
+            VoxelActorAttachmentHandle staleSecondary =
                 secondaryHandle;
 
-            presentation.Dispose();
-            presentation =
-                await VoxelStreamedPresentation
-                    .AcquireCompositeAsync(actors)
-                    .AsTask();
+            actors.Release(presentation);
+            presentation = await actors.AcquireAsync().AsTask();
 
-            if (!presentation.IsComposite ||
-                presentation.AttachmentCount != 0)
+            if (presentation.AttachmentCount != 0)
             {
                 throw new InvalidOperationException(
                     "Warm reacquisition inherited runtime-added attachments.");
@@ -519,7 +510,8 @@ namespace VoxelStore.Preview.Runtime
 
         public void DisposeProviderState()
         {
-            presentation?.Dispose();
+            if (presentation != null && presentation.IsActive && actors != null)
+                actors.Release(presentation);
             presentation = null;
             primaryHandle = default;
             secondaryHandle = default;
@@ -609,7 +601,7 @@ namespace VoxelStore.Preview.Runtime
         }
 
         private void ValidateAttachmentTrack(
-            VoxelStreamedPresentationAttachmentHandle handle,
+            VoxelActorAttachmentHandle handle,
             string label)
         {
             RequireCurrentAttachment(handle, label);
@@ -641,7 +633,7 @@ namespace VoxelStore.Preview.Runtime
         }
 
         private void RequireStaleHandle(
-            VoxelStreamedPresentationAttachmentHandle handle,
+            VoxelActorAttachmentHandle handle,
             string label)
         {
             if (presentation.ContainsAttachment(handle))
@@ -653,7 +645,7 @@ namespace VoxelStore.Preview.Runtime
         }
 
         private bool IsCurrentAttachment(
-            VoxelStreamedPresentationAttachmentHandle handle)
+            VoxelActorAttachmentHandle handle)
         {
             return IsInitialized &&
                 handle.IsInitialized &&
@@ -661,7 +653,7 @@ namespace VoxelStore.Preview.Runtime
         }
 
         private void RequireCurrentAttachment(
-            VoxelStreamedPresentationAttachmentHandle handle,
+            VoxelActorAttachmentHandle handle,
             string label)
         {
             if (!IsCurrentAttachment(handle))

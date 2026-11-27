@@ -1,6 +1,5 @@
 using System;
 using Hero.Voxel.Actor.Runtime.Unity;
-using Hero.Voxel.Presentation.Runtime.Unity;
 using Hero.Voxel.Render.Runtime.Unity;
 using Hero.Voxel.Runtime.Animation;
 using Hero.Voxel.Runtime.Assets;
@@ -32,24 +31,23 @@ namespace VoxelStore.Preview.Editor.Tests
 
 
         [Test]
-        public void ComposedAvatarUsesGeneralPresentationAndCanonicalTracks()
+        public void ComposedAvatarUsesActorAndCanonicalTracks()
         {
             using Fixture fixture = CreateFixture(includeSecondEquipment: true);
 
-            VoxelPresentation presentation =
-                RequireProviderPresentation(fixture.Avatar);
-            VoxelPresentationAttachmentHandle primary =
-                RequirePresentationHandle(fixture.Primary);
-            VoxelPresentationAttachmentHandle secondary =
-                RequirePresentationHandle(fixture.Secondary);
+            VoxelActorInstance presentation =
+                RequireProviderActor(fixture.Avatar);
+            VoxelActorBindingId primary =
+                RequireBindingId(fixture.Primary);
+            VoxelActorBindingId secondary =
+                RequireBindingId(fixture.Secondary);
 
-            Assert.That(presentation.IsComposite, Is.True);
-            Assert.That(presentation.AttachmentCount, Is.EqualTo(2));
-            Assert.That(primary.IsInitialized, Is.True);
-            Assert.That(secondary.IsInitialized, Is.True);
+            Assert.That(presentation.BindingCount, Is.EqualTo(2));
+            Assert.That(primary.IsValid, Is.True);
+            Assert.That(secondary.IsValid, Is.True);
             Assert.That(primary, Is.Not.EqualTo(secondary));
-            Assert.That(presentation.ContainsAttachment(primary), Is.True);
-            Assert.That(presentation.ContainsAttachment(secondary), Is.True);
+            Assert.That(presentation.ContainsBinding(primary), Is.True);
+            Assert.That(presentation.ContainsBinding(secondary), Is.True);
             Assert.That(
                 fixture.BodyModel.AnimationTrack,
                 Is.SameAs(presentation.RootTrack));
@@ -62,16 +60,15 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
-        public void AvatarWithoutEquipmentUsesRootOnlyGeneralPresentation()
+        public void AvatarWithoutEquipmentUsesRootOnlyActor()
         {
             using Fixture fixture =
                 CreateFixture(includePrimaryEquipment: false);
 
-            VoxelPresentation presentation =
-                RequireProviderPresentation(fixture.Avatar);
+            VoxelActorInstance presentation =
+                RequireProviderActor(fixture.Avatar);
 
-            Assert.That(presentation.IsComposite, Is.False);
-            Assert.That(presentation.AttachmentCount, Is.Zero);
+            Assert.That(presentation.BindingCount, Is.Zero);
             Assert.That(
                 fixture.BodyModel.AnimationTrack,
                 Is.SameAs(presentation.RootTrack));
@@ -79,14 +76,14 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
-        public void ProviderPresentationOwnsReleaseAndRecovery()
+        public void ProviderActorOwnsReleaseAndRecovery()
         {
             using Fixture fixture = CreateFixture();
 
-            VoxelPresentation presentation =
-                RequireProviderPresentation(fixture.Avatar);
-            VoxelPresentationAttachmentHandle handle =
-                RequirePresentationHandle(fixture.Primary);
+            VoxelActorInstance presentation =
+                RequireProviderActor(fixture.Avatar);
+            VoxelActorBindingId handle =
+                RequireBindingId(fixture.Primary);
             VoxelModelAnimationTrack track =
                 presentation.GetAttachmentTrack(handle);
 
@@ -128,8 +125,8 @@ namespace VoxelStore.Preview.Editor.Tests
                 fixture.Primary.Model.Instance,
                 fixture.Secondary.Model.Instance);
             Assert.AreNotEqual(
-                fixture.Primary.AttachmentHandle,
-                fixture.Secondary.AttachmentHandle);
+                fixture.Primary.BindingId,
+                fixture.Secondary.BindingId);
 
             Vector3 primary = SocketPosition(
                 fixture.Primary.Model.Instance,
@@ -628,40 +625,40 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
 
-        private static VoxelPresentation RequireProviderPresentation(
+        private static VoxelActorInstance RequireProviderActor(
             AvatarPresentation avatar)
         {
             System.Reflection.FieldInfo field =
                 typeof(AvatarPresentation).GetField(
-                    "presentation",
+                    "actor",
                     System.Reflection.BindingFlags.Instance |
                     System.Reflection.BindingFlags.NonPublic);
             Assert.That(
                 field,
                 Is.Not.Null,
-                "AvatarPresentation must own one provider VoxelPresentation.");
-            var value = field.GetValue(avatar) as VoxelPresentation;
+                "AvatarPresentation must own one provider VoxelActorInstance.");
+            var value = field.GetValue(avatar) as VoxelActorInstance;
             Assert.That(value, Is.Not.Null);
             return value;
         }
 
-        private static VoxelPresentationAttachmentHandle
-            RequirePresentationHandle(EquipmentPresentation equipment)
+        private static VoxelActorBindingId
+            RequireBindingId(EquipmentPresentation equipment)
         {
             System.Reflection.FieldInfo field =
                 typeof(EquipmentPresentation).GetField(
-                    "attachmentHandle",
+                    "bindingId",
                     System.Reflection.BindingFlags.Instance |
                     System.Reflection.BindingFlags.NonPublic);
             Assert.That(
                 field,
                 Is.Not.Null,
-                "EquipmentPresentation must retain the provider presentation handle only.");
+                "EquipmentPresentation must retain only the provider actor binding id.");
             object value = field.GetValue(equipment);
             Assert.That(
                 value,
-                Is.TypeOf<VoxelPresentationAttachmentHandle>());
-            return (VoxelPresentationAttachmentHandle)value;
+                Is.TypeOf<VoxelActorBindingId>());
+            return (VoxelActorBindingId)value;
         }
 
         private static EquipmentPresentation CreateEquipment(
