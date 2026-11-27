@@ -4,7 +4,6 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$submoduleRelative = 'Dependencies/hero-studio'
 $heroRoot = Join-Path $repoRoot 'Dependencies\hero-studio'
 $lockPath = Join-Path $repoRoot 'toolchain\hero-voxel.lock.yaml'
 
@@ -22,30 +21,12 @@ if (-not (Test-Path $lockPath)) {
     throw "Hero.Voxel lock not found: $lockPath"
 }
 
-if (-not $VerifyOnly) {
-    & git -C $repoRoot submodule update --init --recursive -- $submoduleRelative
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Failed to initialize the pinned Hero Studio submodule.'
-    }
-}
-
-$expectedRevision = Read-LockScalar 'heroStudioRevision'
+$providerIdentity = Read-LockScalar 'heroStudioRevision'
 $expectedWorkflowHash = Read-LockScalar 'workflowSha256'
 $workflowRelative = Read-LockScalar 'workflow'
 
 if (-not (Test-Path $heroRoot)) {
-    throw 'Hero Studio submodule is missing. Run: git submodule update --init --recursive'
-}
-
-$revision = (& git -C $heroRoot rev-parse HEAD 2>&1).Trim()
-if ($LASTEXITCODE -ne 0) {
-    throw "Hero Studio submodule is not initialized: $revision"
-}
-if (-not [string]::Equals(
-    $revision,
-    $expectedRevision,
-    [StringComparison]::OrdinalIgnoreCase)) {
-    throw "Hero Studio revision mismatch. expected=$expectedRevision actual=$revision"
+    throw 'Hero Studio provider is missing at Dependencies/hero-studio.'
 }
 
 $workflowPath = Join-Path $heroRoot (
@@ -96,5 +77,5 @@ if ($VerifyOnly -and -not (Test-Path $packageLink)) {
     throw "Hero Studio embedded package junction is missing: $packageLink"
 }
 
-Write-Output "verified Hero Studio submodule $revision"
+Write-Output "verified Hero Studio provider contract $providerIdentity"
 Write-Output "embedded full Hero Studio Unity package from $packageSource"

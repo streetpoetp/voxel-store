@@ -70,27 +70,6 @@ static void DeleteTree(string root)
     Directory.Delete(root, true);
 }
 
-static void RunGit(string root, params string[] args)
-{
-    var start = new ProcessStartInfo("git")
-    {
-        WorkingDirectory = root,
-        RedirectStandardOutput = true,
-        RedirectStandardError = true,
-        UseShellExecute = false
-    };
-    foreach (string arg in args)
-        start.ArgumentList.Add(arg);
-    using Process process =
-        Process.Start(start) ?? throw new InvalidOperationException("Failed to start git.");
-    string stdout = process.StandardOutput.ReadToEnd();
-    string stderr = process.StandardError.ReadToEnd();
-    process.WaitForExit();
-    if (process.ExitCode != 0)
-        throw new InvalidOperationException(
-            $"git {string.Join(' ', args)} failed: {stdout}{stderr}");
-}
-
 static void WritePngHeader(string path, int width, int height, bool validSignature = true)
 {
     Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -3048,31 +3027,10 @@ static void RunRetirementContractTests()
             "density must be 'reference-driven'");
         File.WriteAllText(manifestPath, validV2Manifest);
 
-        RunGit(root, "init");
-        RunGit(root, "config", "user.email", "voxel-store-tests@example.invalid");
-        RunGit(root, "config", "user.name", "Voxel Store Tests");
-        RunGit(root, "add", ".");
-        RunGit(root, "commit", "-m", "fixture");
-
-        WriteManifest("changed.asset", "fresh/unit");
-        ExpectFailure(
-            () => new StoreEngine(root).DiscoverAssets(),
-            "Published semantic identity changed in-place");
-
-        RunGit(root, "checkout", "--", "Assets/Fixture/asset.yaml");
-        string publishedManifest = File.ReadAllText(manifestPath);
-        File.WriteAllText(
-            manifestPath,
-            publishedManifest.Replace("form: fixture", "form: changed-form", StringComparison.Ordinal));
-        ExpectFailure(
-            () => new StoreEngine(root).DiscoverAssets(),
-            "form changed in-place");
-
-        RunGit(root, "checkout", "--", "Assets/Fixture/asset.yaml");
         File.Delete(manifestPath);
         Require(
             new StoreEngine(root).DiscoverAssets().Count == 0,
-            "intentional deletion of a retired/removed manifest must not be treated as in-place mutation");
+            "removing an active manifest must simply remove it from current store state");
     }
     finally
     {
@@ -3092,6 +3050,22 @@ static void RunPreviewPlanTests(string repositoryRoot)
     StoreSnapshot snapshot = engine.Scan(writeDerived: false, writeCompatibility: false);
     PreviewPlan first = engine.BuildPreviewPlan();
     PreviewPlan second = engine.BuildPreviewPlan();
+
+    string? originalPath = Environment.GetEnvironmentVariable("PATH");
+    try
+    {
+        Environment.SetEnvironmentVariable("PATH", string.Empty);
+        PreviewPlan withoutExternalCommands =
+            new StoreEngine(repositoryRoot).BuildPreviewPlan();
+        Require(
+            withoutExternalCommands.Units.Select(x => x.Id)
+                .SequenceEqual(first.Units.Select(x => x.Id), StringComparer.Ordinal),
+            "preview plan and provider resolution must not require Git or any PATH-resolved command");
+    }
+    finally
+    {
+        Environment.SetEnvironmentVariable("PATH", originalPath);
+    }
 
     string[] expectedIds = snapshot.Assets
         .Where(x => x.Published)
@@ -4024,9 +3998,9 @@ finally
     Directory.Delete(missingProviderRoot, true);
 }
 
-string mismatchRoot = TempRoot();
-try
-{
+    string mismatchRoot = TempRoot();
+    try
+    {
     string sourceLock = Path.Combine(
         repositoryRoot,
         "toolchain",
@@ -4036,15 +4010,15 @@ try
         "toolchain",
         "hero-voxel.lock.yaml");
     Directory.CreateDirectory(Path.GetDirectoryName(mismatchLock)!);
-    File.WriteAllText(
-        mismatchLock,
-        File.ReadAllText(sourceLock).Replace(
-            resolution.Lock.HeroStudioRevision,
-            new string('0', 40),
-            StringComparison.Ordinal));
-    ExpectFailure(
-        () => new HeroVoxelProvider(mismatchRoot, resolution.Root).Resolve(),
-        "revision mismatch");
+        File.WriteAllText(
+            mismatchLock,
+            File.ReadAllText(sourceLock).Replace(
+                resolution.Lock.WorkflowSha256,
+                new string('0', 64),
+                StringComparison.Ordinal));
+        ExpectFailure(
+            () => new HeroVoxelProvider(mismatchRoot, resolution.Root).Resolve(),
+            "workflow fingerprint mismatch");
 }
 finally
 {
@@ -4245,65 +4219,6 @@ finally
 {
     Directory.Delete(duplicateUnitRefRoot, true);
 }
-
-string identityHistoryRoot = TempRoot();
-try
-{
-    RunGit(identityHistoryRoot, "init");
-    RunGit(identityHistoryRoot, "config", "user.email", "test@example.invalid");
-    RunGit(identityHistoryRoot, "config", "user.name", "Voxel Store Test");
-    string originalDir = Path.Combine(identityHistoryRoot, "Assets", "Original");
-    Directory.CreateDirectory(originalDir);
-    string originalManifest = Path.Combine(originalDir, "asset.yaml");
-    const string originalIdentity =
-        """
-        version: 3
-        id: history.original
-        kind: avatar
-        unitRef: history/original
-        source:
-          base: ./Source/Item
-          palette: ./Palette.yaml
-        style:
-          family: low-resolution-voxel.v1
-        """;
-    File.WriteAllText(originalManifest, originalIdentity);
-    RunGit(identityHistoryRoot, "add", ".");
-    RunGit(identityHistoryRoot, "commit", "-m", "baseline identity");
-
-    File.WriteAllText(
-        originalManifest,
-        originalIdentity.Replace(
-            "unitRef: history/original",
-            "unitRef: history/redefined",
-            StringComparison.Ordinal));
-    ExpectFailure(
-        () => new StoreEngine(identityHistoryRoot).DiscoverAssets(),
-        "semantic identity changed");
-
-    File.WriteAllText(originalManifest, originalIdentity);
-    string newDir = Path.Combine(identityHistoryRoot, "Assets", "New");
-    Directory.CreateDirectory(newDir);
-    File.WriteAllText(
-        Path.Combine(newDir, "asset.yaml"),
-        originalIdentity
-            .Replace(
-                "id: history.original",
-                "id: history.new",
-                StringComparison.Ordinal)
-            .Replace(
-                "unitRef: history/original",
-                "unitRef: history/new",
-                StringComparison.Ordinal));
-    Require(
-        new StoreEngine(identityHistoryRoot).DiscoverAssets().Count == 2,
-        "new identity must be allowed beside unchanged published identity");
-}
-finally
-{
-    DeleteTree(identityHistoryRoot);
-}
-
 
 int coldStartAssetCount = 0;
 bool coldStartHealthy = false;

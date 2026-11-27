@@ -4,6 +4,6 @@
   </PropertyGroup>
   <Target Name="RequireHeroStudioSubmodule" BeforeTargets="PrepareForBuild">
     <Error Condition="!Exists('$(HeroStudioSubmoduleRoot)/src/client/unity/Packages/hero.studio/hero.voxel/Tool~/Hero.Voxel.Tool/Hero.Voxel.Tool.csproj')"
-           Text="Hero Studio submodule is missing or uninitialized. Run: git submodule update --init --recursive" />
+           Text="Hero Studio provider is missing at Dependencies/hero-studio." />
   </Target>
 </Project>

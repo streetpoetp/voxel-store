@@ -1,5 +1,4 @@
 using System.Buffers.Binary;
-using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;
@@ -184,8 +183,6 @@ public sealed class StoreEngine
                 throw new InvalidDataException(
                     $"Active UnitRef '{asset.Manifest.UnitRef}' reuses a retired published identity.");
         }
-        foreach (AssetRecord asset in assets)
-            ValidateHistoricalIdentity(asset);
         return assets;
     }
 
@@ -234,10 +231,15 @@ public sealed class StoreEngine
     }
 
     public StoreSnapshot Scan(bool writeDerived, bool writeCompatibility)
+        => Scan(DiscoverAssets(), writeDerived, writeCompatibility);
+
+    private StoreSnapshot Scan(
+        IReadOnlyList<AssetRecord> assets,
+        bool writeDerived,
+        bool writeCompatibility)
     {
         StorePolicy policy = LoadStorePolicy();
         CollectionManifest collection = LoadCollection(policy);
-        IReadOnlyList<AssetRecord> assets = DiscoverAssets();
         var healthById = new Dictionary<string, AssetHealth>(StringComparer.Ordinal);
 
         foreach (AssetRecord asset in assets)
@@ -275,7 +277,10 @@ public sealed class StoreEngine
     public PreviewPlan BuildPreviewPlan()
     {
         IReadOnlyList<AssetRecord> assets = DiscoverAssets();
-        StoreSnapshot snapshot = Scan(writeDerived: false, writeCompatibility: false);
+        StoreSnapshot snapshot = Scan(
+            assets,
+            writeDerived: false,
+            writeCompatibility: false);
         return CreatePreviewPlan(_root, assets, snapshot);
     }
 
@@ -1024,6 +1029,23 @@ public sealed class StoreEngine
             if (!Uri.IsHexDigit(c))
                 return false;
         return true;
+    }
+
+    private static string? ReadTopLevelYamlScalar(string yaml, string key)
+    {
+        string prefix = key + ":";
+        foreach (string raw in yaml.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
+        {
+            if (raw.Length == 0 || char.IsWhiteSpace(raw[0]) ||
+                !raw.StartsWith(prefix, StringComparison.Ordinal))
+                continue;
+
+            string value = raw[prefix.Length..].Trim();
+            if (value.Length == 0)
+                return null;
+            return value.Trim('"', '\'');
+        }
+        return null;
     }
 
     private static string ValidateSource(AssetRecord asset)
@@ -2574,89 +2596,6 @@ public sealed class StoreEngine
                 throw new InvalidDataException("Avatar collection requirements cannot declare equipment form.");
             }
         }
-    }
-
-    private void ValidateHistoricalIdentity(AssetRecord asset)
-    {
-        string relative = Path.GetRelativePath(_root, asset.ManifestPath).Replace('\\', '/');        string? previous = GitShow(relative);
-        if (previous == null)
-            return;
-
-        HistoricalAssetIdentity old = ParseHistoricalAssetIdentity(previous);
-        bool identityChanged =
-            !string.Equals(old.Id, asset.Manifest.Id, StringComparison.Ordinal) ||
-            !string.Equals(old.UnitRef, asset.Manifest.UnitRef, StringComparison.Ordinal);
-        if (identityChanged)
-        {
-            bool explicitlyRetired = LoadRetiredIdentities().Any(x =>
-                string.Equals(x.Id, old.Id, StringComparison.Ordinal) &&
-                string.Equals(x.UnitRef, old.UnitRef, StringComparison.Ordinal));
-            if (!explicitlyRetired)
-                throw new InvalidDataException(
-                    $"Published semantic identity changed in-place at {relative}; create a new asset identity or explicit migration.");
-            return;
-        }
-
-        if (old.Version == 2 &&
-            !string.Equals(old.Form, asset.Manifest.Form, StringComparison.Ordinal))
-            throw new InvalidDataException(
-                $"Published equipment form changed in-place at {relative}; create an explicit migration.");
-    }
-
-    private sealed record HistoricalAssetIdentity(int Version, string Id, string UnitRef, string? Form);
-
-    private static HistoricalAssetIdentity ParseHistoricalAssetIdentity(string yaml)
-    {
-        string versionText = ReadTopLevelYamlScalar(yaml, "version")
-            ?? throw new InvalidDataException("Historical asset manifest is missing version.");
-        if (!int.TryParse(versionText, NumberStyles.Integer, CultureInfo.InvariantCulture, out int version))
-            throw new InvalidDataException("Historical asset manifest version is invalid.");
-
-        string id = ReadTopLevelYamlScalar(yaml, "id")
-            ?? throw new InvalidDataException("Historical asset manifest is missing id.");
-        string unitRef = ReadTopLevelYamlScalar(yaml, "unitRef")
-            ?? throw new InvalidDataException("Historical asset manifest is missing UnitRef.");
-
-        return new HistoricalAssetIdentity(
-            version,
-            id,
-            unitRef,
-            ReadTopLevelYamlScalar(yaml, "form"));
-    }
-
-    private static string? ReadTopLevelYamlScalar(string yaml, string key)
-    {
-        string prefix = key + ":";
-        foreach (string raw in yaml.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
-        {
-            if (raw.Length == 0 || char.IsWhiteSpace(raw[0]) ||
-                !raw.StartsWith(prefix, StringComparison.Ordinal))
-                continue;
-
-            string value = raw[prefix.Length..].Trim();
-            if (value.Length == 0)
-                return null;
-            return value.Trim('"', '\'');
-        }
-        return null;
-    }
-
-    private string? GitShow(string relative)
-    {
-        var psi = new ProcessStartInfo("git")
-        {
-            WorkingDirectory = _root,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-        psi.ArgumentList.Add("show");
-        psi.ArgumentList.Add($"HEAD:{relative}");
-        using Process process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start git.");
-        string stdout = process.StandardOutput.ReadToEnd();
-        process.StandardError.ReadToEnd();
-        process.WaitForExit();
-        return process.ExitCode == 0 ? stdout : null;
     }
 
     private static void EnsureUnique(

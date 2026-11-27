@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Security.Cryptography;
 using Hero.Voxel.Tool;
 
@@ -42,8 +41,7 @@ public sealed class HeroVoxelProvider
         root = Path.GetFullPath(root);
         if (!Directory.Exists(root))
             throw new InvalidOperationException(
-                "Hero Studio submodule is missing or uninitialized at Dependencies/hero-studio. " +
-                "Run: git submodule update --init --recursive");
+                "Hero Studio provider is missing at Dependencies/hero-studio.");
         string project = Path.Combine(root, Normalize(lockFile.ToolProject));
         string workflow = Path.Combine(root, Normalize(lockFile.Workflow));
         if (!File.Exists(project) || !File.Exists(workflow))
@@ -52,10 +50,6 @@ public sealed class HeroVoxelProvider
         string workflowHash = HashFile(workflow);
         if (!string.Equals(workflowHash, lockFile.WorkflowSha256, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException($"Hero.Voxel workflow fingerprint mismatch. expected={lockFile.WorkflowSha256} actual={workflowHash}");
-
-        string revision = ReadGitRevision(root);
-        if (!string.Equals(revision, lockFile.HeroStudioRevision, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException($"Hero Studio revision mismatch. expected={lockFile.HeroStudioRevision} actual={revision}");
 
         _resolution = new Resolution(root, lockFile);
         return _resolution;
@@ -113,23 +107,4 @@ public sealed class HeroVoxelProvider
     private static string Normalize(string relative) =>
         relative.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
 
-    private static string ReadGitRevision(string root)
-    {
-        var start = new ProcessStartInfo("git")
-        {
-            WorkingDirectory = root,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-        start.ArgumentList.Add("rev-parse");
-        start.ArgumentList.Add("HEAD");
-        using Process process = Process.Start(start) ?? throw new InvalidOperationException("Failed to start git.");
-        string stdout = process.StandardOutput.ReadToEnd().Trim();
-        string stderr = process.StandardError.ReadToEnd().Trim();
-        process.WaitForExit();
-        if (process.ExitCode != 0)
-            throw new InvalidOperationException($"Unable to resolve Hero Studio revision: {stderr}");
-        return stdout;
-    }
 }

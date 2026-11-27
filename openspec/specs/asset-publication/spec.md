@@ -159,6 +159,17 @@ The store SHALL allow a previously published asset to be removed from the active
 - **WHEN** a new replacement asset declares an asset id or UnitRef previously published by a retired asset
 - **THEN** validation fails and requires a new semantic identity
 
+### Requirement: Publication authority is version-control independent
+Store publication and identity evaluation SHALL derive from current authoritative store files, explicit retired-identity authority, policies, collections, evidence, and declared provider fingerprints. The Tool SHALL NOT invoke Git, inspect `HEAD`, or read version-control history to determine current publication, identity, preview, or provider state.
+
+#### Scenario: Version-control tooling is unavailable
+- **WHEN** Git is not installed, is absent from `PATH`, or the store is evaluated from an equivalent filesystem snapshot without version-control metadata
+- **THEN** discovery, scan, verify, plan, and preview-plan derive the same result from the same authoritative store/provider files
+
+#### Scenario: An active identity is intentionally replaced
+- **WHEN** a migration replaces or removes a previously published asset identity
+- **THEN** identities that must remain reserved are recorded explicitly in `Store/retired-assets.yaml`; source-control history is not consulted as an implicit identity database
+
 ### Requirement: Replacement assets pass normal publication gates
 A replacement asset SHALL be treated as a new independently authored asset and SHALL pass the same reference-first, source, deterministic generation, proof, compatibility, and budget gates as any other new asset.
 

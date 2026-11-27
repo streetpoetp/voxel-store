@@ -3,7 +3,7 @@
 ## Bootstrap
 
 1. Read `AGENTS.md`.
-2. Initialize the repository-owned Hero Studio provider with `git submodule update --init --recursive`; `Dependencies/hero-studio` plus `toolchain/hero-voxel.lock.yaml` is the single Hero.Voxel dependency authority.
+2. Use the repository-owned Hero Studio provider already present at `Dependencies/hero-studio`; that directory plus `toolchain/hero-voxel.lock.yaml` is the single Hero.Voxel dependency authority. Store Tool/preview execution does not invoke Git or inspect version-control history.
 3. Use OpenSpec for architecture, ownership, schema, workflow, or other cross-cutting changes.
 4. Start maintenance from deterministic Tool state; do not choose work from generated catalog/status files by hand.
 
@@ -109,11 +109,10 @@ The Unity workspace under `Preview/Unity/` is an Editor-only inspection surface 
 From the repository root:
 
 ```powershell
-git submodule update --init --recursive
 ./Preview/Bootstrap.ps1
 ```
 
-The bootstrap initializes and verifies the exact Hero Studio submodule revision and Hero.Voxel workflow fingerprint, then exposes the **entire** `hero.studio` package through one ignored embedded-package junction at `Preview/Unity/Packages/hero.studio`. The junction points to `Dependencies/hero-studio/src/client/unity/Packages/hero.studio`; it does not select modules, copy provider code, or patch provider-owned shaders.
+The bootstrap requires the repository-owned Hero Studio provider files to already exist, verifies the Hero.Voxel workflow fingerprint declared by `toolchain/hero-voxel.lock.yaml`, then exposes the **entire** `hero.studio` package through one ignored embedded-package junction at `Preview/Unity/Packages/hero.studio`. It does not initialize/fetch a dependency, invoke Git, inspect `HEAD`, or use version-control state as provider authority. The junction points to `Dependencies/hero-studio/src/client/unity/Packages/hero.studio`; it does not select modules, copy provider code, or patch provider-owned shaders.
 Open `Preview/Unity/` with Unity `6000.3.24f1`.
 
 The visible `Voxel Store` menu exposes one store-owned review action:
