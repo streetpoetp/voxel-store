@@ -19,21 +19,21 @@ namespace VoxelStore.Preview.Editor
         private readonly VoxelRenderWorld _world;
         private readonly List<VoxelActorInstance> _actors;
         private readonly List<VoxelRenderInstance> _instances;
-        private readonly List<GameObject> _inspectionHosts;
+        private readonly IDisposable _previewScope;
 
         internal PreviewRuntimeGridSession(
             GameObject runtimeRoot,
             VoxelRenderWorld world,
             List<VoxelActorInstance> actors,
             List<VoxelRenderInstance> instances,
-            List<GameObject> inspectionHosts,
+            IDisposable previewScope,
             PreviewGridBuildResult result)
         {
             _runtimeRoot = runtimeRoot;
             _world = world;
             _actors = actors;
             _instances = instances;
-            _inspectionHosts = inspectionHosts;
+            _previewScope = previewScope;
             Result = result;
         }
 
@@ -41,8 +41,7 @@ namespace VoxelStore.Preview.Editor
 
         public void Dispose()
         {
-            foreach (GameObject host in _inspectionHosts)
-                VoxelRuntimeInspectionController.Unregister(host);
+            _previewScope.Dispose();
 
             foreach (VoxelActorInstance actor in _actors)
                 actor.Dispose();
@@ -66,16 +65,13 @@ namespace VoxelStore.Preview.Editor
     internal sealed class PreviewRuntimeEntry
     {
         internal PreviewRuntimeEntry(
-            GameObject host,
             VoxelRenderInstance instance,
             VoxelActorInstance actor)
         {
-            Host = host;
             Instance = instance;
             Actor = actor;
         }
 
-        internal GameObject Host { get; }
         internal VoxelRenderInstance Instance { get; }
         internal VoxelActorInstance Actor { get; }
 
@@ -136,14 +132,10 @@ namespace VoxelStore.Preview.Editor
                 runtimeRoot.AddComponent<VoxelRenderWorld>();
             world.Initialize();
 
-            var grid =
-                new GameObject(VoxelStorePreviewPaths.GeneratedGridName);
-            ConfigureGenerated(grid);
-            grid.transform.SetParent(runtimeRoot.transform, false);
-
             var actors = new List<VoxelActorInstance>();
             var instances = new List<VoxelRenderInstance>();
-            var inspectionHosts = new List<GameObject>();
+            var tracks = new List<VoxelModelAnimationTrack>();
+            IDisposable previewScope = null;
             List<PreviewRuntimeEntry> entries = null;
             List<Bounds> measured = null;
             PreviewUnitContract[] equipmentUnits = null;
@@ -168,10 +160,6 @@ namespace VoxelStore.Preview.Editor
                 foreach (PreviewUnitContract unit in plan.Units)
                 {
                     BakedPreviewUnit baked = LoadBaked(unit);
-                    var entry = new GameObject(unit.Id);
-                    ConfigureGenerated(entry);
-                    entry.transform.SetParent(grid.transform, false);
-                    inspectionHosts.Add(entry);
 
                     if (baked.Animation != null)
                         animationCount++;
@@ -183,11 +171,7 @@ namespace VoxelStore.Preview.Editor
                         instances.Add(rootInstance);
                         var actor = new VoxelActorInstance(rootInstance);
                         actors.Add(actor);
-                        VoxelRuntimeInspectionController.Register(
-                            entry,
-                            rootInstance,
-                            actor.RootTrack,
-                            actor);
+                        tracks.Add(actor.RootTrack);
 
                         if (equipmentUnits.Length > 0)
                         {
@@ -195,13 +179,12 @@ namespace VoxelStore.Preview.Editor
                             int primaryIndex =
                                 avatarIndex % equipmentUnits.Length;
                             AttachEquipment(
-                                entry,
                                 world,
                                 actor,
                                 equipmentUnits[primaryIndex],
                                 "Equip.Hand.Right.0",
                                 instances,
-                                inspectionHosts);
+                                tracks);
                             carriedEquipmentCount++;
 
                             if (equipmentUnits.Length > 1)
@@ -218,20 +201,18 @@ namespace VoxelStore.Preview.Editor
                                 }
 
                                 AttachEquipment(
-                                    entry,
                                     world,
                                     actor,
                                     equipmentUnits[secondaryIndex],
                                     "Equip.Hand.Left.0",
                                     instances,
-                                    inspectionHosts);
+                                    tracks);
                                 carriedEquipmentCount++;
                             }
                         }
 
                         entries.Add(
                             new PreviewRuntimeEntry(
-                                entry,
                                 rootInstance,
                                 actor));
                         measured.Add(actor.GetWorldBounds());
@@ -243,13 +224,9 @@ namespace VoxelStore.Preview.Editor
                         instances.Add(instance);
                         var track =
                             new VoxelModelAnimationTrack(instance);
-                        VoxelRuntimeInspectionController.Register(
-                            entry,
-                            instance,
-                            track);
+                        tracks.Add(track);
                         entries.Add(
                             new PreviewRuntimeEntry(
-                                entry,
                                 instance,
                                 null));
                         measured.Add(instance.GetWorldBounds());
@@ -271,7 +248,7 @@ namespace VoxelStore.Preview.Editor
                 for (int i = 0; i < entries.Count; i++)
                 {
                     finalBounds[i] = entries[i].GetWorldBounds();
-                    RequireFiniteBounds(finalBounds[i], entries[i].Host.name);
+                    RequireFiniteBounds(finalBounds[i], plan.Units[i].Id);
                 }
 
                 world.SubmitNow();
@@ -281,14 +258,18 @@ namespace VoxelStore.Preview.Editor
                         "Voxel Store runtime preview submitted no voxel parts.");
                 }
 
+                previewScope = VoxelRuntimeInspectionController.BeginPreview(world);
+
                 var result = new PreviewGridBuildResult
                 {
-                    Grid = grid,
+                    Grid = runtimeRoot,
+                    World = world,
+                    Instances = instances.ToArray(),
+                    Tracks = tracks.ToArray(),
                     EntryIds = plan.Units.Select(x => x.Id).ToArray(),
                     WorldBounds = finalBounds,
                     AnimationCount = animationCount,
                     CarriedEquipmentCount = carriedEquipmentCount,
-                    InspectionHosts = inspectionHosts.ToArray(),
                     SubmittedPartCount = world.SubmittedPartCount
                 };
 
@@ -297,18 +278,16 @@ namespace VoxelStore.Preview.Editor
                     world,
                     actors,
                     instances,
-                    inspectionHosts,
+                    previewScope,
                     result);
 
-                Selection.activeGameObject = grid;
                 FocusSceneView(finalBounds);
                 return result;
             }
             catch (Exception ex)
             {
                 Debug.LogException(ex);
-                foreach (GameObject host in inspectionHosts)
-                    VoxelRuntimeInspectionController.Unregister(host);
+                previewScope?.Dispose();
                 foreach (VoxelActorInstance actor in actors)
                     actor.Dispose();
 
@@ -371,35 +350,20 @@ namespace VoxelStore.Preview.Editor
         }
 
         private static void AttachEquipment(
-            GameObject avatarHost,
             VoxelRenderWorld world,
             VoxelActorInstance actor,
             PreviewUnitContract equipmentUnit,
             string avatarSocketName,
             ICollection<VoxelRenderInstance> instances,
-            ICollection<GameObject> inspectionHosts)
+            ICollection<VoxelModelAnimationTrack> tracks)
         {
             BakedPreviewUnit baked = LoadBaked(equipmentUnit);
             VoxelRenderInstance instance =
                 world.Spawn(baked.Assembly, baked.Animation);
             instances.Add(instance);
 
-            VoxelActorBindingId binding =
-                actor.Attach(instance, avatarSocketName, "Mount");
-            VoxelModelAnimationTrack track =
-                actor.GetAttachmentTrack(binding);
-
-            var host = new GameObject(
-                equipmentUnit.Id + " @ " + avatarSocketName);
-            ConfigureGenerated(host);
-            host.transform.SetParent(avatarHost.transform, false);
-            inspectionHosts.Add(host);
-
-            VoxelRuntimeInspectionController.Register(
-                host,
-                instance,
-                track,
-                actor);
+            VoxelActorBindingId binding = actor.Attach(instance, avatarSocketName, "Mount");
+            tracks.Add(actor.GetAttachmentTrack(binding));
         }
 
         private static bool IsKind(
@@ -560,6 +524,8 @@ namespace VoxelStore.Preview.Editor
                     PreviewPlanClient.Load();
                 PreviewGridBuildResult result =
                     PreviewGridRuntimeBuilder.Build(plan);
+                if (!Application.isBatchMode)
+                    VoxelRuntimeInspectionInspector.Open();
                 Debug.Log(
                     "Voxel Store Play Mode preview grid ready: " +
                     result.EntryIds.Length +

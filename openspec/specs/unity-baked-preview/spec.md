@@ -97,11 +97,12 @@ The preview workspace SHALL exist only for Editor inspection, validation, Play M
 
 #### Scenario: Grid is generated
 - **WHEN** the all-units grid is realized during Play Mode
-- **THEN** its provider runtime objects and plain selection hosts remain disposable Editor review state and are not treated as production runtime content or serialized scene authority
+- **THEN** its provider runtime objects remain disposable Editor review state and are not treated as production runtime content or serialized scene authority
 
 #### Scenario: Proof requires Play Mode execution
 - **WHEN** a registered capture scenario or the canonical interactive grid enters Play Mode to exercise the real provider runtime
 - **THEN** Editor or capture orchestration drives Hero Studio directly and does not depend on a voxel-store runtime assembly or reusable runtime wrapper
+
 ### Requirement: Canonical interactive grid runs through Play Mode Hero.Voxel runtime
 The canonical all-model interactive grid SHALL realize current baked content during Unity Play Mode through the pinned Hero.Voxel render and Actor runtime, and SHALL use provider-owned runtime inspection for interactive animation controls instead of rebuilding the grid through Scene Debug.
 
@@ -114,12 +115,16 @@ The canonical all-model interactive grid SHALL realize current baked content dur
 - **THEN** the avatar and equipment are composed through one existing VoxelActorInstance using the authored avatar socket and equipment Mount frame
 
 #### Scenario: Developer selects a runtime grid host
-- **WHEN** a developer selects an avatar, carried-equipment, or standalone-equipment host in the Play Mode hierarchy
-- **THEN** Hero Studio's runtime Inspector is registered against that model's canonical runtime track without requiring a voxel-store preview/player component
+- **WHEN** a developer previously relied on a per-model hierarchy selection host
+- **THEN** the grid contains no such host and the developer selects the realized model directly using the provider Inspector
+
+#### Scenario: Developer selects a rendered grid model
+- **WHEN** a developer picks or browses an avatar, carried equipment, or standalone equipment using the provider runtime Inspector
+- **THEN** the provider selects its real render instance and exposes its existing canonical track, with preview playback delegated by the grid owner and no selection hosts or store-owned player
 
 #### Scenario: Play Mode ends
 - **WHEN** the Editor leaves Play Mode
-- **THEN** runtime grid instances, actors, inspection registrations, and selection hosts disappear without being serialized as current preview or store authority
+- **THEN** runtime grid instances and actors are disposed and preview authority is revoked without being serialized as current preview or store authority
 
 #### Scenario: Required provider inspection capability is unavailable
 - **WHEN** the pinned Hero Studio provider cannot supply the required Play Mode runtime inspection contract

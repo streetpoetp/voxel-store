@@ -149,7 +149,7 @@ Preview bake paths mirror the authoritative model directory, never the asset id.
 
 Published avatars own a `Body` part and authored equipment sockets such as `Equip.Hand.Left.0` and `Equip.Hand.Right.0`; equipment owns an exact `Mount` socket. These are content contracts. Generic socket-to-Mount composition, reference influence, model animation tracks, bounds, and render lifetime are Hero Studio responsibilities.
 
-Published reusable models keep the required authored V1 floor. Each Play Mode grid model is associated with a plain transient hierarchy selection host and registered with Hero Studio `VoxelRuntimeInspectionController`; selecting that host exposes Hero Studio's shared runtime Inspector over the model's canonical track for clip selection, play/pause, reset, and normalized-time scrub. The host owns no voxel-store preview/player `MonoBehaviour`, clip inventory, update loop, or mirrored playback state. Direct baked-asset inspection outside the canonical grid may still use Hero.Voxel asset Inspector / Scene Debug in Edit Mode as separate provider tooling.
+Published reusable models keep the required authored V1 floor. After the grid realizes its ordinary render instances and canonical tracks, the grid owner delegates one disposable preview scope to Hero Studio through `VoxelRuntimeInspectionController.BeginPreview(world)`. The provider window `Hero/Voxel/Debug/Runtime Inspector` opens on interactive launch; select the actual model using opt-in Scene View picking or the live-world browser. The provider owns clip selection, play/pause, reset, scrubbing, speed, and loop controls for each delegated track. There are no per-model hierarchy hosts, colliders, store-owned picker, player, timer, clip inventory, or mirrored playback state. Direct baked-asset inspection outside the canonical grid may still use Hero.Voxel asset Inspector / Scene Debug in Edit Mode as separate provider tooling.
 
 Canonical composed-content proof remains command-driven from the repository root:
 
@@ -163,7 +163,7 @@ Voxel-store does not own or re-prove streamed Actor pooling, attach/detach/rebin
 
 `CAPTURE_ATTESTED` proves acquisition integrity only. Inspect the PNGs to verify authored content: baseline/V1 takes remain readable, Left/Right body Attack remains distinct where authored, equipment shows its independently authored motion, and socket/Mount composition is visually valid through release/return trajectories.
 
-Generated Play Mode grid objects, selection hosts, provider runtime instances, baked Unity assets, reports, and captures remain derived evidence. Leaving Play Mode discards the runtime grid and provider inspection registrations; none of them become voxel-store authoring, publication, compatibility, or runtime authority.
+Generated Play Mode world objects, provider runtime instances, baked Unity assets, reports, and captures remain derived evidence. Rebuilding or leaving Play Mode revokes the preview scope before disposing the runtime grid; none of them become voxel-store authoring, publication, compatibility, or runtime authority.
 
 ## Finalization
 - Run the applicable deterministic validation and Tool tests when the pinned provider is available.

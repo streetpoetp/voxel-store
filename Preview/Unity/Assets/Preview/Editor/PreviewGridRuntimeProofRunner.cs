@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Hero.Voxel.Actor.Editor;
+using Hero.Voxel.Actor.Runtime.Unity;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -102,10 +103,11 @@ namespace VoxelStore.Preview.Editor
                 Validate(plan, result);
 
                 GameObject firstGrid = result.Grid;
+                var firstInstances = result.Instances;
                 PreviewGridBuildResult rebuilt =
                     PreviewGridRuntimeBuilder.Build(plan);
                 Validate(plan, rebuilt);
-                if (firstGrid != null)
+                if (firstGrid != null || firstInstances.Any(x => x.IsValid))
                 {
                     throw new InvalidOperationException(
                         "Runtime grid rebuild did not dispose the previous grid.");
@@ -192,101 +194,24 @@ namespace VoxelStore.Preview.Editor
                     "Runtime grid submitted no voxel parts.");
             }
 
-            int expectedHosts =
-                plan.Units.Length + expectedCarried;
-            if (result.InspectionHosts.Length != expectedHosts)
+            int expectedInstances = plan.Units.Length + expectedCarried;
+            if (result.World.InstanceCount != expectedInstances ||
+                result.Instances.Length != expectedInstances ||
+                result.Tracks.Length != expectedInstances ||
+                result.Grid.transform.childCount != 0 ||
+                result.Grid.GetComponentsInChildren<Collider>(true).Length != 0)
+                throw new InvalidOperationException("Grid must contain only real render instances, not selection hosts or colliders.");
+
+            // A duplicate grant must fail for every canonical root, attachment and standalone track.
+            foreach (var track in result.Tracks)
             {
-                throw new InvalidOperationException(
-                    "Runtime grid inspection-host count mismatch. expected=" +
-                    expectedHosts +
-                    " actual=" +
-                    result.InspectionHosts.Length);
+                bool rejected = false;
+                try { using var duplicate = VoxelRuntimeInspectionController.BeginPreview(new[] { track }); }
+                catch (InvalidOperationException) { rejected = true; }
+                if (!rejected)
+                    throw new InvalidOperationException("Canonical track was not delegated to provider playback.");
             }
-
-            foreach (GameObject host in result.InspectionHosts)
-            {
-                if (host == null)
-                {
-                    throw new InvalidOperationException(
-                        "Runtime grid contains a destroyed inspection host.");
-                }
-
-                if (host.GetComponents<MonoBehaviour>().Length != 0)
-                {
-                    throw new InvalidOperationException(
-                        "Runtime grid inspection host owns a MonoBehaviour: " +
-                        host.name);
-                }
-
-                if (!VoxelRuntimeInspectionController.TryGetSession(
-                        host,
-                        out _))
-                {
-                    throw new InvalidOperationException(
-                        "Runtime grid host is not registered with Hero.Voxel inspection: " +
-                        host.name);
-                }
-            }
-
-            GameObject carriedHost =
-                result.InspectionHosts.FirstOrDefault(x =>
-                    x != null &&
-                    x.transform.parent != null &&
-                    x.transform.parent.gameObject != result.Grid &&
-                    x.transform.parent.parent != null &&
-                    x.transform.parent.parent.gameObject == result.Grid);
-            if (carriedHost == null)
-            {
-                throw new InvalidOperationException(
-                    "Runtime grid has no carried-equipment inspection host.");
-            }
-
-            GameObject avatarHost =
-                carriedHost.transform.parent.gameObject;
-            if (!VoxelRuntimeInspectionController.TryGetSession(
-                    avatarHost,
-                    out VoxelRuntimeInspectionSession avatarSession) ||
-                !VoxelRuntimeInspectionController.TryGetSession(
-                    carriedHost,
-                    out VoxelRuntimeInspectionSession equipmentSession))
-            {
-                throw new InvalidOperationException(
-                    "Runtime grid could not resolve avatar/equipment inspection sessions.");
-            }
-
-            if (!ReferenceEquals(
-                    avatarSession.Actor,
-                    equipmentSession.Actor))
-            {
-                throw new InvalidOperationException(
-                    "Carried equipment inspection is not associated with its owning Actor.");
-            }
-
-            bool avatarHadSelection =
-                avatarSession.Track.HasSelection;
-            float avatarPhase =
-                avatarHadSelection
-                    ? avatarSession.Track.NormalizedPhase
-                    : 0f;
-
-            equipmentSession.SelectClip(0);
-            equipmentSession.SetNormalizedTime(0.5f);
-
-            if (avatarSession.Track.HasSelection !=
-                avatarHadSelection)
-            {
-                throw new InvalidOperationException(
-                    "Equipment inspection changed root-track selection.");
-            }
-
-            if (avatarHadSelection &&
-                Mathf.Abs(
-                    avatarSession.Track.NormalizedPhase -
-                    avatarPhase) > 0.0001f)
-            {
-                throw new InvalidOperationException(
-                    "Equipment inspection changed root-track phase.");
-            }
+            // Provider tests own the selection and independent playback mechanics.
         }
 
         private static void WriteReport(
@@ -307,8 +232,9 @@ namespace VoxelStore.Preview.Editor
             {
                 PlanCount = plan.Units.Length,
                 GridCount = result.EntryIds.Length,
-                InspectionHostCount =
-                    result.InspectionHosts.Length,
+                RenderInstanceCount = result.Instances.Length,
+                SelectionHostCount = result.Grid.transform.childCount,
+                DelegatedTrackCount = result.Tracks.Length,
                 AnimationCount = result.AnimationCount,
                 CarriedEquipmentCount =
                     result.CarriedEquipmentCount,
@@ -340,7 +266,9 @@ namespace VoxelStore.Preview.Editor
         {
             public int PlanCount;
             public int GridCount;
-            public int InspectionHostCount;
+            public int RenderInstanceCount;
+            public int SelectionHostCount;
+            public int DelegatedTrackCount;
             public int AnimationCount;
             public int CarriedEquipmentCount;
             public int OverlapCount;
