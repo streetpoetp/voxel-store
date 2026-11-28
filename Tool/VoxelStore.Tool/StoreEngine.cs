@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Hero.Voxel.Tool;
 
 namespace VoxelStore.Tool;
@@ -159,6 +160,7 @@ public sealed class StoreEngine
             AssetManifest manifest = ContractYaml.Load<AssetManifest>(manifestPath);
             ValidateManifestShape(manifest, manifestPath);
             string assetRoot = Path.GetDirectoryName(manifestPath)!;
+            ValidateCanonicalIdentity(assetsRoot, assetRoot, manifest, manifestPath);
             string sourceBase = ResolveRelative(assetRoot, manifest.Source.Base);
             string palette = ResolveRelative(assetRoot, manifest.Source.Palette);
             assets.Add(new AssetRecord(
@@ -184,6 +186,87 @@ public sealed class StoreEngine
                     $"Active UnitRef '{asset.Manifest.UnitRef}' reuses a retired published identity.");
         }
         return assets;
+    }
+
+    private static readonly Regex ModelNameTokenRegex = new(
+        @"[A-Z]+(?=[A-Z][a-z]|[0-9]|$)|[A-Z][a-z]*|[0-9]+",
+        RegexOptions.CultureInvariant);
+
+    internal static string CanonicalModelKey(string modelName)
+    {
+        if (string.IsNullOrWhiteSpace(modelName))
+            throw new InvalidDataException("ModelName is required.");
+        if (!char.IsUpper(modelName[0]) ||
+            modelName.Any(c => !char.IsLetterOrDigit(c)))
+        {
+            throw new InvalidDataException(
+                $"ModelName '{modelName}' must use UpperCamel words/acronyms and decimal runs only.");
+        }
+
+        MatchCollection matches = ModelNameTokenRegex.Matches(modelName);
+        if (matches.Count == 0 ||
+            string.Concat(matches.Select(x => x.Value)) != modelName)
+        {
+            throw new InvalidDataException(
+                $"ModelName '{modelName}' cannot be tokenized canonically.");
+        }
+
+        return string.Join(
+            '-',
+            matches.Select(x => x.Value.All(char.IsDigit)
+                ? x.Value
+                : x.Value.ToLowerInvariant()));
+    }
+
+    private static void ValidateCanonicalIdentity(
+        string assetsRoot,
+        string assetRoot,
+        AssetManifest manifest,
+        string manifestPath)
+    {
+        string relative = Path.GetRelativePath(assetsRoot, assetRoot);
+        string[] segments = relative.Split(
+            new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+            StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length != 2)
+        {
+            throw new InvalidDataException(
+                $"Active asset path must be Assets/<Catalog>/<ModelName>/asset.yaml in {manifestPath}.");
+        }
+
+        string catalog = segments[0];
+        string modelName = segments[1];
+        string expectedKind = catalog switch
+        {
+            "Avatars" => "avatar",
+            "Equipment" => "equipment",
+            _ => throw new InvalidDataException(
+                $"Active asset catalog must be 'Avatars' or 'Equipment' in {manifestPath}; actual '{catalog}'.")
+        };
+        if (!string.Equals(manifest.Kind, expectedKind, StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Asset kind '{manifest.Kind}' does not match catalog '{catalog}' in {manifestPath}; expected '{expectedKind}'.");
+        }
+
+        string expectedSourceBase = "./Source/" + modelName;
+        string sourceBase = manifest.Source.Base.Replace('\\', '/');
+        if (!string.Equals(sourceBase, expectedSourceBase, StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Asset source.base must match ModelName in {manifestPath}; expected '{expectedSourceBase}' actual '{manifest.Source.Base}'.");
+        }
+
+        string modelKey = CanonicalModelKey(modelName);
+        string expectedId = expectedKind + "." + modelKey;
+        string expectedUnitRef = "voxel-store/" + expectedKind + "/" + modelKey;
+        if (!string.Equals(manifest.Id, expectedId, StringComparison.Ordinal) ||
+            !string.Equals(manifest.UnitRef, expectedUnitRef, StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Asset identity does not match canonical model structure in {manifestPath}; " +
+                $"expected id='{expectedId}' unitRef='{expectedUnitRef}' actual id='{manifest.Id}' unitRef='{manifest.UnitRef}'.");
+        }
     }
 
     private IReadOnlyList<RetiredAssetIdentity> LoadRetiredIdentities()

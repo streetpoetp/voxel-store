@@ -16,6 +16,14 @@
 - `Collections/**` owns desired reusable asset coverage; collections select assets but do not contain or own their published identity.
 - `Store/**` owns global store configuration, numeric authoring policy, and retired identity history only.
 
+## Canonical model identity
+
+- Active reusable models live at `Assets/Avatars/<ModelName>` or `Assets/Equipment/<ModelName>` and use `source.base: ./Source/<ModelName>`.
+- `ModelName` is UpperCamel with optional acronym and decimal runs. Tool derives one lowercase kebab `ModelKey`, for example `Wraith01 -> wraith-01`, `FoundationGuard01 -> foundation-guard-01`, `WarPick01 -> war-pick-01`, and `Rifle02 -> rifle-02`.
+- Active ids are exactly `avatar.<ModelKey>` or `equipment.<ModelKey>`. Active UnitRefs are exactly `voxel-store/avatar/<ModelKey>` or `voxel-store/equipment/<ModelKey>`.
+- Do not put collection/origin/game namespaces such as `dungeon`, `foundation`, or `humanoid` into reusable asset identity unless that word is literally part of `ModelName`.
+- A later non-semantic repository move does not rename published identity while kind and canonical ModelName stay unchanged. Renaming ModelName or changing kind is an explicit identity migration and the old id/UnitRef pair must be retired.
+
 ## Production authoring
 
 - New production models are authored from current `Collections/**`, `Styles/**`, the applicable model-owned socket/Mount attachment contract, explicit asset intent, and a newly accepted asset-specific Product Target.

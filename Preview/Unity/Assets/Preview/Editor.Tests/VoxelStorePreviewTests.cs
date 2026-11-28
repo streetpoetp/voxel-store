@@ -371,7 +371,7 @@ namespace VoxelStore.Preview.Editor.Tests
                 VoxelStorePreviewPaths.BakedModelDirectory(
                     new PreviewUnitContract
                     {
-                        Id = "dungeon.avatar.zombie-brute-01",
+                        Id = "avatar.zombie-brute-01",
                         Kind = "avatar",
                         SourceBase =
                             "Assets/Avatars/ZombieBrute01/Source/ZombieBrute01"

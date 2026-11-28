@@ -375,9 +375,9 @@ static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string rep
             Path.Combine(assetRoot, "asset.yaml"),
             """
             version: 3
-            id: fixture.equipment.staff
+            id: equipment.fixture-staff
             kind: equipment
-            unitRef: fixture/equipment/staff
+            unitRef: voxel-store/equipment/fixture-staff
             form: staff
             attachment:
               capability: Hand
@@ -519,8 +519,8 @@ static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string rep
             """);
 
         var engine = new StoreEngine(root, HeroStudioSubmodule(repositoryRoot));
-        engine.Generate("fixture.equipment.staff");
-        engine.Seal("fixture.equipment.staff");
+        engine.Generate("equipment.fixture-staff");
+        engine.Seal("equipment.fixture-staff");
         return (root, assetRoot);
     }
     catch
@@ -533,7 +533,7 @@ static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string rep
 
 static void RunReferenceDensityEvidenceTests(string repositoryRoot)
 {
-    const string densityFixtureId = "fixture.equipment.staff";
+    const string densityFixtureId = "equipment.fixture-staff";
     (string root, string assetRoot) = PrepareDensityEquipmentFixture(repositoryRoot);
     try
     {
@@ -844,10 +844,10 @@ static string PrepareReferenceFixture(string sourceRoot, string referenceYaml)
     File.WriteAllText(
         Path.Combine(assetRoot, "asset.yaml"),
         """
-        version: 2
-        id: fixture.avatar
+        version: 3
+        id: avatar.fixture-avatar
         kind: avatar
-        unitRef: fixture/avatar
+        unitRef: voxel-store/avatar/fixture-avatar
         source:
           base: ./Source/FixtureAvatar
           palette: ./Source/FixtureAvatar.palette.yaml
@@ -1710,10 +1710,10 @@ static void RunReferenceSealVersionTests(string sourceRoot)
         WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
         WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
         StoreEngine engine = new(v2Root);
-        engine.SealReference("fixture.avatar");
+        engine.SealReference("avatar.fixture-avatar");
         string auditPath = Path.Combine(referenceRoot, "audit.generated.json");
         byte[] first = File.ReadAllBytes(auditPath);
-        engine.SealReference("fixture.avatar");
+        engine.SealReference("avatar.fixture-avatar");
         byte[] second = File.ReadAllBytes(auditPath);
         Require(
             first.SequenceEqual(second),
@@ -1809,7 +1809,7 @@ static void RunReferenceSealVersionTests(string sourceRoot)
                 new JsonSerializerOptions { WriteIndented = true }));
 
         StoreEngine engine = new(v3Root);
-        engine.SealReference("fixture.avatar");
+        engine.SealReference("avatar.fixture-avatar");
         string auditPath = Path.Combine(referenceRoot, "audit.generated.json");
         byte[] first = File.ReadAllBytes(auditPath);
         using (JsonDocument audit = JsonDocument.Parse(first))
@@ -1837,7 +1837,7 @@ static void RunReferenceSealVersionTests(string sourceRoot)
                 "import source provenance must not become construction reference audit authority");
         }
 
-        engine.SealReference("fixture.avatar");
+        engine.SealReference("avatar.fixture-avatar");
         byte[] second = File.ReadAllBytes(auditPath);
         Require(
             first.SequenceEqual(second),
@@ -2025,7 +2025,7 @@ static void RunReferenceV3PublicationTests(string sourceRoot)
         UpgradeTargetStyle(v3Root);
         WriteV3Package(v3Root, referenceRoot);
         StoreEngine engine = new(v3Root);
-        engine.SealReference("fixture.avatar");
+        engine.SealReference("avatar.fixture-avatar");
         Require(
             ReferenceGate(engine.Scan(false, false)).Passed,
             "current v3 Product Target/provenance/fidelity package must pass reference gate");
@@ -2117,7 +2117,7 @@ static void RunReferenceV3PublicationTests(string sourceRoot)
         WritePngHeader(Path.Combine(referenceRoot, "composition.png"), 1200, 800);
         WritePngHeader(Path.Combine(referenceRoot, "Parts", "Body.png"), 800, 800);
         StoreEngine engine = new(v2Root);
-        engine.SealReference("fixture.avatar");
+        engine.SealReference("avatar.fixture-avatar");
         Require(
             ReferenceGate(engine.Scan(false, false)).Passed,
             "unchanged v2 asset must continue to pass reference without target migration");
@@ -2131,7 +2131,7 @@ static void RunReferenceV3PublicationTests(string sourceRoot)
 
 static void RunV3DensityBoundaryTests(string sourceRoot)
 {
-    const string densityFixtureId = "fixture.equipment.staff";
+    const string densityFixtureId = "equipment.fixture-staff";
     (string root, string assetRoot) = PrepareDensityEquipmentFixture(sourceRoot);
     try
     {
@@ -2770,7 +2770,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
             "PNG files without explicit visual seal must not satisfy reference acceptance");
 
         ExpectFailure(
-            () => fixtureEngine.Seal("fixture.avatar"),
+            () => fixtureEngine.Seal("avatar.fixture-avatar"),
             "Cannot seal missing proof input");
         StoreSnapshot sealedSnapshot = fixtureEngine.Scan(false, false);
         Require(ReferenceGate(sealedSnapshot).Passed, "sealed valid v2 reference must pass reference gate");
@@ -2867,7 +2867,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
         }
 
         ExpectFailure(
-            () => fixtureEngine.Seal("fixture.avatar"),
+            () => fixtureEngine.Seal("avatar.fixture-avatar"),
             "Cannot seal missing proof input");
         Require(
             ReferenceGate(fixtureEngine.Scan(false, false)).Passed,
@@ -2901,7 +2901,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
         }
 
         ExpectFailure(
-            () => fixtureEngine.Seal("fixture.avatar"),
+            () => fixtureEngine.Seal("avatar.fixture-avatar"),
             "Cannot seal missing proof input");
         Require(
             ReferenceGate(fixtureEngine.Scan(false, false)).Passed,
@@ -2932,7 +2932,7 @@ static void RunReferenceAuthorityContractTests(string sourceRoot)
         }
 
         ExpectFailure(
-            () => fixtureEngine.Seal("fixture.avatar"),
+            () => fixtureEngine.Seal("avatar.fixture-avatar"),
             "Cannot seal missing proof input");
         Require(
             ReferenceGate(fixtureEngine.Scan(false, false)).Passed,
@@ -2950,26 +2950,28 @@ static void RunRetirementContractTests()
     try
     {
         Directory.CreateDirectory(Path.Combine(root, "Store"));
-        File.WriteAllText(
-            Path.Combine(root, "Store", "retired-assets.yaml"),
-            """
-            version: 1
-            assets:
-              - id: retired.asset
-                unitRef: retired/unit
-            """);
+        string retiredPath = Path.Combine(root, "Store", "retired-assets.yaml");
+        void WriteRetired(string id, string unitRef) =>
+            File.WriteAllText(
+                retiredPath,
+                $"""
+                version: 1
+                assets:
+                  - id: {id}
+                    unitRef: {unitRef}
+                """);
 
-        string assetRoot = Path.Combine(root, "Assets", "Fixture");
+        string assetRoot = Path.Combine(root, "Assets", "Equipment", "Fixture");
         Directory.CreateDirectory(assetRoot);
         string manifestPath = Path.Combine(assetRoot, "asset.yaml");
-        void WriteManifest(string id, string unitRef) =>
+        void WriteManifest() =>
             File.WriteAllText(
                 manifestPath,
-                $"""
+                """
                 version: 3
-                id: {id}
+                id: equipment.fixture
                 kind: equipment
-                unitRef: {unitRef}
+                unitRef: voxel-store/equipment/fixture
                 form: fixture
                 attachment:
                   capability: Hand
@@ -2977,22 +2979,23 @@ static void RunRetirementContractTests()
                   anchor: Mount
                 source:
                   base: ./Source/Fixture
-                  palette: ./Source/Palette.yaml
+                  palette: ./Source/Fixture.palette.yaml
                 style:
                   family: low-resolution-voxel.v1
                 """);
 
-        WriteManifest("retired.asset", "fresh/unit");
+        WriteManifest();
+        WriteRetired("equipment.fixture", "retired/unit");
         ExpectFailure(
             () => new StoreEngine(root).DiscoverAssets(),
             "reuses a retired published identity");
 
-        WriteManifest("fresh.asset", "retired/unit");
+        WriteRetired("retired.asset", "voxel-store/equipment/fixture");
         ExpectFailure(
             () => new StoreEngine(root).DiscoverAssets(),
             "reuses a retired published identity");
 
-        WriteManifest("fresh.asset", "fresh/unit");
+        WriteRetired("retired.asset", "retired/unit");
         Require(
             new StoreEngine(root).DiscoverAssets().Count == 1,
             "fresh replacement identity must remain valid");
@@ -3108,7 +3111,7 @@ static void RunPreviewPlanTests(string repositoryRoot)
                 Path.Combine(syntheticRoot, "Assets", id, "Reference"),
                 Path.Combine(syntheticRoot, "Assets", id, "Proof"));
 
-        AssetRecord avatar = Synthetic("b.avatar", "avatar", "fixture/avatar/b");
+        AssetRecord avatar = Synthetic("b.avatar", "avatar", "voxel-store/avatar/fixture-avatar/b");
         AssetRecord equipment = Synthetic("a.equipment", "equipment", "fixture/equipment/a");
         AssetRecord unpublished = Synthetic("z.unpublished", "equipment", "fixture/equipment/z");
         var syntheticSnapshot = new StoreSnapshot
@@ -4104,22 +4107,41 @@ ExpectFailure(
         """),
     "correction");
 
-// Repository containment and identity uniqueness.
+// Canonical model identity and repository containment.
+Require(
+    StoreEngine.CanonicalModelKey("Wraith01") == "wraith-01" &&
+    StoreEngine.CanonicalModelKey("FoundationGuard01") == "foundation-guard-01" &&
+    StoreEngine.CanonicalModelKey("WarPick01") == "war-pick-01" &&
+    StoreEngine.CanonicalModelKey("Rifle02") == "rifle-02" &&
+    StoreEngine.CanonicalModelKey("NPCGuard01") == "npc-guard-01" &&
+    StoreEngine.CanonicalModelKey("Guard001") == "guard-001",
+    "ModelName canonicalization must preserve word/acronym boundaries and decimal runs");
+Require(
+    StoreEngine.CanonicalModelKey("NPCGuard01") ==
+        StoreEngine.CanonicalModelKey("NpcGuard01"),
+    "canonicalizer must expose normalization collisions deterministically so identity uniqueness can reject them");
+ExpectFailure(
+    () => StoreEngine.CanonicalModelKey("wraith01"),
+    "UpperCamel");
+ExpectFailure(
+    () => StoreEngine.CanonicalModelKey("Wraith-01"),
+    "UpperCamel");
+
 string invalidPathRoot = TempRoot();
 try
 {
-    string assetDir = Path.Combine(invalidPathRoot, "Assets", "Bad");
+    string assetDir = Path.Combine(invalidPathRoot, "Assets", "Avatars", "BadPath");
     Directory.CreateDirectory(assetDir);
     File.WriteAllText(
         Path.Combine(assetDir, "asset.yaml"),
         """
         version: 3
-        id: bad.path
+        id: avatar.bad-path
         kind: avatar
-        unitRef: bad/path
+        unitRef: voxel-store/avatar/bad-path
         source:
-          base: ../../../../outside
-          palette: ./Palette.yaml
+          base: ./Source/BadPath
+          palette: ../../../../outside.palette.yaml
         style:
           family: low-resolution-voxel.v1
         """);
@@ -4135,18 +4157,18 @@ finally
 string invalidKindRoot = TempRoot();
 try
 {
-    string assetDir = Path.Combine(invalidKindRoot, "Assets", "BadKind");
+    string assetDir = Path.Combine(invalidKindRoot, "Assets", "Avatars", "BadKind");
     Directory.CreateDirectory(assetDir);
     File.WriteAllText(
         Path.Combine(assetDir, "asset.yaml"),
         """
         version: 3
-        id: bad.kind
+        id: avatar.bad-kind
         kind: weapon
-        unitRef: bad/kind
+        unitRef: voxel-store/avatar/bad-kind
         source:
-          base: ./Source/Item
-          palette: ./Palette.yaml
+          base: ./Source/BadKind
+          palette: ./Source/BadKind.palette.yaml
         style:
           family: low-resolution-voxel.v1
         """);
@@ -4159,65 +4181,149 @@ finally
     Directory.Delete(invalidKindRoot, true);
 }
 
-string duplicateRoot = TempRoot();
+string legacyNamespaceRoot = TempRoot();
 try
 {
-    for (int i = 0; i < 2; i++)
-    {
-        string assetDir = Path.Combine(duplicateRoot, "Assets", "A" + i);
-        Directory.CreateDirectory(assetDir);
-        File.WriteAllText(
-            Path.Combine(assetDir, "asset.yaml"),
-            $"""
-             version: 3
-             id: duplicate.asset
-             kind: avatar
-             unitRef: duplicate/unit-{i}
-             source:
-               base: ./Source/Item
-               palette: ./Palette.yaml
-             style:
-               family: low-resolution-voxel.v1
-             """);
-    }
-
+    string assetDir = Path.Combine(legacyNamespaceRoot, "Assets", "Avatars", "Wraith01");
+    Directory.CreateDirectory(assetDir);
+    File.WriteAllText(
+        Path.Combine(assetDir, "asset.yaml"),
+        """
+        version: 3
+        id: dungeon.avatar.fixture-avatar
+        kind: avatar
+        unitRef: voxel-store/avatar/dungeon/fixture-avatar
+        source:
+          base: ./Source/Wraith01
+          palette: ./Source/Wraith01.palette.yaml
+        style:
+          family: low-resolution-voxel.v1
+        """);
     ExpectFailure(
-        () => new StoreEngine(duplicateRoot).DiscoverAssets(),
-        "Duplicate asset id");
+        () => new StoreEngine(legacyNamespaceRoot).DiscoverAssets(),
+        "does not match canonical model structure");
 }
 finally
 {
-    Directory.Delete(duplicateRoot, true);
+    Directory.Delete(legacyNamespaceRoot, true);
 }
 
-string duplicateUnitRefRoot = TempRoot();
+string sourceNameMismatchRoot = TempRoot();
 try
 {
-    for (int i = 0; i < 2; i++)
-    {
-        string assetDir = Path.Combine(duplicateUnitRefRoot, "Assets", "U" + i);
-        Directory.CreateDirectory(assetDir);
-        File.WriteAllText(
-            Path.Combine(assetDir, "asset.yaml"),
-            $"""
-             version: 3
-             id: duplicate.unitref-{i}
-             kind: avatar
-             unitRef: duplicate/shared-unit
-             source:
-               base: ./Source/Item
-               palette: ./Palette.yaml
-             style:
-               family: low-resolution-voxel.v1
-             """);
-    }
+    string assetDir = Path.Combine(sourceNameMismatchRoot, "Assets", "Avatars", "Wraith01");
+    Directory.CreateDirectory(assetDir);
+    File.WriteAllText(
+        Path.Combine(assetDir, "asset.yaml"),
+        """
+        version: 3
+        id: avatar.wraith-01
+        kind: avatar
+        unitRef: voxel-store/avatar/wraith-01
+        source:
+          base: ./Source/Ghoul01
+          palette: ./Source/Wraith01.palette.yaml
+        style:
+          family: low-resolution-voxel.v1
+        """);
     ExpectFailure(
-        () => new StoreEngine(duplicateUnitRefRoot).DiscoverAssets(),
-        "Duplicate UnitRef");
+        () => new StoreEngine(sourceNameMismatchRoot).DiscoverAssets(),
+        "source.base must match ModelName");
 }
 finally
 {
-    Directory.Delete(duplicateUnitRefRoot, true);
+    Directory.Delete(sourceNameMismatchRoot, true);
+}
+
+string catalogKindMismatchRoot = TempRoot();
+try
+{
+    string assetDir = Path.Combine(catalogKindMismatchRoot, "Assets", "Equipment", "Wraith01");
+    Directory.CreateDirectory(assetDir);
+    File.WriteAllText(
+        Path.Combine(assetDir, "asset.yaml"),
+        """
+        version: 3
+        id: avatar.wraith-01
+        kind: avatar
+        unitRef: voxel-store/avatar/wraith-01
+        source:
+          base: ./Source/Wraith01
+          palette: ./Source/Wraith01.palette.yaml
+        style:
+          family: low-resolution-voxel.v1
+        """);
+    ExpectFailure(
+        () => new StoreEngine(catalogKindMismatchRoot).DiscoverAssets(),
+        "does not match catalog");
+}
+finally
+{
+    Directory.Delete(catalogKindMismatchRoot, true);
+}
+
+string numericSeparatorRoot = TempRoot();
+try
+{
+    string assetDir = Path.Combine(numericSeparatorRoot, "Assets", "Equipment", "Rifle02");
+    Directory.CreateDirectory(assetDir);
+    File.WriteAllText(
+        Path.Combine(assetDir, "asset.yaml"),
+        """
+        version: 3
+        id: equipment.rifle.02
+        kind: equipment
+        unitRef: voxel-store/equipment/rifle.02
+        form: rifle
+        attachment:
+          capability: Hand
+          side: Any
+          anchor: Mount
+        source:
+          base: ./Source/Rifle02
+          palette: ./Source/Rifle02.palette.yaml
+        style:
+          family: low-resolution-voxel.v1
+        """);
+    ExpectFailure(
+        () => new StoreEngine(numericSeparatorRoot).DiscoverAssets(),
+        "expected id='equipment.rifle-02'");
+}
+finally
+{
+    Directory.Delete(numericSeparatorRoot, true);
+}
+
+string unitRefMismatchRoot = TempRoot();
+try
+{
+    string assetDir = Path.Combine(unitRefMismatchRoot, "Assets", "Equipment", "Rifle02");
+    Directory.CreateDirectory(assetDir);
+    File.WriteAllText(
+        Path.Combine(assetDir, "asset.yaml"),
+        """
+        version: 3
+        id: equipment.rifle-02
+        kind: equipment
+        unitRef: voxel-store/equipment/rifle-two
+        form: rifle
+        attachment:
+          capability: Hand
+          side: Any
+          anchor: Mount
+        source:
+          base: ./Source/Rifle02
+          palette: ./Source/Rifle02.palette.yaml
+        style:
+          family: low-resolution-voxel.v1
+        """);
+    ExpectFailure(
+        () => new StoreEngine(unitRefMismatchRoot).DiscoverAssets(),
+        "expected id='equipment.rifle-02' unitRef='voxel-store/equipment/rifle-02'");
+}
+finally
+{
+    Directory.Delete(unitRefMismatchRoot, true);
 }
 
 int coldStartAssetCount = 0;
@@ -4261,8 +4367,8 @@ Require(
         .SequenceEqual(
             new[]
             {
-                "foundation.equipment.dagger.02",
-                "foundation.equipment.sword.02"
+                "equipment.dagger-02",
+                "equipment.sword-02"
             },
             StringComparer.Ordinal),
     "isolated cold-start proof baseline must contain one avatar plus exactly Sword02 and Dagger02");
@@ -4298,10 +4404,10 @@ string compatibilityFixtureRoot = Path.Combine(
     "Compatibility");
 string copiedSwordCompatibility = Path.Combine(
     compatibilityFixtureRoot,
-    "foundation.equipment.sword.02.json");
+    "equipment.sword-02.json");
 string copiedDaggerCompatibility = Path.Combine(
     compatibilityFixtureRoot,
-    "foundation.equipment.dagger.02.json");
+    "equipment.dagger-02.json");
 File.WriteAllText(
     copiedSwordCompatibility,
     File.ReadAllText(copiedSwordCompatibility).Replace(
@@ -4319,9 +4425,9 @@ StoreSnapshot obsoleteCompatibility =
     coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);Require(
     obsoleteCompatibility.Assets
         .Where(x =>
-            x.Id == "foundation.avatar.humanoid.guard-01" ||
-            x.Id == "foundation.equipment.sword.02" ||
-            x.Id == "foundation.equipment.dagger.02")
+            x.Id == "avatar.foundation-guard-01" ||
+            x.Id == "equipment.sword-02" ||
+            x.Id == "equipment.dagger-02")
         .All(x => !x.Published && x.FailedGate == "compatibility"),
     "retired tracked compatibility evidence must fail the affected publication gate before regeneration");
 
@@ -4395,7 +4501,7 @@ finally
 string compatibilityEvidence = Path.Combine(
     assets.Single(x => x.Manifest.Kind == "avatar").ProofDirectory,
     "Compatibility",
-    "foundation.equipment.sword.02.json");
+    "equipment.sword-02.json");
 using (JsonDocument evidence =
        JsonDocument.Parse(File.ReadAllText(compatibilityEvidence)))
 {
@@ -4439,10 +4545,10 @@ StoreSnapshot missingCompatibility =
     coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);
 Require(
     missingCompatibility.Assets.Single(
-        x => x.Id == "foundation.avatar.humanoid.guard-01").FailedGate ==
+        x => x.Id == "avatar.foundation-guard-01").FailedGate ==
         "compatibility" &&
     missingCompatibility.Assets.Single(
-        x => x.Id == "foundation.equipment.sword.02").FailedGate ==
+        x => x.Id == "equipment.sword-02").FailedGate ==
         "compatibility",
     "missing tracked compatibility proof must fail affected publication despite passing live compatibility");
 coldStartEngine.Scan(writeDerived: false, writeCompatibility: true);
@@ -4461,7 +4567,7 @@ StoreSnapshot obsoleteV2 =
     coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);
 Require(
     obsoleteV2.Assets.Single(
-        x => x.Id == "foundation.equipment.sword.02").FailedGate ==
+        x => x.Id == "equipment.sword-02").FailedGate ==
         "compatibility",
     "obsolete v2 compatibility convention must fail affected publication");
 
@@ -4476,7 +4582,7 @@ StoreSnapshot staleCompatibility =
     coldStartEngine.Scan(writeDerived: false, writeCompatibility: false);
 Require(
     staleCompatibility.Assets.Single(
-        x => x.Id == "foundation.equipment.sword.02").FailedGate ==
+        x => x.Id == "equipment.sword-02").FailedGate ==
         "compatibility",
     "stale tracked compatibility proof must fail affected publication even when live recomputation passes");
 
@@ -4504,7 +4610,7 @@ Require(
 
 // A stale generated sibling is diagnosed before expansion work.
 AssetRecord sword = assets.Single(
-    x => x.Manifest.Id == "foundation.equipment.sword.02");
+    x => x.Manifest.Id == "equipment.sword-02");
 string swordGenerated = sword.SourceBase + ".generated.vox";
 byte[] originalGenerated = File.ReadAllBytes(swordGenerated);
 string coveragePath = Path.Combine(coldStartRoot, "Collections", "combat-foundation.v1.yaml");
@@ -4726,24 +4832,42 @@ try
     foreach (string form in missingForms)
     {
         string fixtureName = "Fixture" + char.ToUpperInvariant(form[0]) + form[1..];
+        string fixtureKey = "fixture-" + form;
+        string fixtureId = "equipment." + fixtureKey;
         string fixtureRoot = Path.Combine(fixtureEquipmentRoot, fixtureName);
         CopyDirectory(sourceSwordRoot, fixtureRoot);
+        string sourceRoot = Path.Combine(fixtureRoot, "Source");
+        foreach (string sourcePath in Directory.GetFiles(sourceRoot, "Sword02*"))
+        {
+            string renamed = Path.Combine(
+                sourceRoot,
+                fixtureName + Path.GetFileName(sourcePath)["Sword02".Length..]);
+            File.Move(sourcePath, renamed, true);
+        }
         string manifestPath = Path.Combine(fixtureRoot, "asset.yaml");
         string manifest = File.ReadAllText(manifestPath)
             .Replace(
-                "id: foundation.equipment.sword.02",
-                $"id: fixture.equipment.{form}.01",
+                "id: equipment.sword-02",
+                $"id: {fixtureId}",
                 StringComparison.Ordinal)
             .Replace(
-                "unitRef: voxel-store/equipment/sword/02",
-                $"unitRef: fixture/equipment/{form}/01",
+                "unitRef: voxel-store/equipment/sword-02",
+                $"unitRef: voxel-store/equipment/{fixtureKey}",
+                StringComparison.Ordinal)
+            .Replace(
+                "base: ./Source/Sword02",
+                $"base: ./Source/{fixtureName}",
+                StringComparison.Ordinal)
+            .Replace(
+                "palette: ./Source/Sword02.palette.yaml",
+                $"palette: ./Source/{fixtureName}.palette.yaml",
                 StringComparison.Ordinal)
             .Replace(
                 "form: sword",
                 $"form: {form}",
                 StringComparison.Ordinal);
         File.WriteAllText(manifestPath, manifest);
-        fullEngine.Seal($"fixture.equipment.{form}.01");
+        fullEngine.Seal(fixtureId);
     }
 
     StoreSnapshot fullCatalog =

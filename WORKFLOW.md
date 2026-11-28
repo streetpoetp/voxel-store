@@ -9,6 +9,26 @@
 
 Repository domain roots are explicit: `Assets` is reusable product content; `Styles` is visual authority; `Collections` is desired coverage; `Store` is global policy/history; `Catalog` is derived state. Reusable avatar/equipment compatibility is defined by the global rigid-Body composition contract rather than a separate profile domain.
 
+### Canonical model identity
+
+Active model identity is mechanically tied to its reusable model structure:
+
+```text
+Assets/Avatars/Wraith01
+  source.base = ./Source/Wraith01
+  ModelKey    = wraith-01
+  id          = avatar.wraith-01
+  unitRef     = voxel-store/avatar/wraith-01
+
+Assets/Equipment/Rifle02
+  source.base = ./Source/Rifle02
+  ModelKey    = rifle-02
+  id          = equipment.rifle-02
+  unitRef     = voxel-store/equipment/rifle-02
+```
+
+`ModelKey` is the deterministic lowercase-kebab projection of UpperCamel words, acronym runs, and decimal runs in `ModelName`; decimal digits, including leading zeroes, are preserved. Tool validates catalog, kind, ModelName, source base, id, and UnitRef as one contract. Collection/origin namespaces are not reusable identity. After publication, an ordinary repository move that preserves kind and ModelName preserves identity; changing ModelName or kind requires an explicit identity migration and retirement of the previous pair.
+
 ## Canonical asset pipeline
 
 `.agents/skills/voxel-store-pipeline/SKILL.md` is the single end-to-end coordinator for one asset job.
