@@ -124,7 +124,7 @@ dotnet run --project Tool/VoxelStore.Tool -- seal <asset-id>
 Current Tool builds resolve Hero.Voxel directly from `Dependencies/hero-studio`; no `HERO_STUDIO_ROOT` or developer-local provider checkout is required.
 
 ## Unity baked preview
-The Unity workspace under `Preview/Unity/` is an Editor-only inspection surface for real baked Hero.Voxel outputs. It is not voxel-store source authority, publication authority, or a production runtime.
+The Unity workspace under `Preview/Unity/` is Editor-owned inspection/validation tooling for real baked Hero.Voxel outputs. Its canonical all-model review grid executes the pinned provider runtime only while Unity is in Play Mode; the workspace is not voxel-store source authority, publication authority, a production game runtime, or a reusable voxel runtime API.
 
 From the repository root:
 
@@ -141,15 +141,15 @@ The visible `Voxel Store` menu exposes one store-owned review action:
 
 ### Editor preview and content proof
 
-`Voxel Store/Refresh Preview Grid` performs a bake-only provider refresh for every published model and rebuilds the canonical Editor-only grid in `Assets/Preview/VoxelStorePreview.unity`. Baked `VoxelAssemblyAsset` and matching `VoxelAnimationAsset` files live under `Preview/Unity/Assets/__VoxelStorePreview/Baked/<Catalog>/<Model>/`. The grid uses pinned Hero.Voxel Editor `VoxelSceneDebugBuilder` / Scene Debug behavior; voxel-store does not create a runtime presenter, animation player, Actor wrapper, renderer, or model-frame abstraction.
+`Voxel Store/Refresh Preview Grid` bakes every currently published model, opens the disposable shell at `Assets/Preview/VoxelStorePreview.unity`, records only a transient Editor-session launch intent, and enters Play Mode. After Play Mode begins, Editor orchestration reloads the current preview-plan and realizes the canonical grid through one pinned Hero.Voxel `VoxelRenderWorld`. Avatar entries use direct `VoxelActorInstance` composition; standalone equipment uses direct `VoxelRenderInstance` plus its canonical `VoxelModelAnimationTrack`. The saved scene remains a shell and never serializes the generated runtime grid.
 
-Avatar grid entries also show deterministic carried equipment for composition review: the first selected equipment is aligned `Mount -> Equip.Hand.Right.0`, and when more than one equipment model exists a second deterministic equipment model is aligned `Mount -> Equip.Hand.Left.0`. Equipment models still keep their own standalone grid entries, so the grid remains a complete published-content review surface.
+Avatar grid entries also show deterministic carried equipment for composition review: the first selected equipment is attached by Hero Studio as `Equip.Hand.Right.0 -> Mount`, and when more than one equipment model exists a second deterministic equipment model is attached as `Equip.Hand.Left.0 -> Mount`. No GameObject transform correction or pair-specific placement record is maintained by voxel-store. Equipment models still keep their own standalone grid entries, so the grid remains a complete published-content review surface.
 
 Preview bake paths mirror the authoritative model directory, never the asset id. Canonical source `Assets/<Catalog>/<Model>/Source/<Model>` bakes to `Assets/__VoxelStorePreview/Baked/<Catalog>/<Model>/<Model>.assembly.asset` plus sibling `<Model>.animation.asset`. Baked output remains disposable and reconstructable from authoritative voxel-store source.
 
 Published avatars own a `Body` part and authored equipment sockets such as `Equip.Hand.Left.0` and `Equip.Hand.Right.0`; equipment owns an exact `Mount` socket. These are content contracts. Generic socket-to-Mount composition, reference influence, model animation tracks, bounds, and render lifetime are Hero Studio responsibilities.
 
-Published reusable models keep the required authored V1 floor. Interactive clip inspection uses the current baked `VoxelAnimationAsset` through Hero.Voxel's own Inspector / Scene Debug tooling; voxel-store does not maintain a second clip inventory or playback state.
+Published reusable models keep the required authored V1 floor. Each Play Mode grid model is associated with a plain transient hierarchy selection host and registered with Hero Studio `VoxelRuntimeInspectionController`; selecting that host exposes Hero Studio's shared runtime Inspector over the model's canonical track for clip selection, play/pause, reset, and normalized-time scrub. The host owns no voxel-store preview/player `MonoBehaviour`, clip inventory, update loop, or mirrored playback state. Direct baked-asset inspection outside the canonical grid may still use Hero.Voxel asset Inspector / Scene Debug in Edit Mode as separate provider tooling.
 
 Canonical composed-content proof remains command-driven from the repository root:
 
@@ -163,7 +163,7 @@ Voxel-store does not own or re-prove streamed Actor pooling, attach/detach/rebin
 
 `CAPTURE_ATTESTED` proves acquisition integrity only. Inspect the PNGs to verify authored content: baseline/V1 takes remain readable, Left/Right body Attack remains distinct where authored, equipment shows its independently authored motion, and socket/Mount composition is visually valid through release/return trajectories.
 
-Generated preview scenes, baked Unity assets, reports, and captures remain derived evidence. They never become voxel-store authoring, publication, compatibility, or runtime authority.
+Generated Play Mode grid objects, selection hosts, provider runtime instances, baked Unity assets, reports, and captures remain derived evidence. Leaving Play Mode discards the runtime grid and provider inspection registrations; none of them become voxel-store authoring, publication, compatibility, or runtime authority.
 
 ## Finalization
 - Run the applicable deterministic validation and Tool tests when the pinned provider is available.

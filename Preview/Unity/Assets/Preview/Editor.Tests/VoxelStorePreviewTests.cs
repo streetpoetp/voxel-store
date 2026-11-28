@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Hero.Voxel.Actor.Editor;
 using Hero.Voxel.Actor.Runtime.Unity;
 using Hero.Voxel.Editor.Preview.Scene;
 using Hero.Voxel.Render.Runtime.Unity;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace VoxelStore.Preview.Editor.Tests
@@ -351,7 +353,7 @@ namespace VoxelStore.Preview.Editor.Tests
             var go = new GameObject("generated-test");
             try
             {
-                PreviewGridBuilder.ConfigureGenerated(go);
+                PreviewGridRuntimeBuilder.ConfigureGenerated(go);
                 Assert.AreEqual("EditorOnly", go.tag);
                 Assert.AreNotEqual(
                     0,
@@ -385,6 +387,51 @@ namespace VoxelStore.Preview.Editor.Tests
                         SourceBase =
                             "Assets/Avatars/Wrong/Source/Other"
                     }));
+        }
+
+        [Test]
+        public void RuntimeGridBuildRejectsEditMode()
+        {
+            Assert.IsFalse(EditorApplication.isPlaying);
+            Assert.Throws<InvalidOperationException>(
+                () => PreviewGridRuntimeBuilder.Build(
+                    new PreviewPlanContract
+                    {
+                        Units = Array.Empty<PreviewUnitContract>()
+                    }));
+        }
+
+        [Test]
+        public void PreviewShellDoesNotSerializeRuntimeGridAuthority()
+        {
+            string scenePath = Path.Combine(
+                VoxelStorePreviewPaths.ProjectRoot,
+                "Assets",
+                "Preview",
+                "VoxelStorePreview.unity");
+            string yaml = File.ReadAllText(scenePath);
+            StringAssert.DoesNotContain(
+                VoxelStorePreviewPaths.GeneratedGridName,
+                yaml);
+            StringAssert.DoesNotContain(
+                "[Voxel Store Preview Runtime]",
+                yaml);
+        }
+
+        [Test]
+        public void RuntimeGridLaunchIntentUsesTransientSessionState()
+        {
+            PreviewGridPlayModeOrchestrator.ClearPendingForTesting();
+            Assert.IsFalse(
+                PreviewGridPlayModeOrchestrator.PendingForTesting);
+
+            PreviewGridPlayModeOrchestrator.SetPendingForTesting();
+            Assert.IsTrue(
+                PreviewGridPlayModeOrchestrator.PendingForTesting);
+
+            PreviewGridPlayModeOrchestrator.ClearPendingForTesting();
+            Assert.IsFalse(
+                PreviewGridPlayModeOrchestrator.PendingForTesting);
         }
 
         [Test]

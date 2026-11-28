@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Hero.Voxel.Editor.Baking;
-using Hero.Voxel.Editor.Preview.Scene;
 using Hero.Voxel.Runtime.Assets;
 using Hero.Voxel.Runtime.Data.Models;
 using UnityEditor;
@@ -54,8 +53,10 @@ namespace VoxelStore.Preview.Editor
         public GameObject Grid;
         public string[] EntryIds = Array.Empty<string>();
         public Bounds[] WorldBounds = Array.Empty<Bounds>();
+        public GameObject[] InspectionHosts = Array.Empty<GameObject>();
         public int AnimationCount;
         public int CarriedEquipmentCount;
+        public int SubmittedPartCount;
     }
 
     internal static class VoxelStorePreviewPaths
@@ -481,283 +482,6 @@ namespace VoxelStore.Preview.Editor
         }
     }
 
-    internal static class PreviewGridBuilder
-    {
-        internal static void ConfigureGenerated(GameObject value)
-        {
-            value.tag = "EditorOnly";
-            value.hideFlags = HideFlags.DontSaveInEditor;
-        }
-
-        internal static PreviewGridBuildResult Build(IReadOnlyList<BakedPreviewUnit> units)
-        {
-            EditorSceneManager.OpenScene(
-                VoxelStorePreviewPaths.ScenePath,
-                OpenSceneMode.Single);
-
-            GameObject previous = GameObject.Find(VoxelStorePreviewPaths.GeneratedGridName);
-            if (previous != null)
-                UnityEngine.Object.DestroyImmediate(previous);
-
-            var grid = new GameObject(VoxelStorePreviewPaths.GeneratedGridName);
-            ConfigureGenerated(grid);
-
-            var entries = new List<GameObject>(units.Count);
-            var measured = new List<Bounds>(units.Count);
-            BakedPreviewUnit[] equipmentUnits = units
-                .Where(x => IsKind(x, "equipment"))
-                .OrderBy(ModelName, StringComparer.Ordinal)
-                .ToArray();
-            Dictionary<string, int> avatarOrder = units
-                .Where(x => IsKind(x, "avatar"))
-                .OrderBy(ModelName, StringComparer.Ordinal)
-                .Select((x, i) => new { x.Unit.Id, Index = i })
-                .ToDictionary(x => x.Id, x => x.Index, StringComparer.Ordinal);
-            int animationCount = 0;
-            int carriedEquipmentCount = 0;
-            foreach (BakedPreviewUnit baked in units)
-            {
-                var entry = new GameObject(baked.Unit.Id);
-                ConfigureGenerated(entry);
-                entry.transform.SetParent(grid.transform, false);
-
-                PreviewBakePaths paths = PreviewBake.CreatePaths(
-                    baked.Unit,
-                    VoxelStorePreviewPaths.StoreRoot);
-                VoxelAssemblyAsset assembly =
-                    AssetDatabase.LoadAssetAtPath<VoxelAssemblyAsset>(paths.AssemblyAsset);
-                if (assembly == null)
-                    throw new InvalidOperationException(
-                        "Baked assembly could not be reloaded after scene open: " + baked.Unit.Id);
-
-                VoxelAnimationAsset animation = null;
-                if (!string.IsNullOrWhiteSpace(baked.Unit.GeneratedAnimation))
-                    animation = AssetDatabase.LoadAssetAtPath<VoxelAnimationAsset>(
-                        paths.AnimationAsset);
-
-                GameObject debug = VoxelSceneDebugBuilder.Create(
-                    assembly,
-                    Vector3.zero);
-                debug.transform.SetParent(entry.transform, true);
-                VoxelSceneDebugController.Register(
-                    debug,
-                    assembly,
-                    animation);
-                if (animation != null)
-                    animationCount++;
-
-                if (IsKind(baked, "avatar") && equipmentUnits.Length > 0)
-                {
-                    int avatarIndex = avatarOrder[baked.Unit.Id];
-                    int primaryIndex = avatarIndex % equipmentUnits.Length;
-                    AttachEquipmentDebug(
-                        entry,
-                        debug,
-                        equipmentUnits[primaryIndex],
-                        "Equip.Hand.Right.0");
-                    carriedEquipmentCount++;
-
-                    if (equipmentUnits.Length > 1)
-                    {
-                        int secondaryIndex =
-                            (avatarIndex + Math.Max(1, equipmentUnits.Length / 2)) %
-                            equipmentUnits.Length;
-                        if (secondaryIndex == primaryIndex)
-                            secondaryIndex =
-                                (primaryIndex + 1) % equipmentUnits.Length;
-
-                        AttachEquipmentDebug(
-                            entry,
-                            debug,
-                            equipmentUnits[secondaryIndex],
-                            "Equip.Hand.Left.0");
-                        carriedEquipmentCount++;
-                    }
-                }
-
-                Renderer[] renderers = debug.GetComponentsInChildren<Renderer>(true);
-                if (renderers.Length == 0)
-                    throw new InvalidOperationException(
-                        "Baked preview has no renderers: " + baked.Unit.Id);
-
-                Bounds combined = renderers[0].bounds;
-                for (int i = 1; i < renderers.Length; i++)
-                    combined.Encapsulate(renderers[i].bounds);
-                entries.Add(entry);
-                measured.Add(combined);
-            }
-
-            Vector3[] offsets = PreviewGridLayout.Calculate(
-                measured,
-                VoxelStorePreviewPaths.GridMargin);
-            for (int i = 0; i < entries.Count; i++)
-            {
-                entries[i].transform.position += offsets[i];
-                entries[i].transform.localScale = Vector3.one;
-            }
-
-            var finalBounds = new Bounds[entries.Count];
-            for (int i = 0; i < entries.Count; i++)
-            {
-                Renderer[] renderers = entries[i].GetComponentsInChildren<Renderer>(true);
-                Bounds combined = renderers[0].bounds;
-                for (int j = 1; j < renderers.Length; j++)
-                    combined.Encapsulate(renderers[j].bounds);
-                finalBounds[i] = combined;
-            }
-
-            Selection.activeGameObject = grid;
-            if (SceneView.lastActiveSceneView != null)
-                SceneView.lastActiveSceneView.FrameSelected(false);
-            SceneView.RepaintAll();
-
-            return new PreviewGridBuildResult
-            {
-                Grid = grid,
-                EntryIds = units.Select(x => x.Unit.Id).ToArray(),
-                WorldBounds = finalBounds,
-                AnimationCount = animationCount,
-                CarriedEquipmentCount = carriedEquipmentCount
-            };
-        }
-
-        private static bool IsKind(
-            BakedPreviewUnit unit,
-            string kind) =>
-            unit?.Unit != null &&
-            string.Equals(
-                unit.Unit.Kind,
-                kind,
-                StringComparison.Ordinal);
-
-        private static string ModelName(BakedPreviewUnit unit)
-        {
-            string sourceBase = unit?.Unit?.SourceBase;
-            if (string.IsNullOrWhiteSpace(sourceBase))
-                return unit?.Unit?.Id ?? string.Empty;
-
-            string normalized = sourceBase.Replace('\\', '/').TrimEnd('/');
-            int slash = normalized.LastIndexOf('/');
-            return slash >= 0 && slash + 1 < normalized.Length
-                ? normalized[(slash + 1)..]
-                : normalized;
-        }
-
-        private static void AttachEquipmentDebug(
-            GameObject entry,
-            GameObject avatarDebug,
-            BakedPreviewUnit equipment,
-            string avatarSocketName)
-        {
-            if (entry == null)
-                throw new ArgumentNullException(nameof(entry));
-            if (avatarDebug == null)
-                throw new ArgumentNullException(nameof(avatarDebug));
-            if (equipment?.Unit == null)
-                throw new ArgumentNullException(nameof(equipment));
-
-            PreviewBakePaths paths = PreviewBake.CreatePaths(
-                equipment.Unit,
-                VoxelStorePreviewPaths.StoreRoot);
-            VoxelAssemblyAsset assembly =
-                AssetDatabase.LoadAssetAtPath<VoxelAssemblyAsset>(
-                    paths.AssemblyAsset);
-            if (assembly == null)
-            {
-                throw new InvalidOperationException(
-                    "Baked equipment assembly could not be reloaded after scene open: " +
-                    equipment.Unit.Id);
-            }
-
-            VoxelAnimationAsset animation = null;
-            if (!string.IsNullOrWhiteSpace(equipment.Unit.GeneratedAnimation))
-            {
-                animation = AssetDatabase.LoadAssetAtPath<VoxelAnimationAsset>(
-                    paths.AnimationAsset);
-            }
-
-            Transform avatarSocket = RequireSocket(
-                avatarDebug,
-                avatarSocketName);
-            GameObject equipmentDebug = VoxelSceneDebugBuilder.Create(
-                assembly,
-                Vector3.zero);
-            Transform mount = RequireSocket(
-                equipmentDebug,
-                "Mount");
-
-            Matrix4x4 mountLocalToEquipment =
-                equipmentDebug.transform.worldToLocalMatrix *
-                mount.localToWorldMatrix;
-            Matrix4x4 equipmentLocalToSocket =
-                mountLocalToEquipment.inverse;
-
-            equipmentDebug.transform.SetParent(
-                avatarSocket,
-                false);
-            equipmentDebug.transform.localPosition =
-                equipmentLocalToSocket.GetColumn(3);
-            equipmentDebug.transform.localRotation =
-                equipmentLocalToSocket.rotation;
-            equipmentDebug.transform.localScale =
-                equipmentLocalToSocket.lossyScale;
-
-            VoxelSceneDebugController.Register(
-                equipmentDebug,
-                assembly,
-                animation);
-
-            float positionError = Vector3.Distance(
-                mount.position,
-                avatarSocket.position);
-            float rotationError = Quaternion.Angle(
-                mount.rotation,
-                avatarSocket.rotation);
-            if (positionError > 0.0001f || rotationError > 0.01f)
-            {
-                throw new InvalidOperationException(
-                    "Carried equipment Mount did not align with avatar socket. " +
-                    "avatar=" + entry.name +
-                    " equipment=" + equipment.Unit.Id +
-                    " socket=" + avatarSocketName +
-                    " positionError=" + positionError +
-                    " rotationError=" + rotationError);
-            }
-        }
-
-        private static Transform RequireSocket(
-            GameObject root,
-            string socketName)
-        {
-            string expected =
-                VoxelSceneDebugBuilder.SocketPrefix + socketName;
-            Transform match = null;
-            foreach (Transform candidate in
-                     root.GetComponentsInChildren<Transform>(true))
-            {
-                if (!string.Equals(
-                        candidate.name,
-                        expected,
-                        StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                if (match != null)
-                {
-                    throw new InvalidOperationException(
-                        "Preview composition found duplicate socket '" +
-                        socketName + "' under " + root.name + ".");
-                }
-                match = candidate;
-            }
-
-            return match ?? throw new InvalidOperationException(
-                "Preview composition requires socket '" +
-                socketName + "' under " + root.name + ".");
-        }
-    }
-
     internal static class PreviewRefreshOrchestrator
     {
         internal static PreviewGridBuildResult Run(
@@ -780,12 +504,26 @@ namespace VoxelStore.Preview.Editor
         {
             try
             {
-                PreviewGridBuildResult result = PreviewRefreshOrchestrator.Run(
-                    PreviewPlanClient.Load,
-                    PreviewBake.BakeAll,
-                    PreviewGridBuilder.Build);
+                if (EditorApplication.isPlayingOrWillChangePlaymode)
+                {
+                    throw new InvalidOperationException(
+                        "Exit Play Mode before refreshing the canonical Voxel Store preview grid.");
+                }
+
+                PreviewPlanContract plan = PreviewPlanClient.Load();
+                List<BakedPreviewUnit> baked = PreviewBake.BakeAll(plan);
+                if (baked.Count != plan.Units.Length)
+                {
+                    throw new InvalidOperationException(
+                        "Preview bake count mismatch. plan=" +
+                        plan.Units.Length +
+                        " baked=" +
+                        baked.Count);
+                }
+
+                PreviewGridPlayModeOrchestrator.PrepareAndEnterPlayMode();
                 Debug.Log(
-                    $"Voxel Store preview grid refreshed: {result.EntryIds.Length} published units.");
+                    "Voxel Store preview bake complete; entering Play Mode for runtime grid inspection.");
             }
             catch (Exception ex)
             {
@@ -819,162 +557,6 @@ namespace VoxelStore.Preview.Editor
                 " published units.");
         }
 
-        public static void RefreshAllAndOpenGridForBatch()
-        {
-            PreviewPlanContract plan = PreviewPlanClient.Load();
-            List<BakedPreviewUnit> baked = PreviewBake.BakeAll(plan);
-            PreviewGridBuildResult result = PreviewGridBuilder.Build(baked);
-
-            string reportDir = Path.Combine(
-                VoxelStorePreviewPaths.ProjectRoot,
-                "Library",
-                "VoxelStorePreview");
-            Directory.CreateDirectory(reportDir);
-            var report = new PreviewGridReport
-            {
-                PlanCount = plan.Units.Length,
-                GridCount = result.EntryIds.Length,
-                UnitIds = result.EntryIds,
-                AnimationCount = result.AnimationCount,
-                CarriedEquipmentCount = result.CarriedEquipmentCount,
-                OverlapCount = PreviewGridLayout.CountXZOverlaps(result.WorldBounds),
-                NonUnitScaleCount = result.Grid.transform
-                    .Cast<Transform>()
-                    .Count(x => x.localScale != Vector3.one)
-            };
-            File.WriteAllText(
-                Path.Combine(reportDir, "grid-report.json"),
-                JsonUtility.ToJson(report, true));
-
-            if (report.PlanCount != report.GridCount)
-                throw new InvalidOperationException(
-                    $"Preview grid count mismatch. plan={report.PlanCount} grid={report.GridCount}");
-            if (!plan.Units.Select(x => x.Id).SequenceEqual(
-                    result.EntryIds,
-                    StringComparer.Ordinal))
-                throw new InvalidOperationException(
-                    "Preview grid identity/order differs from preview-plan.");
-            if (report.OverlapCount != 0)
-                throw new InvalidOperationException(
-                    "Preview grid contains overlapping unit bounds: " + report.OverlapCount);
-            if (report.NonUnitScaleCount != 0)
-                throw new InvalidOperationException(
-                    "Preview grid normalized one or more unit scales.");
-
-            int avatarCount = plan.Units.Count(x =>
-                string.Equals(x.Kind, "avatar", StringComparison.Ordinal));
-            int equipmentCount = plan.Units.Count(x =>
-                string.Equals(x.Kind, "equipment", StringComparison.Ordinal));
-            int expectedCarriedEquipment =
-                avatarCount * Math.Min(2, equipmentCount);
-            if (report.CarriedEquipmentCount != expectedCarriedEquipment)
-            {
-                throw new InvalidOperationException(
-                    "Preview grid carried-equipment count mismatch. expected=" +
-                    expectedCarriedEquipment +
-                    " actual=" +
-                    report.CarriedEquipmentCount);
-            }
-        }
-
-        public static void CaptureCurrentGridSceneViewForBatch()
-        {
-            PreviewPlanContract plan = PreviewPlanClient.Load();
-            List<BakedPreviewUnit> baked = PreviewBake.BakeAll(plan);
-            PreviewGridBuildResult result = PreviewGridBuilder.Build(baked);
-
-            string reportDir = Path.Combine(
-                VoxelStorePreviewPaths.ProjectRoot,
-                "Library",
-                "VoxelStorePreview");
-            Directory.CreateDirectory(reportDir);
-            CaptureSceneView(
-                result,
-                Path.Combine(reportDir, "grid-scene-view.png"));
-        }
-
-        private static void CaptureSceneView(
-            PreviewGridBuildResult result,
-            string outputPath)
-        {
-            if (result.WorldBounds == null || result.WorldBounds.Length == 0)
-                throw new InvalidOperationException(
-                    "Cannot capture an empty preview grid.");
-
-            Bounds all = result.WorldBounds[0];
-            for (int i = 1; i < result.WorldBounds.Length; i++)
-                all.Encapsulate(result.WorldBounds[i]);
-
-            CaptureSceneView(all, outputPath);
-        }
-
-        private static void CaptureSceneView(
-            Bounds all,
-            string outputPath)
-        {
-            CaptureSceneView(
-                all,
-                outputPath,
-                Quaternion.Euler(35f, 45f, 0f));
-        }
-
-        private static void CaptureSceneView(
-            Bounds all,
-            string outputPath,
-            Quaternion viewRotation)
-        {
-            SceneView sceneView = EditorWindow.GetWindow<SceneView>();
-            sceneView.position = new Rect(40f, 40f, 1600f, 1000f);
-            sceneView.pivot = all.center;
-            sceneView.rotation = viewRotation;
-            sceneView.orthographic = true;
-            sceneView.size = Mathf.Max(
-                all.size.y,
-                Mathf.Max(all.size.x, all.size.z) * 0.72f);
-
-            Camera camera = sceneView.camera;
-            if (camera == null)
-                throw new InvalidOperationException(
-                    "SceneView camera is unavailable for preview proof capture.");
-
-            float distance = Mathf.Max(20f, all.extents.magnitude * 3f);
-            camera.transform.rotation = viewRotation;
-            camera.transform.position =
-                all.center - camera.transform.forward * distance;
-            camera.orthographic = true;
-            camera.orthographicSize = Mathf.Max(
-                all.extents.y + 1f,
-                Mathf.Max(all.extents.x / 1.6f, all.extents.z) * 1.12f);
-            camera.nearClipPlane = 0.01f;
-            camera.farClipPlane = distance * 3f + all.extents.magnitude;
-            camera.cullingMask = ~0;
-            camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.12f, 0.14f, 0.16f, 1f);
-            const int width = 1600;
-            const int height = 1000;
-            var target = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
-            RenderTexture previousActive = RenderTexture.active;
-            RenderTexture previousTarget = camera.targetTexture;
-            var texture = new Texture2D(width, height, TextureFormat.RGB24, false);
-            try
-            {
-                camera.targetTexture = target;
-                RenderTexture.active = target;
-                camera.Render();
-                texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-                texture.Apply(false, false);
-                File.WriteAllBytes(outputPath, texture.EncodeToPNG());
-            }
-            finally
-            {
-                camera.targetTexture = previousTarget;
-                RenderTexture.active = previousActive;
-                UnityEngine.Object.DestroyImmediate(texture);
-                target.Release();
-                UnityEngine.Object.DestroyImmediate(target);
-            }
-        }
-
         public static void CreateShellSceneForBatch()
         {
             Directory.CreateDirectory(Path.Combine(Application.dataPath, "Preview"));
@@ -984,16 +566,5 @@ namespace VoxelStore.Preview.Editor
             EditorSceneManager.SaveScene(scene, VoxelStorePreviewPaths.ScenePath);
         }
 
-        [Serializable]
-        private sealed class PreviewGridReport
-        {
-            public int PlanCount;
-            public int GridCount;
-            public string[] UnitIds;
-            public int AnimationCount;
-            public int CarriedEquipmentCount;
-            public int OverlapCount;
-            public int NonUnitScaleCount;
-        }
     }
 }
