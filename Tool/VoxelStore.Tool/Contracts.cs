@@ -53,6 +53,7 @@ public sealed class AssetManifest
     public int Version { get; set; }
     public string Id { get; set; } = string.Empty;
     public string Kind { get; set; } = string.Empty;
+    public string? AnimationProfile { get; set; }
     public string UnitRef { get; set; } = string.Empty;
     public string? Form { get; set; }
     public string? Density { get; set; }
@@ -231,6 +232,26 @@ public sealed class AuditEvidence
     public string? HeroVoxelWorkflowSha256 { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, string>? StyleSha256 { get; set; }
+}
+
+public sealed class AnimationReviewEvidence
+{
+    public int Version { get; set; } = 1;
+    public string Outcome { get; set; } = string.Empty;
+    public string AnimationProfile { get; set; } = string.Empty;
+    public string ManifestSha256 { get; set; } = string.Empty;
+    public string SourceSha256 { get; set; } = string.Empty;
+    public string PaletteSha256 { get; set; } = string.Empty;
+    public string GeneratedAnimationSha256 { get; set; } = string.Empty;
+    public string AnimationProfilesSha256 { get; set; } = string.Empty;
+    public string HeroStudioRevision { get; set; } = string.Empty;
+    public string HeroVoxelWorkflowSha256 { get; set; } = string.Empty;
+    public string CaptureReportSha256 { get; set; } = string.Empty;
+    public List<string> ReviewedClips { get; set; } = new();
+    public Dictionary<string, List<string>> ClipCheckpoints { get; set; } =
+        new(StringComparer.Ordinal);
+    public Dictionary<string, string> CaptureImageSha256 { get; set; } =
+        new(StringComparer.Ordinal);
 }
 public static class ContractYaml
 {

@@ -36,7 +36,7 @@ Use this skill only inside the `voxel-store` repository after one asset job has 
 
 5. **Source**
    - Owner: pinned Hero.Voxel authoring workflow plus deterministic Tool/source validation.
-   - Source must consume current upstream authority; this skill does not define VoxelSpec semantics.
+   - Source must consume current upstream authority, resolve the asset's store-owned animation profile, omit irrelevant families, and author the default plus V1/V2/V3 for every declared family. This skill does not redefine VoxelSpec semantics or choreography validity.
 
 6. **Generate**
    - Owner: repository Tool and pinned Hero.Voxel generation contract.
@@ -44,7 +44,7 @@ Use this skill only inside the `voxel-store` repository after one asset job has 
 
 7. **Runtime Presentation Proof**
    - Owner: current `unity-baked-preview`, proof, and compatibility contracts.
-   - Run provider-backed runtime/capture proof when those owners require it. Otherwise record the stage as not applicable; do not invent a universal Unity-capture gate.
+   - Run the Tool-planned provider-backed candidate/runtime capture when required, visually review every declared take, and record accepted animation review evidence before sealing. Capture attestation alone is not acceptance.
 
 8. **Compatibility**
    - Owner: `asset-compatibility` plus deterministic Tool evaluation.

@@ -35,138 +35,394 @@ sockets:
       translate: [2, 10, 1]
 animations:
   - clip: Idle
-    duration: 1.2
+    duration: 1.4
     loop: true
     tracks:
       - part: Dagger
-        rotation:
+        position:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
             - time: 0.5
-              value: [0, 0, 1.5]
+              value: [0, 0, 2.079]
             - time: 1
               value: [0, 0, 0]
-  - clip: WalkForward
-    duration: 0.6
-    loop: true
-    tracks:
-      - part: Dagger
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
             - time: 0.5
-              value: [0, 0, 5]
+              value: [0, 0, 2.5]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V1
+    duration: 1.7
+    loop: true
+    tracks:
+      - part: Dagger
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0.1701, 0, 1.134]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [3, 0, -3]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V2
+    duration: 1.15
+    loop: true
+    tracks:
+      - part: Dagger
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [-0.1512, 0, 1.512]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [-3, 0, 4]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V3
+    duration: 1.5
+    loop: true
+    tracks:
+      - part: Dagger
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0, 0.1134, 0.756]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [2, 0, -5]
             - time: 1
               value: [0, 0, 0]
   - clip: Attack
-    duration: 0.45
+    duration: 0.5
     loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.18, value: 1 }
+        - { time: 0.32, value: 0.25 }
+        - { time: 0.66, value: 0.25 }
+        - { time: 0.84, value: 0.65 }
+        - { time: 1, value: 1 }
     tracks:
       - part: Dagger
-        rotation:
+        position:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
+            - time: 0.18
+              value: [0.1512, 0.4725, 0.189]
             - time: 0.55
-              value: [0, 0, -38]
+              value: [-0.756, -3.78, 0.756]
+            - time: 0.82
+              value: [-0.189, -1.323, 0.2268]
             - time: 1
-              value: [0, 0, -6.84]
-  - clip: Hit
-    duration: 0.35
-    loop: false
-    tracks:
-      - part: Dagger
+              value: [0, 0, 0]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 0.45
-              value: [0, 0, 10]
-            - time: 1
-              value: [0, 0, 0]
-  - clip: Death
-    duration: 0.75
-    loop: false
-    tracks:
-      - part: Dagger
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 1
-              value: [0, 0, 82]
-  - clip: Idle.V1
-    duration: 1.104
-    loop: true
-    tracks:
-      - part: Dagger
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 0.5
-              value: [0, 0, -1.5]
-            - time: 1
-              value: [0, 0, 0]
-  - clip: WalkForward.V1
-    duration: 0.594
-    loop: true
-    tracks:
-      - part: Dagger
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 0.5
-              value: [0, 0, 12]
+            - time: 0.18
+              value: [-2, 0, 17.5]
+            - time: 0.55
+              value: [10, 0, -70]
+            - time: 0.82
+              value: [3, 0, -21]
             - time: 1
               value: [0, 0, 0]
   - clip: Attack.V1
-    duration: 0.45
+    duration: 0.64
     loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.18, value: 1 }
+        - { time: 0.32, value: 0.25 }
+        - { time: 0.66, value: 0.25 }
+        - { time: 0.84, value: 0.65 }
+        - { time: 1, value: 1 }
     tracks:
       - part: Dagger
-        rotation:
+        position:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.4725, 0.189]
             - time: 0.55
-              value: [0, 0, -46]
+              value: [0, -4.914, 0.2835]
+            - time: 0.82
+              value: [0, -1.7199, 0.0851]
             - time: 1
-              value: [0, 0, -6.84]
-  - clip: Hit.V1
-    duration: 0.3255
-    loop: false
-    tracks:
-      - part: Dagger
+              value: [0, 0, 0]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 0.45
-              value: [0, 0, 14]
+            - time: 0.18
+              value: [1.6, 0, -3]
+            - time: 0.55
+              value: [-8, 0, 12]
+            - time: 0.82
+              value: [-2.4, 0, 3.6]
             - time: 1
               value: [0, 0, 0]
-  - clip: Death.V1
-    duration: 0.705
+  - clip: Attack.V2
+    duration: 0.56
     loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.18, value: 1 }
+        - { time: 0.32, value: 0.25 }
+        - { time: 0.66, value: 0.25 }
+        - { time: 0.84, value: 0.65 }
+        - { time: 1, value: 1 }
     tracks:
       - part: Dagger
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [-0.1512, 0.4725, 0.189]
+            - time: 0.55
+              value: [0.756, -4.2525, 1.0395]
+            - time: 0.82
+              value: [0.189, -1.4884, 0.3119]
+            - time: 1
+              value: [0, 0, 0]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
+            - time: 0.18
+              value: [-2.4, 0, -19.5]
+            - time: 0.55
+              value: [12, 0, 78]
+            - time: 0.82
+              value: [3.6, 0, 23.4]
             - time: 1
-              value: [0, 0, 74]
+              value: [0, 0, 0]
+  - clip: Attack.V3
+    duration: 0.72
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.18, value: 1 }
+        - { time: 0.32, value: 0.25 }
+        - { time: 0.66, value: 0.25 }
+        - { time: 0.84, value: 0.65 }
+        - { time: 1, value: 1 }
+    tracks:
+      - part: Dagger
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0.0662, 0.4725, 0.189]
+            - time: 0.55
+              value: [-0.3307, -5.481, 0.567]
+            - time: 0.82
+              value: [-0.0827, -1.9183, 0.1701]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [3.2, 0, 7]
+            - time: 0.55
+              value: [-16, 0, -28]
+            - time: 0.82
+              value: [-4.8, 0, -8.4]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Drop
+    duration: 0.72
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Dagger
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.1418, 0.2363]
+            - time: 0.5
+              value: [0.1276, 0.1276, -1.4364]
+            - time: 1
+              value: [0.2835, 0.2835, -3.591]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [12.3, 0, 2.7]
+            - time: 0.62
+              value: [53.3, 0, 11.7]
+            - time: 1
+              value: [82, 0, 18]
+  - clip: Drop.V1
+    duration: 0.86
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Dagger
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.1418, 0.2363]
+            - time: 0.5
+              value: [-0.2552, 0.0638, -1.701]
+            - time: 1
+              value: [-0.567, 0.1418, -4.2525]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [9.6, 0, -6.9]
+            - time: 0.62
+              value: [41.6, 0, -29.9]
+            - time: 1
+              value: [64, 0, -46]
+  - clip: Drop.V2
+    duration: 0.64
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Dagger
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.1418, 0.2363]
+            - time: 0.5
+              value: [0.3402, -0.1276, -1.2852]
+            - time: 1
+              value: [0.756, -0.2835, -3.213]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [15.75, 0, 8.7]
+            - time: 0.62
+              value: [68.25, 0, 37.7]
+            - time: 1
+              value: [105, 0, 58]
+  - clip: Drop.V3
+    duration: 0.95
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Dagger
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.1418, 0.2363]
+            - time: 0.5
+              value: [-0.0851, 0.1914, -1.89]
+            - time: 1
+              value: [-0.189, 0.4253, -4.725]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [17.7, 0, -2.4]
+            - time: 0.62
+              value: [76.7, 0, -10.4]
+            - time: 1
+              value: [118, 0, -16]

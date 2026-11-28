@@ -15,6 +15,7 @@
 - `Styles/**` owns reusable visual grammar; a collection is not a style family.
 - `Collections/**` owns desired reusable asset coverage; collections select assets but do not contain or own their published identity.
 - `Store/**` owns global store configuration, numeric authoring policy, and retired identity history only.
+- `Store/animation-profiles.yaml` owns reusable visual animation-family policy. Each asset manifest selects one applicable profile; the model source owns its actual curves and choreography.
 
 ## Canonical model identity
 
@@ -40,6 +41,7 @@
 - Store metadata may own visual identity, style family, palette, bounds, physical compatibility family, mount sockets, and authoring evidence.
 - Do not add damage, rarity, class, inventory rules, AI, progression, economy, combat balance, or other game-specific semantics.
 - Avatars and equipment are independent assemblies. Do not create precomposed avatar/equipment variants or per-pair correction records.
+- Do not invent animation families merely for uniformity. Author only families permitted by the selected visual profile, and provide the default plus V1/V2/V3 as meaningfully different model-local takes for every declared family.
 
 ## Maintenance
 

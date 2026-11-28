@@ -1,14 +1,21 @@
 {
-  "convention": "model-socket-reference-influence-semantic-phase.v3",
+  "convention": "profile-independent-motion-pairs.v4",
   "provider": {
     "heroStudioRevision": "f4e3ef3104b54ccf5bedc78d0e7c2d185602cb8e",
     "workflowSha256": "bc9c0096b4c21f80b3fc0096b4536d0fbdd37704137dd59633957aa163b1d191"
   },
   "inputs": {
-    "avatarSourceSha256": "8ebab52f27dab8c38fbf4b1a5ead9f35010ea2e1347a6f898acfc6465eb04d8f",
+    "avatarSourceSha256": "3449b2e9d63167f5cb43c0efb9fc72d5817c9d04b918267af6c86ce8f45d3741",
     "avatarPaletteSha256": "4e7af3fcaaf3ed4b010a20c9dd7c239e4d5a767ebc9386792053ccfd9cafd1f6",
-    "equipmentSourceSha256": "331e608937c59f5849a6e61d7b8871df76e6bb57521660cb92eb09780493bda4",
-    "equipmentPaletteSha256": "bce6e2d43049f9a54d35903c0c7d0f44fb07ed040b323ba6fc267dc1753a4d73"
+    "equipmentSourceSha256": "e7c01c8411f350c156064291c92c004b2dd6b0311b113a70dd6ec296d8218e60",
+    "equipmentPaletteSha256": "bce6e2d43049f9a54d35903c0c7d0f44fb07ed040b323ba6fc267dc1753a4d73",
+    "avatarManifestSha256": "a752a06093dcb74ca7b31c4e48e34aaef5be21d3cbc0e796e2a8e26ed46a0922",
+    "equipmentManifestSha256": "bdaa32a12ee82bb9c4ddf853336d041159133dcdd41387664644c8dd4e762e23",
+    "animationProfilesSha256": "7c7e2b1e930b0ab5b65410b4ea74ad387637ce1ee2b64bdc25dccbe29221625d"
+  },
+  "profiles": {
+    "avatar": "avatar.grounded",
+    "equipment": "equipment.heavy"
   },
   "avatar": "avatar.foundation-guard-01",
   "equipment": "equipment.axe-03",
@@ -22,10 +29,71 @@
       "capability": "Hand",
       "socket": "Equip.Hand.Left.0",
       "side": "Left",
-      "motion": "Idle",
-      "phase": 0,
-      "bodyClip": "Idle",
+      "caseName": "body:Attack",
+      "bodyClip": "Attack",
+      "bodyPhase": 0,
       "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0.023625,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0.023625,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0.023625,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Attack",
+      "bodyClip": "Attack",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0.03899896,
+        0.8933483
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0.03899896,
+        0.8933483
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0.07631324,
+        1.0578356
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866662,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Attack",
+      "bodyClip": "Attack",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
       "referenceInfluence": 1,
       "bodySocketOrigin": [
         -0.625,
@@ -40,10 +108,10 @@
       "evaluatedMountOrigin": [
         -0.625,
         0,
-        0.875
+        1.0436666
       ],
       "referenceError": 0,
-      "animatedMountDrift": 0,
+      "animatedMountDrift": 0.1686666,
       "passed": true,
       "detail": "PASS"
     },
@@ -51,28 +119,89 @@
       "capability": "Hand",
       "socket": "Equip.Hand.Left.0",
       "side": "Left",
-      "motion": "Idle",
-      "phase": 0.5,
-      "bodyClip": "Idle",
+      "caseName": "body:Attack.V1",
+      "bodyClip": "Attack.V1",
+      "bodyPhase": 0,
       "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0.023625,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0.023625,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0.023625,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Attack.V1",
+      "bodyClip": "Attack.V1",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.5603279,
+        0.06574869,
+        0.9324277
+      ],
+      "attachmentReferenceOrigin": [
+        -0.5603279,
+        0.06574869,
+        0.9324277
+      ],
+      "evaluatedMountOrigin": [
+        -0.5596494,
+        0.124398164,
+        1.0905676
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Attack.V1",
+      "bodyClip": "Attack.V1",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
       "referenceInfluence": 1,
       "bodySocketOrigin": [
         -0.625,
         0,
-        0.9
+        0.875
       ],
       "attachmentReferenceOrigin": [
         -0.625,
         0,
-        0.9
+        0.875
       ],
       "evaluatedMountOrigin": [
         -0.625,
         0,
-        0.9
+        1.0436666
       ],
       "referenceError": 0,
-      "animatedMountDrift": 0,
+      "animatedMountDrift": 0.1686666,
       "passed": true,
       "detail": "PASS"
     },
@@ -80,25 +209,1886 @@
       "capability": "Hand",
       "socket": "Equip.Hand.Left.0",
       "side": "Left",
-      "motion": "WalkForward",
-      "phase": 0.5,
+      "caseName": "body:Attack.V2",
+      "bodyClip": "Attack.V2",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0.023625,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0.023625,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0.023625,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Attack.V2",
+      "bodyClip": "Attack.V2",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.65888315,
+        0.24505033,
+        0.8252697
+      ],
+      "attachmentReferenceOrigin": [
+        -0.65888315,
+        0.24505033,
+        0.8252697
+      ],
+      "evaluatedMountOrigin": [
+        -0.6595691,
+        0.29315624,
+        0.9869292
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866665,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Attack.V2",
+      "bodyClip": "Attack.V2",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Attack.V3",
+      "bodyClip": "Attack.V3",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0.023625,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0.023625,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0.023625,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Attack.V3",
+      "bodyClip": "Attack.V3",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.5979694,
+        0.14757286,
+        0.90447515
+      ],
+      "attachmentReferenceOrigin": [
+        -0.5979694,
+        0.14757286,
+        0.90447515
+      ],
+      "evaluatedMountOrigin": [
+        -0.5975622,
+        0.22153477,
+        1.0560598
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Attack.V3",
+      "bodyClip": "Attack.V3",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Death",
+      "bodyClip": "Death",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Death",
+      "bodyClip": "Death",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.36415982,
+        0.8078671
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.36415982,
+        0.8078671
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        -0.43119732,
+        0.9626393
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Death",
+      "bodyClip": "Death",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.9021713,
+        0.1348941
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.9021713,
+        0.1348941
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        -1.0658278,
+        0.17569825
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Death.V1",
+      "bodyClip": "Death.V1",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Death.V1",
+      "bodyClip": "Death.V1",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.61580056,
+        -0.3895142,
+        0.7858167
+      ],
+      "attachmentReferenceOrigin": [
+        -0.61580056,
+        -0.3895142,
+        0.7858167
+      ],
+      "evaluatedMountOrigin": [
+        -0.6196479,
+        -0.444497,
+        0.94522357
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Death.V1",
+      "bodyClip": "Death.V1",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.46505508,
+        -0.9576054,
+        0.05338081
+      ],
+      "attachmentReferenceOrigin": [
+        -0.46505508,
+        -0.9576054,
+        0.05338081
+      ],
+      "evaluatedMountOrigin": [
+        -0.46505508,
+        -1.1065292,
+        0.13256502
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Death.V2",
+      "bodyClip": "Death.V2",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Death.V2",
+      "bodyClip": "Death.V2",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.614641,
+        -0.20742916,
+        0.87769127
+      ],
+      "attachmentReferenceOrigin": [
+        -0.614641,
+        -0.20742916,
+        0.87769127
+      ],
+      "evaluatedMountOrigin": [
+        -0.61054164,
+        -0.26581123,
+        1.0358784
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Death.V2",
+      "bodyClip": "Death.V2",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.5950051,
+        -0.6587288,
+        0.5934853
+      ],
+      "attachmentReferenceOrigin": [
+        -0.5950051,
+        -0.6587288,
+        0.5934853
+      ],
+      "evaluatedMountOrigin": [
+        -0.5950051,
+        -0.8128134,
+        0.6620882
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866663,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Death.V3",
+      "bodyClip": "Death.V3",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Death.V3",
+      "bodyClip": "Death.V3",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6134695,
+        -0.4523048,
+        0.74094665
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6134695,
+        -0.4523048,
+        0.74094665
+      ],
+      "evaluatedMountOrigin": [
+        -0.6148783,
+        -0.5307318,
+        0.8863448
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16520713,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Death.V3",
+      "bodyClip": "Death.V3",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.5640575,
+        -0.90183306,
+        -0.1990067
+      ],
+      "attachmentReferenceOrigin": [
+        -0.5640575,
+        -0.90183306,
+        -0.1990067
+      ],
+      "evaluatedMountOrigin": [
+        -0.5640575,
+        -1.0602832,
+        -0.2045399
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.15854672,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Hit",
+      "bodyClip": "Hit",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Hit",
+      "bodyClip": "Hit",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.13079542,
+        0.86551166
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.13079542,
+        0.86551166
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        -0.17163752,
+        1.0291587
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866665,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Hit",
+      "bodyClip": "Hit",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Hit.V1",
+      "bodyClip": "Hit.V1",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Hit.V1",
+      "bodyClip": "Hit.V1",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.58788747,
+        -0.1884927,
+        0.8704095
+      ],
+      "attachmentReferenceOrigin": [
+        -0.58788747,
+        -0.1884927,
+        0.8704095
+      ],
+      "evaluatedMountOrigin": [
+        -0.588378,
+        -0.21587776,
+        1.0368375
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866669,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Hit.V1",
+      "bodyClip": "Hit.V1",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Hit.V2",
+      "bodyClip": "Hit.V2",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Hit.V2",
+      "bodyClip": "Hit.V2",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.64003074,
+        0.019936562,
+        0.9033892
+      ],
+      "attachmentReferenceOrigin": [
+        -0.64003074,
+        0.019936562,
+        0.9033892
+      ],
+      "evaluatedMountOrigin": [
+        -0.63945836,
+        -0.011961415,
+        1.0690112
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686667,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Hit.V2",
+      "bodyClip": "Hit.V2",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Hit.V3",
+      "bodyClip": "Hit.V3",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Hit.V3",
+      "bodyClip": "Hit.V3",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6143731,
+        -0.22798137,
+        0.8187809
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6143731,
+        -0.22798137,
+        0.8187809
+      ],
+      "evaluatedMountOrigin": [
+        -0.61479384,
+        -0.28201628,
+        0.9785573
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Hit.V3",
+      "bodyClip": "Hit.V3",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625038,
+        -0.019632814,
+        0.8853838
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625038,
+        -0.019632814,
+        0.8853838
+      ],
+      "evaluatedMountOrigin": [
+        -0.6250483,
+        -0.022576453,
+        1.0540247
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.04514449,
+        1.0639889
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866665,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625038,
+        -0.019632814,
+        0.8853838
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625038,
+        -0.019632814,
+        0.8853838
+      ],
+      "evaluatedMountOrigin": [
+        -0.6250483,
+        -0.022576453,
+        1.0540247
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle.V1",
+      "bodyClip": "Idle.V1",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle.V1",
+      "bodyClip": "Idle.V1",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.62484294,
+        -0.025089625,
+        0.89129
+      ],
+      "attachmentReferenceOrigin": [
+        -0.62484294,
+        -0.025089625,
+        0.89129
+      ],
+      "evaluatedMountOrigin": [
+        -0.62481725,
+        -0.030976009,
+        1.0598539
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle.V1",
+      "bodyClip": "Idle.V1",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249048,
+        -0.050155733,
+        0.9067044
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249048,
+        -0.050155733,
+        0.9067044
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249048,
+        -0.061921325,
+        1.0749602
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle.V1",
+      "bodyClip": "Idle.V1",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.62484294,
+        -0.025089625,
+        0.89129
+      ],
+      "attachmentReferenceOrigin": [
+        -0.62484294,
+        -0.025089625,
+        0.89129
+      ],
+      "evaluatedMountOrigin": [
+        -0.62481725,
+        -0.030976009,
+        1.0598539
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle.V2",
+      "bodyClip": "Idle.V2",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle.V2",
+      "bodyClip": "Idle.V2",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6248058,
+        0.02400017,
+        0.8818971
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6248058,
+        0.02400017,
+        0.8818971
+      ],
+      "evaluatedMountOrigin": [
+        -0.624775,
+        0.029886551,
+        1.050461
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866672,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle.V2",
+      "bodyClip": "Idle.V2",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6248629,
+        0.047979783,
+        0.88795656
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6248629,
+        0.047979783,
+        0.88795656
+      ],
+      "evaluatedMountOrigin": [
+        -0.6248629,
+        0.059745375,
+        1.0562124
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866674,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle.V2",
+      "bodyClip": "Idle.V2",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6248058,
+        0.02400017,
+        0.8818971
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6248058,
+        0.02400017,
+        0.8818971
+      ],
+      "evaluatedMountOrigin": [
+        -0.624775,
+        0.029886551,
+        1.050461
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866672,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle.V3",
+      "bodyClip": "Idle.V3",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle.V3",
+      "bodyClip": "Idle.V3",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.62484837,
+        -0.041986555,
+        0.8870942
+      ],
+      "attachmentReferenceOrigin": [
+        -0.62484837,
+        -0.041986555,
+        0.8870942
+      ],
+      "evaluatedMountOrigin": [
+        -0.62482136,
+        -0.050813887,
+        1.0555297
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle.V3",
+      "bodyClip": "Idle.V3",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249534,
+        -0.08386862,
+        0.8969923
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249534,
+        -0.08386862,
+        0.8969923
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249534,
+        -0.101499096,
+        1.064735
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686667,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:Idle.V3",
+      "bodyClip": "Idle.V3",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.62484837,
+        -0.041986555,
+        0.8870942
+      ],
+      "attachmentReferenceOrigin": [
+        -0.62484837,
+        -0.041986555,
+        0.8870942
+      ],
+      "evaluatedMountOrigin": [
+        -0.62482136,
+        -0.050813887,
+        1.0555297
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward",
       "bodyClip": "WalkForward",
-      "equipmentClip": "WalkForward",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
       "referenceInfluence": 1,
       "bodySocketOrigin": [
         -0.625,
-        -0.11420402,
-        0.946592
+        0,
+        0.875
       ],
       "attachmentReferenceOrigin": [
         -0.625,
-        -0.11420402,
-        0.946592
+        0,
+        0.875
       ],
       "evaluatedMountOrigin": [
         -0.625,
-        -0.11420402,
-        0.946592
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0.07931859,
+        1.00996
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0.07931859,
+        1.00996
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0.10204644,
+        1.1770884
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866663,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        -0.114554726,
+        1.1566615
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686667,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        -0.089547195,
+        1.0938015
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866672,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward.V1",
+      "bodyClip": "WalkForward.V1",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward.V1",
+      "bodyClip": "WalkForward.V1",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.599102,
+        0.09571991,
+        1.0081068
+      ],
+      "attachmentReferenceOrigin": [
+        -0.599102,
+        0.09571991,
+        1.0081068
+      ],
+      "evaluatedMountOrigin": [
+        -0.59907895,
+        0.12688608,
+        1.173869
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866663,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward.V1",
+      "bodyClip": "WalkForward.V1",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6275647,
+        -0.10277851,
+        0.9893062
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6275647,
+        -0.10277851,
+        0.9893062
+      ],
+      "evaluatedMountOrigin": [
+        -0.6273029,
+        -0.109236255,
+        1.157849
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866662,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward.V1",
+      "bodyClip": "WalkForward.V1",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.622616,
+        -0.07950057,
+        0.9256916
+      ],
+      "attachmentReferenceOrigin": [
+        -0.622616,
+        -0.07950057,
+        0.9256916
+      ],
+      "evaluatedMountOrigin": [
+        -0.62256396,
+        -0.08893247,
+        1.0940943
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward.V2",
+      "bodyClip": "WalkForward.V2",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward.V2",
+      "bodyClip": "WalkForward.V2",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.64529103,
+        0.18860507,
+        0.9881462
+      ],
+      "attachmentReferenceOrigin": [
+        -0.64529103,
+        0.18860507,
+        0.9881462
+      ],
+      "evaluatedMountOrigin": [
+        -0.6453151,
+        0.22812934,
+        1.1521165
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward.V2",
+      "bodyClip": "WalkForward.V2",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.623047,
+        -0.12689835,
+        0.9863597
+      ],
+      "attachmentReferenceOrigin": [
+        -0.623047,
+        -0.12689835,
+        0.9863597
+      ],
+      "evaluatedMountOrigin": [
+        -0.6233149,
+        -0.13423336,
+        1.1548666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866663,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward.V2",
+      "bodyClip": "WalkForward.V2",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.62681264,
+        -0.1115877,
+        0.92334414
+      ],
+      "attachmentReferenceOrigin": [
+        -0.62681264,
+        -0.1115877,
+        0.92334414
+      ],
+      "evaluatedMountOrigin": [
+        -0.6268637,
+        -0.122903354,
+        1.0916308
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866669,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward.V3",
+      "bodyClip": "WalkForward.V3",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward.V3",
+      "bodyClip": "WalkForward.V3",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.61099225,
+        0.19472292,
+        0.9864738
+      ],
+      "attachmentReferenceOrigin": [
+        -0.61099225,
+        0.19472292,
+        0.9864738
+      ],
+      "evaluatedMountOrigin": [
+        -0.61097276,
+        0.24250373,
+        1.1482311
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward.V3",
+      "bodyClip": "WalkForward.V3",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.62605196,
+        -0.11677013,
+        0.9886091
+      ],
+      "attachmentReferenceOrigin": [
+        -0.62605196,
+        -0.11677013,
+        0.9886091
+      ],
+      "evaluatedMountOrigin": [
+        -0.6258375,
+        -0.12498169,
+        1.1570756
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866672,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "body:WalkForward.V3",
+      "bodyClip": "WalkForward.V3",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6236703,
+        -0.10463427,
+        0.9241693
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6236703,
+        -0.10463427,
+        0.9241693
+      ],
+      "evaluatedMountOrigin": [
+        -0.6236305,
+        -0.11783224,
+        1.0923188
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866663,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Attack",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "referenceError": 0,
       "animatedMountDrift": 0,
@@ -109,25 +2099,56 @@
       "capability": "Hand",
       "socket": "Equip.Hand.Left.0",
       "side": "Left",
-      "motion": "Attack",
-      "phase": 0,
-      "bodyClip": "Attack.Left",
+      "caseName": "equipment:Attack",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
       "equipmentClip": "Attack",
-      "referenceInfluence": 1,
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
       "bodySocketOrigin": [
-        -0.6189175,
-        -0.049483187,
-        0.875
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "attachmentReferenceOrigin": [
-        -0.6189175,
-        -0.049483187,
-        0.875
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "evaluatedMountOrigin": [
-        -0.6189175,
-        -0.049483187,
-        0.875
+        -0.61937183,
+        -0.44078988,
+        0.96963525
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.4083698,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Attack",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack",
+      "equipmentPhase": 1,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "referenceError": 0,
       "animatedMountDrift": 0,
@@ -138,28 +2159,329 @@
       "capability": "Hand",
       "socket": "Equip.Hand.Left.0",
       "side": "Left",
-      "motion": "Attack",
-      "phase": 0.5,
-      "bodyClip": "Attack.Left",
-      "equipmentClip": "Attack",
+      "caseName": "equipment:Attack.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V1",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Attack.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V1",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.51694334,
+        -0.54780924,
+        0.94403124
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.52215886,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Attack.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V1",
+      "equipmentPhase": 1,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Attack.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V2",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Attack.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V2",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.71946114,
+        -0.5009411,
+        0.9821125
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.47916627,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Attack.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V2",
+      "equipmentPhase": 1,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Attack.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V3",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Attack.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V3",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.57358503,
+        -0.62039036,
+        0.91234094
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.58364207,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Attack.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V3",
+      "equipmentPhase": 1,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Drop",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Drop",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop",
+      "equipmentPhase": 0.5,
       "referenceInfluence": 0,
       "bodySocketOrigin": [
-        -0.60776275,
-        0.00013889372,
-        0.875
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "attachmentReferenceOrigin": [
-        -0.60776275,
-        0.00013889372,
-        0.875
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "evaluatedMountOrigin": [
-        -0.7540484,
-        -0.609766,
-        0.9958459
+        -0.6147346,
+        -0.024704047,
+        0.7793289
       ],
       "referenceError": 0,
-      "animatedMountDrift": 0.63873875,
+      "animatedMountDrift": 0.11744899,
       "passed": true,
       "detail": "PASS"
     },
@@ -167,257 +2489,56 @@
       "capability": "Hand",
       "socket": "Equip.Hand.Left.0",
       "side": "Left",
-      "motion": "Attack",
-      "phase": 1,
-      "bodyClip": "Attack.Left",
-      "equipmentClip": "Attack",
-      "referenceInfluence": 1,
-      "bodySocketOrigin": [
-        -0.6234776,
-        0.0060977936,
-        0.875
-      ],
-      "attachmentReferenceOrigin": [
-        -0.6234776,
-        0.0060977936,
-        0.875
-      ],
-      "evaluatedMountOrigin": [
-        -0.6234776,
-        0.0060977936,
-        0.875
-      ],
-      "referenceError": 0,
-      "animatedMountDrift": 0,
-      "passed": true,
-      "detail": "PASS"
-    },
-    {
-      "capability": "Hand",
-      "socket": "Equip.Hand.Left.0",
-      "side": "Left",
-      "motion": "Hit",
-      "phase": 0.5,
-      "bodyClip": "Hit",
-      "equipmentClip": "Hit",
-      "referenceInfluence": 1,
-      "bodySocketOrigin": [
-        -0.625,
-        0.122088656,
-        0.89941776
-      ],
-      "attachmentReferenceOrigin": [
-        -0.625,
-        0.122088656,
-        0.89941776
-      ],
-      "evaluatedMountOrigin": [
-        -0.625,
-        0.122088656,
-        0.89941776
-      ],
-      "referenceError": 0,
-      "animatedMountDrift": 0,
-      "passed": true,
-      "detail": "PASS"
-    },
-    {
-      "capability": "Hand",
-      "socket": "Equip.Hand.Left.0",
-      "side": "Left",
-      "motion": "Death",
-      "phase": 1,
-      "bodyClip": "Death",
-      "equipmentClip": "Death",
-      "referenceInfluence": 1,
-      "bodySocketOrigin": [
-        -0.08698318,
-        -0.6189176,
-        0.63
-      ],
-      "attachmentReferenceOrigin": [
-        -0.08698318,
-        -0.6189176,
-        0.63
-      ],
-      "evaluatedMountOrigin": [
-        -0.08698318,
-        -0.6189176,
-        0.63
-      ],
-      "referenceError": 0,
-      "animatedMountDrift": 0,
-      "passed": true,
-      "detail": "PASS"
-    },
-    {
-      "capability": "Hand",
-      "socket": "Equip.Hand.Right.0",
-      "side": "Right",
-      "motion": "Idle",
-      "phase": 0,
+      "caseName": "equipment:Drop",
       "bodyClip": "Idle",
-      "equipmentClip": "Idle",
-      "referenceInfluence": 1,
-      "bodySocketOrigin": [
-        0.625,
-        0,
-        0.875
-      ],
-      "attachmentReferenceOrigin": [
-        0.625,
-        0,
-        0.875
-      ],
-      "evaluatedMountOrigin": [
-        0.625,
-        0,
-        0.875
-      ],
-      "referenceError": 0,
-      "animatedMountDrift": 0,
-      "passed": true,
-      "detail": "PASS"
-    },
-    {
-      "capability": "Hand",
-      "socket": "Equip.Hand.Right.0",
-      "side": "Right",
-      "motion": "Idle",
-      "phase": 0.5,
-      "bodyClip": "Idle",
-      "equipmentClip": "Idle",
-      "referenceInfluence": 1,
-      "bodySocketOrigin": [
-        0.625,
-        0,
-        0.9
-      ],
-      "attachmentReferenceOrigin": [
-        0.625,
-        0,
-        0.9
-      ],
-      "evaluatedMountOrigin": [
-        0.625,
-        0,
-        0.9
-      ],
-      "referenceError": 0,
-      "animatedMountDrift": 0,
-      "passed": true,
-      "detail": "PASS"
-    },
-    {
-      "capability": "Hand",
-      "socket": "Equip.Hand.Right.0",
-      "side": "Right",
-      "motion": "WalkForward",
-      "phase": 0.5,
-      "bodyClip": "WalkForward",
-      "equipmentClip": "WalkForward",
-      "referenceInfluence": 1,
-      "bodySocketOrigin": [
-        0.625,
-        -0.11420402,
-        0.946592
-      ],
-      "attachmentReferenceOrigin": [
-        0.625,
-        -0.11420402,
-        0.946592
-      ],
-      "evaluatedMountOrigin": [
-        0.625,
-        -0.11420402,
-        0.946592
-      ],
-      "referenceError": 0,
-      "animatedMountDrift": 0,
-      "passed": true,
-      "detail": "PASS"
-    },
-    {
-      "capability": "Hand",
-      "socket": "Equip.Hand.Right.0",
-      "side": "Right",
-      "motion": "Attack",
-      "phase": 0,
-      "bodyClip": "Attack.Right",
-      "equipmentClip": "Attack",
-      "referenceInfluence": 1,
-      "bodySocketOrigin": [
-        0.6189175,
-        -0.049483187,
-        0.875
-      ],
-      "attachmentReferenceOrigin": [
-        0.6189175,
-        -0.049483187,
-        0.875
-      ],
-      "evaluatedMountOrigin": [
-        0.6189175,
-        -0.049483187,
-        0.875
-      ],
-      "referenceError": 0,
-      "animatedMountDrift": 0,
-      "passed": true,
-      "detail": "PASS"
-    },
-    {
-      "capability": "Hand",
-      "socket": "Equip.Hand.Right.0",
-      "side": "Right",
-      "motion": "Attack",
-      "phase": 0.5,
-      "bodyClip": "Attack.Right",
-      "equipmentClip": "Attack",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop",
+      "equipmentPhase": 1,
       "referenceInfluence": 0,
       "bodySocketOrigin": [
-        0.60776275,
-        0.00013889372,
-        0.875
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "attachmentReferenceOrigin": [
-        0.60776275,
-        0.00013889372,
-        0.875
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "evaluatedMountOrigin": [
-        0.7540484,
-        -0.609766,
-        0.9958459
+        -0.60226244,
+        -0.005786039,
+        0.605083
       ],
       "referenceError": 0,
-      "animatedMountDrift": 0.63873875,
+      "animatedMountDrift": 0.2931435,
       "passed": true,
       "detail": "PASS"
     },
     {
       "capability": "Hand",
-      "socket": "Equip.Hand.Right.0",
-      "side": "Right",
-      "motion": "Attack",
-      "phase": 1,
-      "bodyClip": "Attack.Right",
-      "equipmentClip": "Attack",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Drop.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V1",
+      "equipmentPhase": 0,
       "referenceInfluence": 1,
       "bodySocketOrigin": [
-        0.6234776,
-        0.0060977936,
-        0.875
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "attachmentReferenceOrigin": [
-        0.6234776,
-        0.0060977936,
-        0.875
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "evaluatedMountOrigin": [
-        0.6234776,
-        0.0060977936,
-        0.875
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "referenceError": 0,
       "animatedMountDrift": 0,
@@ -426,27 +2547,88 @@
     },
     {
       "capability": "Hand",
-      "socket": "Equip.Hand.Right.0",
-      "side": "Right",
-      "motion": "Hit",
-      "phase": 0.5,
-      "bodyClip": "Hit",
-      "equipmentClip": "Hit",
-      "referenceInfluence": 1,
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Drop.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V1",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0,
       "bodySocketOrigin": [
-        0.625,
-        0.122088656,
-        0.89941776
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "attachmentReferenceOrigin": [
-        0.625,
-        0.122088656,
-        0.89941776
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "evaluatedMountOrigin": [
-        0.625,
-        0.122088656,
-        0.89941776
+        -0.64570934,
+        -0.029559474,
+        0.7576796
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1396398,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Drop.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V1",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6710952,
+        -0.016367774,
+        0.55101407
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.3482431,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Drop.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V2",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
       ],
       "referenceError": 0,
       "animatedMountDrift": 0,
@@ -455,30 +2637,5011 @@
     },
     {
       "capability": "Hand",
-      "socket": "Equip.Hand.Right.0",
-      "side": "Right",
-      "motion": "Death",
-      "phase": 1,
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Drop.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V2",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.5971973,
+        -0.04557682,
+        0.7908741
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.108353235,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Drop.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V2",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.5632906,
+        -0.052288894,
+        0.6341444
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.26877105,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Drop.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V3",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Drop.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V3",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.63205516,
+        -0.0184891,
+        0.74272346
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.15427169,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Drop.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V3",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6407526,
+        0.008381702,
+        0.5135217
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.38518798,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.0422013,
+        0.979707
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.08433335,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.0422013,
+        0.979707
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.08433335,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V1",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V1",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6180397,
+        -0.040767204,
+        0.94140035
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.04651461,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V1",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.61114043,
+        -0.0422763,
+        0.98737574
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.093029276,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V1",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6180397,
+        -0.040767204,
+        0.94140035
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.04651461,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V2",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V2",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6310718,
+        -0.041484192,
+        0.956718
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.061639257,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V2",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6372045,
+        -0.043710276,
+        1.018011
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.123278454,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V2",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6310718,
+        -0.041484192,
+        0.956718
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.061639257,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V3",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V3",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.62500334,
+        -0.03573161,
+        0.92623353
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.031009749,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V3",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.62506753,
+        -0.032205112,
+        0.95704204
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.062019497,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "equipment:Idle.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V3",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "attachmentReferenceOrigin": [
+        -0.6249391,
+        -0.039258108,
+        0.895425
+      ],
+      "evaluatedMountOrigin": [
+        -0.62500334,
+        -0.03573161,
+        0.92623353
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.031009749,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "death-drop:base",
       "bodyClip": "Death",
-      "equipmentClip": "Death",
-      "referenceInfluence": 1,
+      "bodyPhase": 0.75,
+      "equipmentClip": "Drop",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0,
       "bodySocketOrigin": [
-        0.08698318,
-        0.6189176,
-        0.63
+        -0.625,
+        -0.7639927,
+        0.4445014
       ],
       "attachmentReferenceOrigin": [
-        0.08698318,
-        0.6189176,
-        0.63
+        -0.625,
+        -0.7639927,
+        0.4445014
       ],
       "evaluatedMountOrigin": [
-        0.08698318,
-        0.6189176,
-        0.63
+        -0.608325,
+        -0.58571136,
+        0.3440892
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.20529225,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "death-drop-terminal:base",
+      "bodyClip": "Death",
+      "bodyPhase": 1,
+      "equipmentClip": "Drop",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.9021713,
+        0.1348941
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.9021713,
+        0.1348941
+      ],
+      "evaluatedMountOrigin": [
+        -0.602,
+        -0.6139276,
+        0.086731
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.2931435,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "death-drop:V1",
+      "bodyClip": "Death.V1",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Drop.V1",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        -0.56208026,
+        -0.80486006,
+        0.37582785
+      ],
+      "attachmentReferenceOrigin": [
+        -0.56208026,
+        -0.80486006,
+        0.37582785
+      ],
+      "evaluatedMountOrigin": [
+        -0.58543485,
+        -0.6351499,
+        0.2021701
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.2439344,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "death-drop-terminal:V1",
+      "bodyClip": "Death.V1",
+      "bodyPhase": 1,
+      "equipmentClip": "Drop.V1",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        -0.46505508,
+        -0.9576054,
+        0.05338081
+      ],
+      "attachmentReferenceOrigin": [
+        -0.46505508,
+        -0.9576054,
+        0.05338081
+      ],
+      "evaluatedMountOrigin": [
+        -0.5101594,
+        -0.65985394,
+        -0.121498875
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.3482431,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "death-drop:V2",
+      "bodyClip": "Death.V2",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Drop.V2",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        -0.5789323,
+        -0.5057744,
+        0.74586093
+      ],
+      "attachmentReferenceOrigin": [
+        -0.5789323,
+        -0.5057744,
+        0.74586093
+      ],
+      "evaluatedMountOrigin": [
+        -0.55341566,
+        -0.38965732,
+        0.59952176
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.18854555,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "death-drop-terminal:V2",
+      "bodyClip": "Death.V2",
+      "bodyPhase": 1,
+      "equipmentClip": "Drop.V2",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        -0.5950051,
+        -0.6587288,
+        0.5934853
+      ],
+      "attachmentReferenceOrigin": [
+        -0.5950051,
+        -0.6587288,
+        0.5934853
+      ],
+      "evaluatedMountOrigin": [
+        -0.5551796,
+        -0.441751,
+        0.43995202
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.26877108,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "death-drop:V3",
+      "bodyClip": "Death.V3",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Drop.V3",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        -0.5991206,
+        -0.8548672,
+        0.20434025
+      ],
+      "attachmentReferenceOrigin": [
+        -0.5991206,
+        -0.8548672,
+        0.20434025
+      ],
+      "evaluatedMountOrigin": [
+        -0.60813135,
+        -0.6066414,
+        0.128317
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.25976294,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "death-drop-terminal:V3",
+      "bodyClip": "Death.V3",
+      "bodyPhase": 1,
+      "equipmentClip": "Drop.V3",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        -0.5640575,
+        -0.90183306,
+        -0.1990067
+      ],
+      "attachmentReferenceOrigin": [
+        -0.5640575,
+        -0.90183306,
+        -0.1990067
+      ],
+      "evaluatedMountOrigin": [
+        -0.5831321,
+        -0.5428415,
+        -0.15429255
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.36226803,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "moving-release:Attack",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Attack",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 0.625,
+      "bodySocketOrigin": [
+        -0.625,
+        0.07931859,
+        1.00996
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0.07931859,
+        1.00996
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        0.07756767,
+        1.0329329
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.02303945,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "moving-release:Attack",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        -0.510411,
+        1.063031
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.40836984,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "moving-release:Attack",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Attack",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0.45,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "evaluatedMountOrigin": [
+        -0.625,
+        -0.27682096,
+        0.9549578
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.19706458,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "moving-release:Attack.V1",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Attack.V1",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 0.625,
+      "bodySocketOrigin": [
+        -0.625,
+        0.07931859,
+        1.00996
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0.07931859,
+        1.00996
+      ],
+      "evaluatedMountOrigin": [
+        -0.63438076,
+        0.066584304,
+        1.0322484
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.02733002,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "moving-release:Attack.V1",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V1",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "evaluatedMountOrigin": [
+        -0.52408725,
+        -0.61889595,
+        1.037576
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.5221589,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "moving-release:Attack.V1",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Attack.V1",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0.45,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "evaluatedMountOrigin": [
+        -0.5847398,
+        -0.32905713,
+        0.9430232
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.25094208,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "moving-release:Attack.V2",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Attack.V2",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 0.625,
+      "bodySocketOrigin": [
+        -0.625,
+        0.07931859,
+        1.00996
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0.07931859,
+        1.00996
+      ],
+      "evaluatedMountOrigin": [
+        -0.61561924,
+        0.07205886,
+        1.035134
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.02782854,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "moving-release:Attack.V2",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V2",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "evaluatedMountOrigin": [
+        -0.72591275,
+        -0.56913686,
+        1.0756648
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.47916633,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "moving-release:Attack.V2",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Attack.V2",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0.45,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "evaluatedMountOrigin": [
+        -0.6652602,
+        -0.3051949,
+        0.9600836
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.22944795,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "moving-release:Attack.V3",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Attack.V3",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 0.625,
+      "bodySocketOrigin": [
+        -0.625,
+        0.07931859,
+        1.00996
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        0.07931859,
+        1.00996
+      ],
+      "evaluatedMountOrigin": [
+        -0.62902033,
+        0.05906818,
+        1.0303664
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.02902864,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "moving-release:Attack.V3",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V3",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "evaluatedMountOrigin": [
+        -0.58175164,
+        -0.6907374,
+        1.006045
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.5836421,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Left.0",
+      "side": "Left",
+      "caseName": "moving-release:Attack.V3",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Attack.V3",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0.45,
+      "bodySocketOrigin": [
+        -0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "attachmentReferenceOrigin": [
+        -0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "evaluatedMountOrigin": [
+        -0.60774565,
+        -0.36359525,
+        0.9286829
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.2821433,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Attack",
+      "bodyClip": "Attack",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0.023625,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0.023625,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0.023625,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Attack",
+      "bodyClip": "Attack",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0.03899896,
+        0.8933483
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0.03899896,
+        0.8933483
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0.07631324,
+        1.0578356
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866662,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Attack",
+      "bodyClip": "Attack",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Attack.V1",
+      "bodyClip": "Attack.V1",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0.023625,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0.023625,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0.023625,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Attack.V1",
+      "bodyClip": "Attack.V1",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6663308,
+        0.28941506,
+        0.8442134
+      ],
+      "attachmentReferenceOrigin": [
+        0.6663308,
+        0.28941506,
+        0.8442134
+      ],
+      "evaluatedMountOrigin": [
+        0.6670093,
+        0.34806454,
+        1.0023533
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Attack.V1",
+      "bodyClip": "Attack.V1",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Attack.V2",
+      "bodyClip": "Attack.V2",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0.023625,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0.023625,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0.023625,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Attack.V2",
+      "bodyClip": "Attack.V2",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.5594116,
+        -0.021621212,
+        0.90979385
+      ],
+      "attachmentReferenceOrigin": [
+        0.5594116,
+        -0.021621212,
+        0.90979385
+      ],
+      "evaluatedMountOrigin": [
+        0.55872566,
+        0.026484702,
+        1.0714533
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866665,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Attack.V2",
+      "bodyClip": "Attack.V2",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Attack.V3",
+      "bodyClip": "Attack.V3",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0.023625,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0.023625,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0.023625,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Attack.V3",
+      "bodyClip": "Attack.V3",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.64617217,
+        0.25485975,
+        0.848785
+      ],
+      "attachmentReferenceOrigin": [
+        0.64617217,
+        0.25485975,
+        0.848785
+      ],
+      "evaluatedMountOrigin": [
+        0.6465794,
+        0.32882166,
+        1.0003697
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Attack.V3",
+      "bodyClip": "Attack.V3",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Death",
+      "bodyClip": "Death",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Death",
+      "bodyClip": "Death",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        -0.36415982,
+        0.8078671
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.36415982,
+        0.8078671
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        -0.43119732,
+        0.9626393
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Death",
+      "bodyClip": "Death",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        -0.9021713,
+        0.1348941
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.9021713,
+        0.1348941
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        -1.0658278,
+        0.17569825
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Death.V1",
+      "bodyClip": "Death.V1",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Death.V1",
+      "bodyClip": "Death.V1",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6159349,
+        -0.1991719,
+        0.8811982
+      ],
+      "attachmentReferenceOrigin": [
+        0.6159349,
+        -0.1991719,
+        0.8811982
+      ],
+      "evaluatedMountOrigin": [
+        0.61208755,
+        -0.25415468,
+        1.0406051
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Death.V1",
+      "bodyClip": "Death.V1",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.5950051,
+        -0.64662784,
+        0.63824445
+      ],
+      "attachmentReferenceOrigin": [
+        0.5950051,
+        -0.64662784,
+        0.63824445
+      ],
+      "evaluatedMountOrigin": [
+        0.5950051,
+        -0.79555166,
+        0.7174287
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Death.V2",
+      "bodyClip": "Death.V2",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Death.V2",
+      "bodyClip": "Death.V2",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6171214,
+        -0.39466134,
+        0.7766689
+      ],
+      "attachmentReferenceOrigin": [
+        0.6171214,
+        -0.39466134,
+        0.7766689
+      ],
+      "evaluatedMountOrigin": [
+        0.62122077,
+        -0.45304343,
+        0.93485606
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Death.V2",
+      "bodyClip": "Death.V2",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.46505508,
+        -0.9281507,
+        -0.011646368
+      ],
+      "attachmentReferenceOrigin": [
+        0.46505508,
+        -0.9281507,
+        -0.011646368
+      ],
+      "evaluatedMountOrigin": [
+        0.46505508,
+        -1.0822353,
+        0.05695653
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866662,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Death.V3",
+      "bodyClip": "Death.V3",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Death.V3",
+      "bodyClip": "Death.V3",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.60978484,
+        -0.41237393,
+        0.77433765
+      ],
+      "attachmentReferenceOrigin": [
+        0.60978484,
+        -0.41237393,
+        0.77433765
+      ],
+      "evaluatedMountOrigin": [
+        0.608376,
+        -0.49080092,
+        0.9197358
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16520713,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Death.V3",
+      "bodyClip": "Death.V3",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.5995075,
+        -0.9075401,
+        -0.035577927
+      ],
+      "attachmentReferenceOrigin": [
+        0.5995075,
+        -0.9075401,
+        -0.035577927
+      ],
+      "evaluatedMountOrigin": [
+        0.5995075,
+        -1.0659902,
+        -0.041111123
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.15854672,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Hit",
+      "bodyClip": "Hit",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Hit",
+      "bodyClip": "Hit",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        -0.13079542,
+        0.86551166
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.13079542,
+        0.86551166
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        -0.17163752,
+        1.0291587
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866665,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Hit",
+      "bodyClip": "Hit",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Hit.V1",
+      "bodyClip": "Hit.V1",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Hit.V1",
+      "bodyClip": "Hit.V1",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.64045733,
+        0.039491758,
+        0.9115441
+      ],
+      "attachmentReferenceOrigin": [
+        0.64045733,
+        0.039491758,
+        0.9115441
+      ],
+      "evaluatedMountOrigin": [
+        0.6399668,
+        0.012106705,
+        1.077972
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866669,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Hit.V1",
+      "bodyClip": "Hit.V1",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Hit.V2",
+      "bodyClip": "Hit.V2",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Hit.V2",
+      "bodyClip": "Hit.V2",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.58831,
+        -0.20674443,
+        0.8554863
+      ],
+      "attachmentReferenceOrigin": [
+        0.58831,
+        -0.20674443,
+        0.8554863
+      ],
+      "evaluatedMountOrigin": [
+        0.5888824,
+        -0.23864241,
+        1.0211083
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686667,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Hit.V2",
+      "bodyClip": "Hit.V2",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Hit.V3",
+      "bodyClip": "Hit.V3",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Hit.V3",
+      "bodyClip": "Hit.V3",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.63163376,
+        -0.1344502,
+        0.8536936
+      ],
+      "attachmentReferenceOrigin": [
+        0.63163376,
+        -0.1344502,
+        0.8536936
+      ],
+      "evaluatedMountOrigin": [
+        0.631213,
+        -0.18848512,
+        1.0134699
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866662,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Hit.V3",
+      "bodyClip": "Hit.V3",
+      "bodyPhase": 1,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.62493145,
+        -0.010908896,
+        0.8856122
+      ],
+      "attachmentReferenceOrigin": [
+        0.62493145,
+        -0.010908896,
+        0.8856122
+      ],
+      "evaluatedMountOrigin": [
+        0.6249212,
+        -0.013852535,
+        1.0542531
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.027702397,
+        1.064598
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866665,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.62493145,
+        -0.010908896,
+        0.8856122
+      ],
+      "attachmentReferenceOrigin": [
+        0.62493145,
+        -0.010908896,
+        0.8856122
+      ],
+      "evaluatedMountOrigin": [
+        0.6249212,
+        -0.013852535,
+        1.0542531
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle.V1",
+      "bodyClip": "Idle.V1",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle.V1",
+      "bodyClip": "Idle.V1",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6251095,
+        -0.035984505,
+        0.890719
+      ],
+      "attachmentReferenceOrigin": [
+        0.6251095,
+        -0.035984505,
+        0.890719
+      ],
+      "evaluatedMountOrigin": [
+        0.6251352,
+        -0.04187089,
+        1.0592829
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle.V1",
+      "bodyClip": "Idle.V1",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249048,
+        -0.0719181,
+        0.9051826
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249048,
+        -0.0719181,
+        0.9051826
+      ],
+      "evaluatedMountOrigin": [
+        0.6249048,
+        -0.08368369,
+        1.0734384
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle.V1",
+      "bodyClip": "Idle.V1",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6251095,
+        -0.035984505,
+        0.890719
+      ],
+      "attachmentReferenceOrigin": [
+        0.6251095,
+        -0.035984505,
+        0.890719
+      ],
+      "evaluatedMountOrigin": [
+        0.6251352,
+        -0.04187089,
+        1.0592829
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle.V2",
+      "bodyClip": "Idle.V2",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle.V2",
+      "bodyClip": "Idle.V2",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.62512565,
+        0.037073955,
+        0.8812119
+      ],
+      "attachmentReferenceOrigin": [
+        0.62512565,
+        0.037073955,
+        0.8812119
+      ],
+      "evaluatedMountOrigin": [
+        0.62515646,
+        0.04296034,
+        1.0497758
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866672,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle.V2",
+      "bodyClip": "Idle.V2",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6248629,
+        0.07409404,
+        0.8861305
+      ],
+      "attachmentReferenceOrigin": [
+        0.6248629,
+        0.07409404,
+        0.8861305
+      ],
+      "evaluatedMountOrigin": [
+        0.6248629,
+        0.085859634,
+        1.0543864
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866674,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle.V2",
+      "bodyClip": "Idle.V2",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.62512565,
+        0.037073955,
+        0.8812119
+      ],
+      "attachmentReferenceOrigin": [
+        0.62512565,
+        0.037073955,
+        0.8812119
+      ],
+      "evaluatedMountOrigin": [
+        0.62515646,
+        0.04296034,
+        1.0497758
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866672,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle.V3",
+      "bodyClip": "Idle.V3",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle.V3",
+      "bodyClip": "Idle.V3",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.62512827,
+        -0.04960139,
+        0.88649493
+      ],
+      "attachmentReferenceOrigin": [
+        0.62512827,
+        -0.04960139,
+        0.88649493
+      ],
+      "evaluatedMountOrigin": [
+        0.62515527,
+        -0.058428723,
+        1.0549304
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle.V3",
+      "bodyClip": "Idle.V3",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249534,
+        -0.099056214,
+        0.895396
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249534,
+        -0.099056214,
+        0.895396
+      ],
+      "evaluatedMountOrigin": [
+        0.6249534,
+        -0.11668669,
+        1.0631387
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686667,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:Idle.V3",
+      "bodyClip": "Idle.V3",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.62512827,
+        -0.04960139,
+        0.88649493
+      ],
+      "attachmentReferenceOrigin": [
+        0.62512827,
+        -0.04960139,
+        0.88649493
+      ],
+      "evaluatedMountOrigin": [
+        0.62515527,
+        -0.058428723,
+        1.0549304
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0.07931859,
+        1.00996
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0.07931859,
+        1.00996
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0.10204644,
+        1.1770884
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866663,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        -0.114554726,
+        1.1566615
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686667,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        -0.089547195,
+        1.0938015
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866672,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward.V1",
+      "bodyClip": "WalkForward.V1",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward.V1",
+      "bodyClip": "WalkForward.V1",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6496545,
+        0.1504691,
+        0.99763906
+      ],
+      "attachmentReferenceOrigin": [
+        0.6496545,
+        0.1504691,
+        0.99763906
+      ],
+      "evaluatedMountOrigin": [
+        0.6496776,
+        0.18163528,
+        1.1634012
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866663,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward.V1",
+      "bodyClip": "WalkForward.V1",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6222468,
+        -0.12430535,
+        0.9865397
+      ],
+      "attachmentReferenceOrigin": [
+        0.6222468,
+        -0.12430535,
+        0.9865397
+      ],
+      "evaluatedMountOrigin": [
+        0.62250865,
+        -0.1307631,
+        1.1550825
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866662,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward.V1",
+      "bodyClip": "WalkForward.V1",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.62714154,
+        -0.10405809,
+        0.92393017
+      ],
+      "attachmentReferenceOrigin": [
+        0.62714154,
+        -0.10405809,
+        0.92393017
+      ],
+      "evaluatedMountOrigin": [
+        0.62719357,
+        -0.113489985,
+        1.0923328
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward.V2",
+      "bodyClip": "WalkForward.V2",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward.V2",
+      "bodyClip": "WalkForward.V2",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6038764,
+        0.14430326,
+        0.9990082
+      ],
+      "attachmentReferenceOrigin": [
+        0.6038764,
+        0.14430326,
+        0.9990082
+      ],
+      "evaluatedMountOrigin": [
+        0.60385233,
+        0.18382753,
+        1.1629785
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward.V2",
+      "bodyClip": "WalkForward.V2",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6268259,
+        -0.109287456,
+        0.9891137
+      ],
+      "attachmentReferenceOrigin": [
+        0.6268259,
+        -0.109287456,
+        0.9891137
+      ],
+      "evaluatedMountOrigin": [
+        0.626558,
+        -0.116622455,
+        1.1576205
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866663,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward.V2",
+      "bodyClip": "WalkForward.V2",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.623025,
+        -0.09151581,
+        0.92507315
+      ],
+      "attachmentReferenceOrigin": [
+        0.623025,
+        -0.09151581,
+        0.92507315
+      ],
+      "evaluatedMountOrigin": [
+        0.6229739,
+        -0.10283146,
+        1.0933598
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866669,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward.V3",
+      "bodyClip": "WalkForward.V3",
+      "bodyPhase": 0,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0,
+        0.875
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0,
+        1.0436666
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1686666,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward.V3",
+      "bodyClip": "WalkForward.V3",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6386377,
+        0.22385108,
+        0.9777193
+      ],
+      "attachmentReferenceOrigin": [
+        0.6386377,
+        0.22385108,
+        0.9777193
+      ],
+      "evaluatedMountOrigin": [
+        0.6386572,
+        0.2716319,
+        1.1394767
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866668,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward.V3",
+      "bodyClip": "WalkForward.V3",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.62389106,
+        -0.12851039,
+        0.9864454
+      ],
+      "attachmentReferenceOrigin": [
+        0.62389106,
+        -0.12851039,
+        0.9864454
+      ],
+      "evaluatedMountOrigin": [
+        0.6241055,
+        -0.13672194,
+        1.154912
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866672,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "body:WalkForward.V3",
+      "bodyClip": "WalkForward.V3",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6262575,
+        -0.11799927,
+        0.922825
+      ],
+      "attachmentReferenceOrigin": [
+        0.6262575,
+        -0.11799927,
+        0.922825
+      ],
+      "evaluatedMountOrigin": [
+        0.62629724,
+        -0.13119724,
+        1.0909745
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.16866663,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Attack",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
       ],
       "referenceError": 0,
       "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Attack",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.63050634,
+        -0.42334777,
+        0.9702443
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.4083698,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Attack",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack",
+      "equipmentPhase": 1,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Attack.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V1",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Attack.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V1",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.73293483,
+        -0.53036714,
+        0.9446403
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.52215886,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Attack.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V1",
+      "equipmentPhase": 1,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Attack.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V2",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Attack.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V2",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.530417,
+        -0.48349902,
+        0.98272157
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.4791663,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Attack.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V2",
+      "equipmentPhase": 1,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Attack.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V3",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Attack.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V3",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.67629313,
+        -0.60294825,
+        0.91295
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.58364207,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Attack.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V3",
+      "equipmentPhase": 1,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Drop",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Drop",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6351436,
+        -0.0072619542,
+        0.7799379
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.11744899,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Drop",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.64761573,
+        0.011656053,
+        0.605692
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.2931435,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Drop.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V1",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Drop.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V1",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.60416883,
+        -0.012117382,
+        0.7582886
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.1396398,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Drop.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V1",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.578783,
+        0.0010743178,
+        0.5516231
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.3482431,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Drop.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V2",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Drop.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V2",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6526809,
+        -0.028134726,
+        0.79148316
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.108353235,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Drop.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V2",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6865876,
+        -0.0348468,
+        0.63475347
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.26877105,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Drop.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V3",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Drop.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V3",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.617823,
+        -0.0010470077,
+        0.7433325
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.15427169,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Drop.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Drop.V3",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.60912555,
+        0.025823794,
+        0.5141307
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.38518798,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.024759207,
+        0.98031604
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.08433335,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.024759207,
+        0.98031604
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.08433335,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V1",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V1",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.63183844,
+        -0.023325112,
+        0.9420094
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.04651461,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V1",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.63873774,
+        -0.024834208,
+        0.9879848
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.093029276,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle.V1",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V1",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.63183844,
+        -0.023325112,
+        0.9420094
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.04651461,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V2",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V2",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.61880636,
+        -0.0240421,
+        0.95732707
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.061639257,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V2",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.61267364,
+        -0.026268186,
+        1.01862
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.123278454,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle.V2",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V2",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.61880636,
+        -0.0240421,
+        0.95732707
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.061639257,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V3",
+      "equipmentPhase": 0,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V3",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.62487483,
+        -0.018289518,
+        0.9268426
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.031009749,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V3",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.62481064,
+        -0.014763018,
+        0.9576511
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.062019497,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "equipment:Idle.V3",
+      "bodyClip": "Idle",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Idle.V3",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 1,
+      "bodySocketOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "attachmentReferenceOrigin": [
+        0.6249391,
+        -0.021816015,
+        0.89603406
+      ],
+      "evaluatedMountOrigin": [
+        0.62487483,
+        -0.018289518,
+        0.9268426
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.031009749,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "death-drop:base",
+      "bodyClip": "Death",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Drop",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.625,
+        -0.7639927,
+        0.4445014
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.7639927,
+        0.4445014
+      ],
+      "evaluatedMountOrigin": [
+        0.641675,
+        -0.58571136,
+        0.3440892
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.20529225,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "death-drop-terminal:base",
+      "bodyClip": "Death",
+      "bodyPhase": 1,
+      "equipmentClip": "Drop",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.625,
+        -0.9021713,
+        0.1348941
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.9021713,
+        0.1348941
+      ],
+      "evaluatedMountOrigin": [
+        0.648,
+        -0.6139276,
+        0.086731
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.2931435,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "death-drop:V1",
+      "bodyClip": "Death.V1",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Drop.V1",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.5816102,
+        -0.48989958,
+        0.76987344
+      ],
+      "attachmentReferenceOrigin": [
+        0.5816102,
+        -0.48989958,
+        0.76987344
+      ],
+      "evaluatedMountOrigin": [
+        0.5582556,
+        -0.32018942,
+        0.5962157
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.24393436,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "death-drop-terminal:V1",
+      "bodyClip": "Death.V1",
+      "bodyPhase": 1,
+      "equipmentClip": "Drop.V1",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.5950051,
+        -0.64662784,
+        0.63824445
+      ],
+      "attachmentReferenceOrigin": [
+        0.5950051,
+        -0.64662784,
+        0.63824445
+      ],
+      "evaluatedMountOrigin": [
+        0.5499008,
+        -0.34887636,
+        0.46336478
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.3482431,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "death-drop:V2",
+      "bodyClip": "Death.V2",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Drop.V2",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.5644593,
+        -0.79779243,
+        0.33369434
+      ],
+      "attachmentReferenceOrigin": [
+        0.5644593,
+        -0.79779243,
+        0.33369434
+      ],
+      "evaluatedMountOrigin": [
+        0.58997595,
+        -0.6816754,
+        0.18735516
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.18854555,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "death-drop-terminal:V2",
+      "bodyClip": "Death.V2",
+      "bodyPhase": 1,
+      "equipmentClip": "Drop.V2",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.46505508,
+        -0.9281507,
+        -0.011646368
+      ],
+      "attachmentReferenceOrigin": [
+        0.46505508,
+        -0.9281507,
+        -0.011646368
+      ],
+      "evaluatedMountOrigin": [
+        0.50488055,
+        -0.71117294,
+        -0.16517964
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.26877108,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "death-drop:V3",
+      "bodyClip": "Death.V3",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Drop.V3",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.5976404,
+        -0.8256382,
+        0.32734498
+      ],
+      "attachmentReferenceOrigin": [
+        0.5976404,
+        -0.8256382,
+        0.32734498
+      ],
+      "evaluatedMountOrigin": [
+        0.58862966,
+        -0.57741237,
+        0.25132173
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.25976294,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "death-drop-terminal:V3",
+      "bodyClip": "Death.V3",
+      "bodyPhase": 1,
+      "equipmentClip": "Drop.V3",
+      "equipmentPhase": 1,
+      "referenceInfluence": 0,
+      "bodySocketOrigin": [
+        0.5995075,
+        -0.9075401,
+        -0.035577927
+      ],
+      "attachmentReferenceOrigin": [
+        0.5995075,
+        -0.9075401,
+        -0.035577927
+      ],
+      "evaluatedMountOrigin": [
+        0.58043295,
+        -0.5485485,
+        0.0091362335
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.36226806,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "moving-release:Attack",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Attack",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 0.625,
+      "bodySocketOrigin": [
+        0.625,
+        0.07931859,
+        1.00996
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0.07931859,
+        1.00996
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        0.07756767,
+        1.0329329
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.02303945,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "moving-release:Attack",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        -0.510411,
+        1.063031
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.40836984,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "moving-release:Attack",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Attack",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0.45,
+      "bodySocketOrigin": [
+        0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "evaluatedMountOrigin": [
+        0.625,
+        -0.27682096,
+        0.9549578
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.19706458,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "moving-release:Attack.V1",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Attack.V1",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 0.625,
+      "bodySocketOrigin": [
+        0.625,
+        0.07931859,
+        1.00996
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0.07931859,
+        1.00996
+      ],
+      "evaluatedMountOrigin": [
+        0.61561924,
+        0.066584304,
+        1.0322484
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.02733002,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "moving-release:Attack.V1",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V1",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "evaluatedMountOrigin": [
+        0.72591275,
+        -0.61889595,
+        1.037576
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.5221589,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "moving-release:Attack.V1",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Attack.V1",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0.45,
+      "bodySocketOrigin": [
+        0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "evaluatedMountOrigin": [
+        0.6652602,
+        -0.32905713,
+        0.9430232
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.25094208,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "moving-release:Attack.V2",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Attack.V2",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 0.625,
+      "bodySocketOrigin": [
+        0.625,
+        0.07931859,
+        1.00996
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0.07931859,
+        1.00996
+      ],
+      "evaluatedMountOrigin": [
+        0.63438076,
+        0.07205886,
+        1.035134
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.02782854,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "moving-release:Attack.V2",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V2",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "evaluatedMountOrigin": [
+        0.52408725,
+        -0.56913686,
+        1.0756648
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.47916633,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "moving-release:Attack.V2",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Attack.V2",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0.45,
+      "bodySocketOrigin": [
+        0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "evaluatedMountOrigin": [
+        0.5847398,
+        -0.3051949,
+        0.9600836
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.22944795,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "moving-release:Attack.V3",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.25,
+      "equipmentClip": "Attack.V3",
+      "equipmentPhase": 0.25,
+      "referenceInfluence": 0.625,
+      "bodySocketOrigin": [
+        0.625,
+        0.07931859,
+        1.00996
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        0.07931859,
+        1.00996
+      ],
+      "evaluatedMountOrigin": [
+        0.62097967,
+        0.05906818,
+        1.0303664
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.02902864,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "moving-release:Attack.V3",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.5,
+      "equipmentClip": "Attack.V3",
+      "equipmentPhase": 0.5,
+      "referenceInfluence": 0.25,
+      "bodySocketOrigin": [
+        0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.10897694,
+        0.98808706
+      ],
+      "evaluatedMountOrigin": [
+        0.66824836,
+        -0.6907374,
+        1.006045
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.5836421,
+      "passed": true,
+      "detail": "PASS"
+    },
+    {
+      "capability": "Hand",
+      "socket": "Equip.Hand.Right.0",
+      "side": "Right",
+      "caseName": "moving-release:Attack.V3",
+      "bodyClip": "WalkForward",
+      "bodyPhase": 0.75,
+      "equipmentClip": "Attack.V3",
+      "equipmentPhase": 0.75,
+      "referenceInfluence": 0.45,
+      "bodySocketOrigin": [
+        0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "attachmentReferenceOrigin": [
+        0.625,
+        -0.082000315,
+        0.9253037
+      ],
+      "evaluatedMountOrigin": [
+        0.64225435,
+        -0.36359525,
+        0.9286829
+      ],
+      "referenceError": 0,
+      "animatedMountDrift": 0.2821433,
       "passed": true,
       "detail": "PASS"
     }

@@ -33,13 +33,15 @@ internal static class SemanticAnimationClipName
     private static readonly HashSet<string> SideSet =
         new(StringComparer.Ordinal) { "Left", "Right", "Center" };
 
-    internal static SemanticAnimationClipIdentity Parse(string name)
+    internal static SemanticAnimationClipIdentity Parse(string name) => Parse(name, MotionSet);
+
+    internal static SemanticAnimationClipIdentity Parse(string name, IEnumerable<string> allowedMotions)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new InvalidDataException("Semantic animation clip name is required.");
 
         string[] parts = name.Split('.');
-        if (parts.Length is < 1 or > 3 || !MotionSet.Contains(parts[0]))
+        if (parts.Length is < 1 or > 3 || !allowedMotions.Contains(parts[0], StringComparer.Ordinal))
         {
             throw new InvalidDataException(
                 $"Semantic animation clip '{name}' must match <Motion>, <Motion>.<Side>, <Motion>.V<n>, or <Motion>.<Side>.V<n>.");
@@ -117,14 +119,15 @@ internal static class SemanticAnimationClipName
     }
 
     internal static IReadOnlyList<SemanticMotionCoverage> BuildCoverage(
-        IEnumerable<string> clipNames)
+        IEnumerable<string> clipNames,
+        IEnumerable<string> allowedMotions)
     {
         var coverage = new Dictionary<string, SemanticMotionCoverage>(
             StringComparer.Ordinal);
 
         foreach (string clipName in clipNames.OrderBy(x => x, StringComparer.Ordinal))
         {
-            SemanticAnimationClipIdentity identity = Parse(clipName);
+            SemanticAnimationClipIdentity identity = Parse(clipName, allowedMotions);
             if (!coverage.TryGetValue(identity.Motion, out SemanticMotionCoverage? motion))
             {
                 motion = new SemanticMotionCoverage { Motion = identity.Motion };

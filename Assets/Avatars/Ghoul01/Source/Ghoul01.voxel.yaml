@@ -525,7 +525,7 @@ sockets:
       translate: [13, 4, 2]
 animations:
   - clip: Idle
-    duration: 1.2
+    duration: 1.3
     loop: true
     tracks:
       - part: Body
@@ -535,11 +535,89 @@ animations:
             - time: 0
               value: [0, 0, 0]
             - time: 0.5
-              value: [0, 0, 0.2]
+              value: [0, 0, 0.1926]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [2, 0, 0.8]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V1
+    duration: 1.6
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0, 0, 0.2996]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [4, 0, -1]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V2
+    duration: 1.1
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0, 0, 0.1284]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [-4, 0, 1.2]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V3
+    duration: 1.45
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0, 0, 0.2354]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [6, 0, -0.7]
             - time: 1
               value: [0, 0, 0]
   - clip: WalkForward
-    duration: 0.6
+    duration: 0.68
     loop: true
     tracks:
       - part: Body
@@ -548,121 +626,27 @@ animations:
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 0.33
-              value: [0, -0.6, 1.2]
-            - time: 0.66
-              value: [0, -1.2, 0]
+            - time: 0.28
+              value: [0, -0.5056, 1.712]
+            - time: 0.58
+              value: [0, -1.1235, 1.2326]
+            - time: 0.82
+              value: [0, -0.3932, 0.428]
             - time: 1
               value: [0, 0, 0]
-  - clip: Attack
-    duration: 0.45
-    loop: false
-    tracks:
-      - part: Body
-        position:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0.3, 0]
-            - time: 0.55
-              value: [0, -1.2, 0]
-            - time: 1
-              value: [0, -0.3, 0]
-  - clip: Attack.Left
-    duration: 0.45
-    loop: false
-    tracks:
-      - part: Body
-        position:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0.3, 0]
-            - time: 0.55
-              value: [0, -1.2, 0]
-            - time: 1
-              value: [0, -0.3, 0]
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 8]
-            - time: 0.55
-              value: [0, 0, -14]
-            - time: 1
-              value: [0, 0, -4]
-  - clip: Attack.Right
-    duration: 0.45
-    loop: false
-    tracks:
-      - part: Body
-        position:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0.3, 0]
-            - time: 0.55
-              value: [0, -1.2, 0]
-            - time: 1
-              value: [0, -0.3, 0]
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, -8]
-            - time: 0.55
-              value: [0, 0, 14]
-            - time: 1
-              value: [0, 0, 4]
-  - clip: Hit
-    duration: 0.35
-    loop: false
-    tracks:
-      - part: Body
-        position:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 0.45
-              value: [0, 1.0, 0.2]
-            - time: 1
-              value: [0, 0, 0]
-  - clip: Death
-    duration: 0.75
-    loop: false
-    tracks:
-      - part: Body
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 1
-              value: [0, 0, 82]
-        scale:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [1, 1, 1]
-            - time: 1
-              value: [1, 1, 0.72]
-  - clip: Idle.V1
-    duration: 1.104
-    loop: true
-    tracks:
-      - part: Body
-        position:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 0.5
-              value: [-0.12, 0, 0.2]
+            - time: 0.28
+              value: [-8, 0, 0]
+            - time: 0.58
+              value: [4, 0, 0]
             - time: 1
               value: [0, 0, 0]
   - clip: WalkForward.V1
-    duration: 0.564
+    duration: 0.82
     loop: true
     tracks:
       - part: Body
@@ -671,14 +655,85 @@ animations:
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 0.33
-              value: [0.16, -0.6, 1.2]
-            - time: 0.66
-              value: [0, -1.2, 0]
+            - time: 0.28
+              value: [0.2354, -0.5056, 1.712]
+            - time: 0.58
+              value: [-0.0942, -1.1235, 1.2326]
+            - time: 0.82
+              value: [0.0471, -0.3932, 0.428]
             - time: 1
               value: [0, 0, 0]
-  - clip: Attack.Left.V1
-    duration: 0.432
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.28
+              value: [-11, 0, 2.64]
+            - time: 0.58
+              value: [5, 0, -1.76]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: WalkForward.V2
+    duration: 0.56
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.28
+              value: [-0.1926, -0.5056, 1.712]
+            - time: 0.58
+              value: [0.077, -1.1235, 1.2326]
+            - time: 0.82
+              value: [-0.0385, -0.3932, 0.428]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.28
+              value: [-14, 0, -2.16]
+            - time: 0.58
+              value: [6, 0, 1.44]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: WalkForward.V3
+    duration: 0.74
+    loop: true
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.28
+              value: [0.1284, -0.5056, 1.712]
+            - time: 0.58
+              value: [-0.0514, -1.1235, 1.2326]
+            - time: 0.82
+              value: [0.0257, -0.3932, 0.428]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.28
+              value: [-17, 0, 1.44]
+            - time: 0.58
+              value: [7, 0, -0.96]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Attack
+    duration: 0.52
     loop: false
     tracks:
       - part: Body
@@ -686,22 +741,30 @@ animations:
           interpolation: smoothstep
           keys:
             - time: 0
-              value: [0, 0.3, 0]
+              value: [0, 0.214, 0]
+            - time: 0.2
+              value: [0, 0.2675, 0.1605]
             - time: 0.55
-              value: [0, -1.2, 0]
+              value: [0, -1.7227, 0.3745]
+            - time: 0.82
+              value: [0, -0.6741, 0.1311]
             - time: 1
-              value: [0, -0.3, 0]
+              value: [0, 0, 0]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
-              value: [0, 0, 8]
+              value: [0, 0, 0]
+            - time: 0.2
+              value: [8, 0, 0]
             - time: 0.55
-              value: [0, 0, -18]
+              value: [-14, 0, 0]
+            - time: 0.82
+              value: [-4.9, 0, 0]
             - time: 1
-              value: [0, 0, -4]
-  - clip: Attack.Right.V1
-    duration: 0.4365
+              value: [0, 0, 0]
+  - clip: Attack.V1
+    duration: 0.64
     loop: false
     tracks:
       - part: Body
@@ -709,22 +772,119 @@ animations:
           interpolation: smoothstep
           keys:
             - time: 0
-              value: [0, 0.3, 0]
+              value: [0, 0.214, 0]
+            - time: 0.2
+              value: [-0.1204, 0.2675, 0.1605]
             - time: 0.55
-              value: [0, -1.2, 0]
+              value: [0.4815, -1.4151, 0.642]
+            - time: 0.82
+              value: [0.1685, -0.5537, 0.2247]
             - time: 1
-              value: [0, -0.3, 0]
+              value: [0, 0, 0]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
-              value: [0, 0, -8]
+              value: [0, 0, 0]
+            - time: 0.2
+              value: [8, 0, -4.8]
             - time: 0.55
-              value: [0, 0, 22]
+              value: [-22, 0, 12]
+            - time: 0.82
+              value: [-7.7, 0, 4.2]
             - time: 1
-              value: [0, 0, 4]
+              value: [0, 0, 0]
+  - clip: Attack.V2
+    duration: 0.46
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0.214, 0]
+            - time: 0.2
+              value: [0.1124, 0.2675, 0.1605]
+            - time: 0.55
+              value: [-0.4494, -1.5381, 0.2675]
+            - time: 0.82
+              value: [-0.1573, -0.6019, 0.0936]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.2
+              value: [8, 0, 5.6]
+            - time: 0.55
+              value: [-18, 0, -14]
+            - time: 0.82
+              value: [-6.3, 0, -4.9]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Attack.V3
+    duration: 0.72
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0.214, 0]
+            - time: 0.2
+              value: [-0.0535, 0.2675, 0.1605]
+            - time: 0.55
+              value: [0.214, -2.0303, 0.856]
+            - time: 0.82
+              value: [0.0749, -0.7945, 0.2996]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.2
+              value: [8, 0, -2.4]
+            - time: 0.55
+              value: [-28, 0, 6]
+            - time: 0.82
+              value: [-9.8, 0, 2.1]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Hit
+    duration: 0.38
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.38
+              value: [0, 1.1075, 0.1926]
+            - time: 0.7
+              value: [0, 0.2408, 0.0578]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.38
+              value: [18, 0, 0]
+            - time: 0.7
+              value: [5.4, 0, 0]
+            - time: 1
+              value: [0, 0, 0]
   - clip: Hit.V1
-    duration: 0.3255
+    duration: 0.48
     loop: false
     tracks:
       - part: Body
@@ -733,26 +893,202 @@ animations:
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 0.45
-              value: [-0.16, 1, 0.2]
+            - time: 0.38
+              value: [0.3424, 0.9229, 0.321]
+            - time: 0.7
+              value: [0.0856, 0.2006, 0.0963]
             - time: 1
               value: [0, 0, 0]
-  - clip: Death.V1
-    duration: 0.7125
-    loop: false
-    tracks:
-      - part: Body
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
+            - time: 0.38
+              value: [12, 0, 14]
+            - time: 0.7
+              value: [3.6, 0, 3.5]
             - time: 1
-              value: [0, 0, 76]
+              value: [0, 0, 0]
+  - clip: Hit.V2
+    duration: 0.32
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.38
+              value: [-0.3424, 0.9844, 0.2354]
+            - time: 0.7
+              value: [-0.0856, 0.214, 0.0706]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.38
+              value: [14, 0, -14]
+            - time: 0.7
+              value: [4.2, 0, -3.5]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Hit.V3
+    duration: 0.44
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.38
+              value: [0.1284, 1.3536, 0.0856]
+            - time: 0.7
+              value: [0.0321, 0.2943, 0.0257]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.38
+              value: [24, 0, 6]
+            - time: 0.7
+              value: [7.2, 0, 1.5]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Death
+    duration: 0.792
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.35
+              value: [0, -0.0963, 0.1605]
+            - time: 1
+              value: [0, -0.4815, -0.6955]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.35
+              value: [15.2, 0, 0]
+            - time: 1
+              value: [76, 0, 0]
         scale:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [1, 1, 1]
+            - time: 0.55
+              value: [1, 1, 1]
             - time: 1
-              value: [1, 1, 0.72]
+              value: [1, 1, 1]
+  - clip: Death.V1
+    duration: 0.945
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.35
+              value: [0.1177, -0.0535, 0.1605]
+            - time: 1
+              value: [0.5885, -0.2675, -0.5885]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.35
+              value: [12.4, 0, 6.4]
+            - time: 1
+              value: [62, 0, 32]
+        scale:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [1, 1, 1]
+            - time: 0.55
+              value: [1, 1, 1]
+            - time: 1
+              value: [1, 1, 1]
+  - clip: Death.V2
+    duration: 0.702
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.35
+              value: [-0.1177, 0.0107, 0.1605]
+            - time: 1
+              value: [-0.5885, 0.0535, -0.5885]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.35
+              value: [13.2, 0, -6.4]
+            - time: 1
+              value: [66, 0, -32]
+        scale:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [1, 1, 1]
+            - time: 0.55
+              value: [1, 1, 1]
+            - time: 1
+              value: [1, 1, 1]
+  - clip: Death.V3
+    duration: 1.062
+    loop: false
+    tracks:
+      - part: Body
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.35
+              value: [0.0321, -0.1498, 0.1605]
+            - time: 1
+              value: [0.1605, -0.749, -0.8025]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.35
+              value: [18.4, 0, 1.6]
+            - time: 1
+              value: [92, 0, 8]
+        scale:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [1, 1, 1]
+            - time: 0.55
+              value: [0.979, 1, 0.979]
+            - time: 1
+              value: [0.94, 1, 0.94]

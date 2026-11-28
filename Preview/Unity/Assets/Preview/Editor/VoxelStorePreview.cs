@@ -32,6 +32,17 @@ namespace VoxelStore.Preview.Editor
         public string Palette;
         public string GeneratedVox;
         public string GeneratedAnimation;
+        public string AnimationProfile;
+        public PreviewClipContract[] RequiredClips =
+            Array.Empty<PreviewClipContract>();
+        public bool Candidate;
+    }
+
+    [Serializable]
+    internal sealed class PreviewClipContract
+    {
+        public string Name;
+        public bool Loop;
     }
 
     internal sealed class BakedPreviewUnit
@@ -225,7 +236,13 @@ namespace VoxelStore.Preview.Editor
                     string.IsNullOrWhiteSpace(unit.UnitRef) ||
                     string.IsNullOrWhiteSpace(unit.SourceBase) ||
                     string.IsNullOrWhiteSpace(unit.Palette) ||
-                    string.IsNullOrWhiteSpace(unit.GeneratedVox))
+                    string.IsNullOrWhiteSpace(unit.GeneratedVox) ||
+                    string.IsNullOrWhiteSpace(unit.AnimationProfile) ||
+                    unit.RequiredClips == null ||
+                    unit.RequiredClips.Length == 0 ||
+                    unit.RequiredClips.Any(clip =>
+                        clip == null ||
+                        string.IsNullOrWhiteSpace(clip.Name)))
                     throw new InvalidDataException("preview-plan contains an incomplete unit.");
                 if (!ids.Add(unit.Id))
                     throw new InvalidDataException("preview-plan contains duplicate asset id: " + unit.Id);
@@ -247,11 +264,23 @@ namespace VoxelStore.Preview.Editor
 
         internal static string BuildToolArguments(
             string toolProject,
-            string storeRoot) =>
-            "run --project " + Quote(toolProject) +
-            " -- preview-plan --root " + Quote(storeRoot);
+            string storeRoot,
+            IEnumerable<string> candidates = null)
+        {
+            string arguments =
+                "run --project " + Quote(toolProject) +
+                " -- preview-plan --root " + Quote(storeRoot);
+            if (candidates != null)
+                foreach (string candidate in candidates)
+                    if (!string.IsNullOrWhiteSpace(candidate))
+                        arguments +=
+                            " --candidate " +
+                            Quote(candidate);
+            return arguments;
+        }
 
-        internal static PreviewPlanContract Load()
+        internal static PreviewPlanContract Load(
+            IEnumerable<string> candidates = null)
         {
             string storeRoot = VoxelStorePreviewPaths.StoreRoot;
             string toolProject = Path.Combine(
@@ -264,7 +293,10 @@ namespace VoxelStore.Preview.Editor
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                Arguments = BuildToolArguments(toolProject, storeRoot)
+                Arguments = BuildToolArguments(
+                    toolProject,
+                    storeRoot,
+                    candidates)
             };
 
             using Process process = Process.Start(start) ??
@@ -516,6 +548,7 @@ namespace VoxelStore.Preview.Editor
 
                 PreviewPlanContract plan = PreviewPlanClient.Load();
                 List<BakedPreviewUnit> baked = PreviewBake.BakeAll(plan);
+                PreviewVariantCoverage.ValidateAll(baked);
                 if (baked.Count != plan.Units.Length)
                 {
                     throw new InvalidOperationException(
@@ -546,6 +579,7 @@ namespace VoxelStore.Preview.Editor
                 PreviewPlanClient.Load();
             List<BakedPreviewUnit> baked =
                 PreviewBake.BakeAll(plan);
+            PreviewVariantCoverage.ValidateAll(baked);
             if (baked.Count != plan.Units.Length)
             {
                 throw new InvalidOperationException(
@@ -559,6 +593,17 @@ namespace VoxelStore.Preview.Editor
                 "Voxel Store preview bake ready: " +
                 baked.Count +
                 " published units.");
+        }
+
+        internal static List<BakedPreviewUnit> BakeCandidatesForBatch(
+            IEnumerable<string> candidateIds)
+        {
+            PreviewPlanContract plan =
+                PreviewPlanClient.Load(candidateIds);
+            List<BakedPreviewUnit> baked =
+                PreviewBake.BakeAll(plan);
+            PreviewVariantCoverage.ValidateAll(baked);
+            return baked;
         }
 
         public static void CreateShellSceneForBatch()

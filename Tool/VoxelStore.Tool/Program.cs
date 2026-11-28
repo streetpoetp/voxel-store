@@ -35,7 +35,17 @@ try
             }
         case "preview-plan":
             {
-                PreviewPlan plan = engine.BuildPreviewPlan();
+                var candidateIds = new List<string>();
+                for (int i = 0; i < args.Length - 1; i++)
+                {
+                    if (string.Equals(
+                            args[i],
+                            "--candidate",
+                            StringComparison.Ordinal))
+                        candidateIds.Add(args[++i]);
+                }
+                PreviewPlan plan = engine.BuildPreviewPlan(
+                    candidateIds);
                 Console.WriteLine(JsonSerializer.Serialize(plan, json));
                 return 0;
             }
@@ -61,6 +71,16 @@ try
                     throw new ArgumentException("seal requires <asset-id>.");
                 engine.Seal(args[1]);
                 Console.WriteLine($"sealed {args[1]}");
+                return 0;
+            }
+        case "accept-animation-review":
+            {
+                if (args.Length < 3)
+                    throw new ArgumentException(
+                        "accept-animation-review requires <asset-id> <game-view-capture.json> after visual review.");
+                AnimationReviewEvidence evidence =
+                    engine.AcceptAnimationReview(args[1], args[2]);
+                Console.WriteLine(JsonSerializer.Serialize(evidence, json));
                 return 0;
             }
         case "density":

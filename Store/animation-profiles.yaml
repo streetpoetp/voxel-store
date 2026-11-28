@@ -1,0 +1,65 @@
+version: 1
+families:
+  Idle: { loop: true }
+  WalkForward: { loop: true }
+  Glide: { loop: true }
+  Fly: { loop: true }
+  Attack: { loop: false }
+  Hit: { loop: false }
+  Death: { loop: false }
+  Drop: { loop: false }
+  Aim: { loop: true }
+  Reload: { loop: false }
+  Cast: { loop: false }
+profiles:
+  avatar.grounded:
+    kind: avatar
+    required: [Idle, WalkForward, Attack, Hit, Death]
+    brief: Compact weight shifts, readable grounded hop, directional recoil and collapse.
+  avatar.heavy:
+    kind: avatar
+    required: [Idle, WalkForward, Attack, Hit, Death]
+    brief: Weighted breathing, slow anticipation, heavy impact and grounded collapse.
+  avatar.agile:
+    kind: avatar
+    required: [Idle, WalkForward, Attack, Hit, Death]
+    brief: Quick irregular hops, lunges, sharp stagger and collapse.
+  avatar.floating:
+    kind: avatar
+    required: [Idle, Glide, Attack, Hit, Death]
+    brief: Hover, glide, spectral recoil and finite contraction or ascent.
+  avatar.winged:
+    kind: avatar
+    required: [Idle, Fly, Attack, Hit, Death]
+    brief: Lift, banking, dive, aerial recoil and fall with rigid silhouette.
+  avatar.caster:
+    kind: avatar
+    required: [Idle, WalkForward, Attack, Hit, Death]
+    brief: Ritual sway, controlled movement, casting gesture and collapse.
+  equipment.blade:
+    kind: equipment
+    forms: [sword, dagger, kukri]
+    required: [Idle, Attack, Drop]
+    brief: Grip-relative sway, slash, thrust, rising cut and release/settle.
+  equipment.heavy:
+    kind: equipment
+    forms: [axe, hammer, mace, war-pick]
+    required: [Idle, Attack, Drop]
+    brief: Weighty anticipation, chop, smash, sweep, release and settle.
+  equipment.polearm:
+    kind: equipment
+    forms: [spear, halberd, scythe]
+    required: [Idle, Attack, Drop]
+    brief: Long reach, thrust, sweeping arc and tip-aware drop.
+  equipment.ranged:
+    kind: equipment
+    forms: [bow, crossbow, rifle]
+    required: [Idle, Attack, Drop]
+    optional: [Aim, Reload]
+    brief: Form-specific aim/release/recoil and shape-aware drop; optional motions only if visually expressible.
+  equipment.magical:
+    kind: equipment
+    forms: [staff]
+    required: [Idle, Attack, Drop]
+    optional: [Cast]
+    brief: Ritual sway, cast arcs, release and settle.

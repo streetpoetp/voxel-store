@@ -27,138 +27,358 @@ sockets:
       translate: [1, 6, 4]
 animations:
   - clip: Idle
-    duration: 1.2
+    duration: 1.4
     loop: true
     tracks:
       - part: Crossbow
-        rotation:
+        position:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
             - time: 0.5
-              value: [0, 0, 1.5]
+              value: [0, 0, 2.024]
             - time: 1
               value: [0, 0, 0]
-  - clip: WalkForward
-    duration: 0.6
-    loop: true
-    tracks:
-      - part: Crossbow
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
             - time: 0.5
-              value: [0, 0, 5]
+              value: [0, 0, 2.5]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V1
+    duration: 1.7
+    loop: true
+    tracks:
+      - part: Crossbow
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0.1656, 0, 1.104]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [3, 0, -3]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V2
+    duration: 1.15
+    loop: true
+    tracks:
+      - part: Crossbow
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [-0.1472, 0, 1.472]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [-3, 0, 4]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V3
+    duration: 1.5
+    loop: true
+    tracks:
+      - part: Crossbow
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0, 0.1104, 0.736]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [2, 0, -5]
             - time: 1
               value: [0, 0, 0]
   - clip: Attack
-    duration: 0.45
+    duration: 0.5
     loop: false
     tracks:
       - part: Crossbow
-        rotation:
+        position:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.46, 0.184]
             - time: 0.55
-              value: [12, 0, 0]
+              value: [0, 0.828, 0.138]
+            - time: 0.82
+              value: [0, 0.2898, 0.0414]
             - time: 1
-              value: [2.16, 0, 0]
-  - clip: Hit
-    duration: 0.35
-    loop: false
-    tracks:
-      - part: Crossbow
+              value: [0, 0, 0]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 0.45
-              value: [0, 0, 10]
-            - time: 1
-              value: [0, 0, 0]
-  - clip: Death
-    duration: 0.75
-    loop: false
-    tracks:
-      - part: Crossbow
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 1
-              value: [0, 0, 82]
-  - clip: Idle.V1
-    duration: 1.2
-    loop: true
-    tracks:
-      - part: Crossbow
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 0.5
-              value: [0, 0, 9.5]
-            - time: 1
-              value: [0, 0, 0]
-  - clip: WalkForward.V1
-    duration: 0.6
-    loop: true
-    tracks:
-      - part: Crossbow
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 0.5
-              value: [0, 0, 10]
+            - time: 0.18
+              value: [2, 0, 0]
+            - time: 0.55
+              value: [-10, 0, 0]
+            - time: 0.82
+              value: [-3, 0, 0]
             - time: 1
               value: [0, 0, 0]
   - clip: Attack.V1
-    duration: 0.4365
+    duration: 0.64
     loop: false
     tracks:
       - part: Crossbow
-        rotation:
+        position:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
+            - time: 0.18
+              value: [-0.046, 0.46, 0.184]
             - time: 0.55
-              value: [12, 0, -8]
+              value: [0.23, 1.104, 0.276]
+            - time: 0.82
+              value: [0.0575, 0.3864, 0.0828]
             - time: 1
-              value: [2.16, 0, 0]
-  - clip: Hit.V1
-    duration: 0.3395
-    loop: false
-    tracks:
-      - part: Crossbow
+              value: [0, 0, 0]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 0.45
-              value: [0, 0, 5]
+            - time: 0.18
+              value: [2.8, 0, -1.25]
+            - time: 0.55
+              value: [-14, 0, 5]
+            - time: 0.82
+              value: [-4.2, 0, 1.5]
             - time: 1
               value: [0, 0, 0]
-  - clip: Death.V1
-    duration: 0.7425
+  - clip: Attack.V2
+    duration: 0.56
     loop: false
     tracks:
       - part: Crossbow
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0.046, 0.46, 0.184]
+            - time: 0.55
+              value: [-0.23, 0.736, 0.184]
+            - time: 0.82
+              value: [-0.0575, 0.2576, 0.0552]
+            - time: 1
+              value: [0, 0, 0]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
+            - time: 0.18
+              value: [1.4, 0, 1.5]
+            - time: 0.55
+              value: [-7, 0, -6]
+            - time: 0.82
+              value: [-2.1, 0, -1.8]
             - time: 1
-              value: [0, 0, 78]
+              value: [0, 0, 0]
+  - clip: Attack.V3
+    duration: 0.72
+    loop: false
+    tracks:
+      - part: Crossbow
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.46, 0.184]
+            - time: 0.55
+              value: [0, 1.38, 0.414]
+            - time: 0.82
+              value: [0, 0.483, 0.1242]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [3.6, 0, 0]
+            - time: 0.55
+              value: [-18, 0, 0]
+            - time: 0.82
+              value: [-5.4, 0, 0]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Drop
+    duration: 0.72
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Crossbow
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.138, 0.23]
+            - time: 0.5
+              value: [0.1242, 0.1242, -1.3984]
+            - time: 1
+              value: [0.276, 0.276, -3.496]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [12.3, 0, 2.7]
+            - time: 0.62
+              value: [53.3, 0, 11.7]
+            - time: 1
+              value: [82, 0, 18]
+  - clip: Drop.V1
+    duration: 0.86
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Crossbow
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.138, 0.23]
+            - time: 0.5
+              value: [-0.2484, 0.0621, -1.656]
+            - time: 1
+              value: [-0.552, 0.138, -4.14]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [9.6, 0, -6.9]
+            - time: 0.62
+              value: [41.6, 0, -29.9]
+            - time: 1
+              value: [64, 0, -46]
+  - clip: Drop.V2
+    duration: 0.64
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Crossbow
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.138, 0.23]
+            - time: 0.5
+              value: [0.3312, -0.1242, -1.2512]
+            - time: 1
+              value: [0.736, -0.276, -3.128]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [15.75, 0, 8.7]
+            - time: 0.62
+              value: [68.25, 0, 37.7]
+            - time: 1
+              value: [105, 0, 58]
+  - clip: Drop.V3
+    duration: 0.95
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Crossbow
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.138, 0.23]
+            - time: 0.5
+              value: [-0.0828, 0.1863, -1.84]
+            - time: 1
+              value: [-0.184, 0.414, -4.6]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [17.7, 0, -2.4]
+            - time: 0.62
+              value: [76.7, 0, -10.4]
+            - time: 1
+              value: [118, 0, -16]

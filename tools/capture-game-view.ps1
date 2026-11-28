@@ -2,6 +2,7 @@
 param(
     [string]$Scenario = '',
     [string]$UnityExe = '',
+    [string[]]$CandidateAssetId = @(),
     [ValidateRange(1,86400)][int]$TimeoutSeconds = 900
 )
 
@@ -100,7 +101,29 @@ try {
         '-logFile',('"' + $log + '"')
     )
 
-    $child = Start-Process -FilePath $exe -ArgumentList $arguments -PassThru
+    $previousCandidates = $env:VOXEL_STORE_PREVIEW_CANDIDATES
+    try {
+        if ($CandidateAssetId.Count -gt 0) {
+            $env:VOXEL_STORE_PREVIEW_CANDIDATES = (
+                @($CandidateAssetId |
+                    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                    Sort-Object -Unique) -join ';'
+            )
+        }
+        else {
+            Remove-Item Env:VOXEL_STORE_PREVIEW_CANDIDATES -ErrorAction SilentlyContinue
+        }
+
+        $child = Start-Process -FilePath $exe -ArgumentList $arguments -PassThru
+    }
+    finally {
+        if ($null -eq $previousCandidates) {
+            Remove-Item Env:VOXEL_STORE_PREVIEW_CANDIDATES -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:VOXEL_STORE_PREVIEW_CANDIDATES = $previousCandidates
+        }
+    }
 
     try {
         $completed = $child.WaitForExit($TimeoutSeconds * 1000)

@@ -68,9 +68,12 @@ public sealed class AssetHealth
     public Dictionary<string, int> SlotCounts { get; } = new(StringComparer.Ordinal);
     public List<string> SemanticMotions { get; } = new();
     public List<SemanticMotionCoverage> SemanticMotionCoverage { get; } = new();
-    public bool RequiredV1Complete { get; set; }
-    public List<string> MissingRequiredV1 { get; } = new();
-    public List<string> AliasedRequiredV1 { get; } = new();
+    public string? AnimationProfile { get; set; }
+    public bool AnimationCoverageComplete { get; set; }
+    public List<string> RequiredAnimationClips { get; } = new();
+    public List<string> MissingAnimationClips { get; } = new();
+    public List<string> InvalidAnimationClips { get; } = new();
+    public List<string> DuplicateAnimationTakes { get; } = new();
     public bool BasePublished { get; set; }
     public bool Published { get; set; }
     public string? FailedGate { get; set; }
@@ -87,6 +90,7 @@ public sealed class StoreSnapshot
     public MaintenanceJob? NextJob { get; set; }
     public bool Healthy => Assets.All(x => x.Published) && CoverageGaps.All(x => !x.Required);
 }
+public sealed record PreviewPlanClip(string Name, bool Loop);
 public sealed record PreviewPlanUnit(
     string Id,
     string Kind,
@@ -94,7 +98,10 @@ public sealed record PreviewPlanUnit(
     string SourceBase,
     string Palette,
     string GeneratedVox,
-    string? GeneratedAnimation);
+    string? GeneratedAnimation,
+    string AnimationProfile,
+    IReadOnlyList<PreviewPlanClip> RequiredClips,
+    bool Candidate);
 public sealed class PreviewPlan
 {
     public List<PreviewPlanUnit> Units { get; set; } = new();
@@ -113,8 +120,6 @@ public sealed class StoreEngine
         "visualEvidenceDominance",
         "implementationNeutral"
     };
-    private static readonly string[] RequiredSemanticMotions =
-        SemanticAnimationClipName.RequiredMotions;
     private static readonly HashSet<string> AttachmentCapabilities =
         new(StringComparer.Ordinal) { "Hand", "Back", "Head", "Hip", "Chest" };
     private static readonly HashSet<string> AttachmentSides =
@@ -124,7 +129,7 @@ public sealed class StoreEngine
     private readonly string _root;
     private readonly HeroVoxelProvider _provider;
     private const string CompatibilityEvidenceConvention =
-        "model-socket-reference-influence-semantic-phase.v3";
+        "profile-independent-motion-pairs.v4";
 
     public StoreEngine(string root, string? providerRoot = null)
     {
@@ -322,11 +327,12 @@ public sealed class StoreEngine
         bool writeCompatibility)
     {
         StorePolicy policy = LoadStorePolicy();
+        AnimationProfilePolicy animationProfiles = AnimationProfilePolicy.Load(_root);
         CollectionManifest collection = LoadCollection(policy);
         var healthById = new Dictionary<string, AssetHealth>(StringComparer.Ordinal);
 
         foreach (AssetRecord asset in assets)
-            healthById.Add(asset.Manifest.Id, EvaluateBaseHealth(asset, policy));
+            healthById.Add(asset.Manifest.Id, EvaluateBaseHealth(asset, policy, animationProfiles));
 
         List<CompatibilityResult> compatibility =
             EvaluateCompatibility(assets, healthById, writeCompatibility);
@@ -357,26 +363,94 @@ public sealed class StoreEngine
             WriteDerived(snapshot);
         return snapshot;
     }
-    public PreviewPlan BuildPreviewPlan()
+    public PreviewPlan BuildPreviewPlan(
+        IEnumerable<string>? candidateIds = null)
     {
         IReadOnlyList<AssetRecord> assets = DiscoverAssets();
         StoreSnapshot snapshot = Scan(
             assets,
             writeDerived: false,
             writeCompatibility: false);
-        return CreatePreviewPlan(_root, assets, snapshot);
+        var candidates = new HashSet<string>(
+            candidateIds ?? Array.Empty<string>(),
+            StringComparer.Ordinal);
+        if (candidates.Count != 0)
+        {
+            var byId = assets.ToDictionary(
+                x => x.Manifest.Id,
+                StringComparer.Ordinal);
+            StorePolicy storePolicy = LoadStorePolicy();
+            foreach (string id in candidates)
+            {
+                if (!byId.TryGetValue(id, out AssetRecord? asset))
+                    throw new InvalidDataException(
+                        $"Unknown preview candidate asset '{id}'.");
+                AssetHealth health = snapshot.Assets.Single(
+                    x => string.Equals(
+                        x.Id,
+                        id,
+                        StringComparison.Ordinal));
+                string[] upstreamGates =
+                {
+                    "manifest",
+                    "reference",
+                    "density",
+                    "source",
+                    "generation"
+                };
+                GateResult? failed = health.Gates.FirstOrDefault(
+                    gate =>
+                        upstreamGates.Contains(
+                            gate.Id,
+                            StringComparer.Ordinal) &&
+                        !gate.Passed &&
+                        !string.Equals(
+                            gate.Message,
+                            "Blocked by earlier gate.",
+                            StringComparison.Ordinal));
+                if (failed != null)
+                    throw new InvalidDataException(
+                        $"Preview candidate '{id}' fails upstream gate '{failed.Id}': {failed.Message}");
+                GateResult? generation = health.Gates.FirstOrDefault(
+                    x => x.Id == "generation");
+                if (generation == null || !generation.Passed)
+                    throw new InvalidDataException(
+                        $"Preview candidate '{id}' does not have current valid generated content.");
+                HeroVoxelProvider.CompiledAsset compiled =
+                    _provider.Compile(
+                        asset,
+                        writeGenerated: false);
+                ValidatePublicationBudget(
+                    compiled.Compilation.Parts.Sum(
+                        x => x.Voxels.Count),
+                    compiled.Compilation.Parts.Count,
+                    storePolicy.Budget);
+            }
+        }
+        return CreatePreviewPlan(
+            _root,
+            assets,
+            snapshot,
+            candidates);
     }
 
     internal static PreviewPlan CreatePreviewPlan(
         string root,
         IReadOnlyList<AssetRecord> assets,
-        StoreSnapshot snapshot)
+        StoreSnapshot snapshot,
+        IReadOnlySet<string>? candidateIds = null)
     {
         var byId = assets.ToDictionary(x => x.Manifest.Id, StringComparer.Ordinal);
+        AnimationProfilePolicy animationProfiles =
+            AnimationProfilePolicy.Load(root);
+        candidateIds ??= new HashSet<string>(
+            StringComparer.Ordinal);
         return new PreviewPlan
         {
             Units = snapshot.Assets
-                .Where(x => x.Published)
+                .Where(x =>
+                    x.Published ||
+                    candidateIds.Contains(x.Id))
                 .OrderBy(x => x.Kind, StringComparer.Ordinal)
                 .ThenBy(x => x.Id, StringComparer.Ordinal)
                 .Select(x =>
@@ -394,7 +468,25 @@ public sealed class StoreEngine
                         ToRepositoryRelative(root, generatedVox),
                         File.Exists(generatedAnimation)
                             ? ToRepositoryRelative(root, generatedAnimation)
-                            : null);
+                            : null,
+                        x.AnimationProfile
+                            ?? throw new InvalidDataException(
+                                $"Preview unit '{x.Id}' has no resolved animation profile."),
+                        x.RequiredAnimationClips
+                            .Select(name =>
+                            {
+                                SemanticAnimationClipIdentity identity =
+                                    SemanticAnimationClipName.Parse(
+                                        name,
+                                        animationProfiles.Families.Keys);
+                                return new PreviewPlanClip(
+                                    name,
+                                    animationProfiles.LoopFor(
+                                        identity.Motion));
+                            })
+                            .ToArray(),
+                        candidateIds.Contains(x.Id) &&
+                        !x.Published);
                 })
                 .ToList()
         };
@@ -433,6 +525,130 @@ public sealed class StoreEngine
         SealReference(assetId);
         AssetRecord asset = RequireAsset(assetId);
         WriteProofAudit(asset);
+    }
+
+    public AnimationReviewEvidence AcceptAnimationReview(
+        string assetId,
+        string captureReportPath)
+    {
+        AssetRecord asset = RequireAsset(assetId);
+        AnimationProfilePolicy policy = AnimationProfilePolicy.Load(_root);
+        HeroVoxelProvider.CompiledAsset compiled =
+            _provider.Compile(asset, writeGenerated: false);
+        ProfileAnimationCoverage coverage =
+            ProfileAnimationCoverage.Evaluate(
+                policy,
+                asset.Manifest,
+                compiled.Compilation.Animations);
+        coverage.RequireComplete(asset.Manifest.Id);
+        ProfileAnimationQuality quality =
+            ProfileAnimationQuality.Evaluate(
+                policy,
+                asset.Manifest,
+                compiled.Compilation);
+        if (!quality.Complete)
+            throw new InvalidDataException(
+                "Animation review cannot accept mechanically invalid choreography.");
+        string report = Path.GetFullPath(captureReportPath);
+        if (!File.Exists(report))
+            throw new FileNotFoundException(
+                "Animation capture report is missing.",
+                report);
+        string captureDirectory = Path.GetDirectoryName(report)!;
+        string captureDirectoryPrefix =
+            captureDirectory.TrimEnd(
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar) +
+            Path.DirectorySeparatorChar;
+        using JsonDocument json = JsonDocument.Parse(File.ReadAllText(report));
+        if (!json.RootElement.TryGetProperty("captures", out JsonElement captures) ||
+            captures.ValueKind != JsonValueKind.Array)
+            throw new InvalidDataException(
+                "Animation capture report has no captures array.");
+
+        string[] clips = compiled.Compilation.Animations
+            .Select(x => x.Name)
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToArray();
+        var checkpoints = clips.ToDictionary(
+            x => x,
+            _ => new List<string>(),
+            StringComparer.Ordinal);
+        var imageHashes = new Dictionary<string, string>(
+            StringComparer.Ordinal);
+        foreach (JsonElement capture in captures.EnumerateArray())
+        {
+            string checkpoint =
+                capture.GetProperty("checkpoint").GetString() ?? string.Empty;
+            string file =
+                capture.GetProperty("file").GetString() ?? string.Empty;
+            if (checkpoint.Length == 0 || file.Length == 0)
+                throw new InvalidDataException(
+                    "Animation capture report contains an empty checkpoint/file.");
+            string assetPrefix = asset.Manifest.Id + "__";
+            if (!checkpoint.StartsWith(assetPrefix, StringComparison.Ordinal))
+                continue;
+            string image = Path.GetFullPath(
+                Path.Combine(captureDirectory, file));
+            if (!image.StartsWith(
+                    captureDirectoryPrefix,
+                    StringComparison.OrdinalIgnoreCase) ||
+                !File.Exists(image))
+                throw new InvalidDataException(
+                    $"Animation capture image is missing or escapes its report directory: '{file}'.");
+            imageHashes[file] = EvidenceHash.HashFile(image);
+            foreach (string clip in clips)
+            {
+                string prefix = asset.Manifest.Id + "__" + clip + "__";
+                if (checkpoint.StartsWith(prefix, StringComparison.Ordinal))
+                    checkpoints[clip].Add(checkpoint);
+            }
+        }
+        foreach ((string clip, List<string> points) in checkpoints)
+        {
+            if (points.Count < 2)
+                throw new InvalidDataException(
+                    $"Animation review requires at least two graphical checkpoints for '{asset.Manifest.Id}' clip '{clip}'.");
+            points.Sort(StringComparer.Ordinal);
+        }
+
+        HeroVoxelProvider.Resolution provider = _provider.Resolve();
+        string generatedAnimation = compiled.GeneratedAnimationPath
+            ?? throw new InvalidDataException(
+                "Animation review requires generated animation output.");
+        var evidence = new AnimationReviewEvidence
+        {
+            Version = 1,
+            Outcome = "pass",
+            AnimationProfile = asset.Manifest.AnimationProfile ?? string.Empty,
+            ManifestSha256 = EvidenceHash.HashFile(asset.ManifestPath),
+            SourceSha256 = EvidenceHash.HashFile(
+                asset.SourceBase + ".voxel.yaml"),
+            PaletteSha256 = EvidenceHash.HashFile(
+                asset.PalettePath),
+            GeneratedAnimationSha256 =
+                EvidenceHash.HashFile(generatedAnimation),
+            AnimationProfilesSha256 = EvidenceHash.HashFile(
+                Path.Combine(
+                    _root,
+                    "Store",
+                    "animation-profiles.yaml")),
+            HeroStudioRevision = provider.Lock.HeroStudioRevision,
+            HeroVoxelWorkflowSha256 = provider.Lock.WorkflowSha256,
+            CaptureReportSha256 = EvidenceHash.HashFile(report),
+            ReviewedClips = clips.ToList(),
+            ClipCheckpoints = checkpoints,
+            CaptureImageSha256 = imageHashes
+        };
+        string evidenceDirectory =
+            Path.Combine(asset.ProofDirectory, "Animation");
+        Directory.CreateDirectory(evidenceDirectory);
+        File.WriteAllText(
+            Path.Combine(
+                evidenceDirectory,
+                "review.generated.json"),
+            JsonSerializer.Serialize(evidence, JsonOptions));
+        return evidence;
     }
 
     public HeroVoxelProvider.Resolution ResolveProvider() => _provider.Resolve();
@@ -597,7 +813,8 @@ public sealed class StoreEngine
 
     private AssetHealth EvaluateBaseHealth(
         AssetRecord asset,
-        StorePolicy policy)
+        StorePolicy policy,
+        AnimationProfilePolicy animationProfiles)
     {
         var health = new AssetHealth
         {
@@ -607,7 +824,8 @@ public sealed class StoreEngine
             Form = asset.Manifest.Form,
             AttachmentCapability = asset.Manifest.Attachment?.Capability,
             AttachmentSide = asset.Manifest.Attachment?.Side,
-            AttachmentAnchor = asset.Manifest.Attachment?.Anchor
+            AttachmentAnchor = asset.Manifest.Attachment?.Anchor,
+            AnimationProfile = asset.Manifest.AnimationProfile
         };
         AddGate(health, "manifest", () => ValidateManifest(asset));
         AddGate(health, "reference", () => ValidateReference(asset));
@@ -624,10 +842,36 @@ public sealed class StoreEngine
                 ValidateEquipmentCompositionFrame(
                     compiled.Compilation,
                     asset.Manifest.Attachment ?? throw new InvalidDataException("Equipment attachment metadata is missing."));
-            ValidateRequiredV1Coverage(
+            ProfileAnimationCoverage animationCoverage =
+                ProfileAnimationCoverage.Evaluate(
+                    animationProfiles,
+                    asset.Manifest,
+                    compiled.Compilation.Animations);
+            PopulateAssetProjection(
+                health,
                 compiled.Compilation,
-                asset.Manifest.Kind);
-            PopulateAssetProjection(health, compiled.Compilation);
+                animationProfiles,
+                animationCoverage,
+                quality: null);
+            animationCoverage.RequireComplete(asset.Manifest.Id);
+            ProfileAnimationQuality animationQuality =
+                ProfileAnimationQuality.Evaluate(
+                    animationProfiles,
+                    asset.Manifest,
+                    compiled.Compilation);
+            PopulateAssetProjection(
+                health,
+                compiled.Compilation,
+                animationProfiles,
+                animationCoverage,
+                animationQuality);
+            if (!animationQuality.Complete)
+            {
+                throw new InvalidDataException(
+                    $"Animation choreography is invalid for '{asset.Manifest.Id}': " +
+                    string.Join("; ", animationQuality.InvalidTakes.Concat(
+                        animationQuality.DuplicateTakes)));
+            }
 
             ReferenceContract reference = ContractYaml.Load<ReferenceContract>(
                 Path.Combine(asset.ReferenceDirectory, "reference.yaml"));
@@ -651,6 +895,16 @@ public sealed class StoreEngine
                     throw new InvalidDataException("Generated animation manifest is stale or missing.");
             }
             return compiled.GeneratedVoxPath;
+        });
+        AddGate(health, "animation-proof", () =>
+        {
+            compiled ??= _provider.Compile(
+                asset,
+                writeGenerated: false);
+            return ValidateAnimationReview(
+                asset,
+                compiled,
+                animationProfiles);
         });
         AddGate(health, "proof", () => ValidateProof(asset));
         AddGate(health, "budget", () =>
@@ -1153,7 +1407,124 @@ public sealed class StoreEngine
         return spec;
     }
 
-    private static string ValidateProof(AssetRecord asset)
+    private string ValidateAnimationReview(
+        AssetRecord asset,
+        HeroVoxelProvider.CompiledAsset compiled,
+        AnimationProfilePolicy animationProfiles)
+    {
+        string path = Path.Combine(
+            asset.ProofDirectory,
+            "Animation",
+            "review.generated.json");
+        if (!File.Exists(path))
+            throw new InvalidDataException(
+                "Required animation review evidence is missing.");
+        AnimationReviewEvidence evidence =
+            JsonSerializer.Deserialize<AnimationReviewEvidence>(
+                File.ReadAllText(path),
+                JsonOptions)
+            ?? throw new InvalidDataException(
+                "Animation review evidence is invalid.");
+        if (evidence.Version != 1 ||
+            !string.Equals(
+                evidence.Outcome,
+                "pass",
+                StringComparison.Ordinal))
+            throw new InvalidDataException(
+                "Animation review evidence is not an accepted v1 review.");
+        string profile =
+            asset.Manifest.AnimationProfile
+            ?? throw new InvalidDataException(
+                "Animation profile is required.");
+        if (!string.Equals(
+                evidence.AnimationProfile,
+                profile,
+                StringComparison.Ordinal))
+            throw new InvalidDataException(
+                "Animation review profile is stale.");
+
+        HeroVoxelProvider.Resolution provider = _provider.Resolve();
+        string generatedAnimation = compiled.GeneratedAnimationPath
+            ?? throw new InvalidDataException(
+                "Animation review requires generated animation output.");
+        var expectedHashes = new[]
+        {
+            (evidence.ManifestSha256, EvidenceHash.HashFile(asset.ManifestPath), "manifest"),
+            (evidence.SourceSha256, EvidenceHash.HashFile(asset.SourceBase + ".voxel.yaml"), "source"),
+            (evidence.PaletteSha256, EvidenceHash.HashFile(asset.PalettePath), "palette"),
+            (evidence.GeneratedAnimationSha256, EvidenceHash.HashFile(generatedAnimation), "generated animation"),
+            (evidence.AnimationProfilesSha256, EvidenceHash.HashFile(
+                Path.Combine(_root, "Store", "animation-profiles.yaml")), "animation profile policy")
+        };
+        foreach ((string actual, string expected, string label) in expectedHashes)
+        {
+            if (!string.Equals(
+                    actual,
+                    expected,
+                    StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException(
+                    $"Animation review {label} hash is stale.");
+        }
+        if (!string.Equals(
+                evidence.HeroStudioRevision,
+                provider.Lock.HeroStudioRevision,
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                evidence.HeroVoxelWorkflowSha256,
+                provider.Lock.WorkflowSha256,
+                StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException(
+                "Animation review provider identity is stale.");
+
+        string[] expectedClips = compiled.Compilation.Animations
+            .Select(x => x.Name)
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToArray();
+        string[] reviewedClips = evidence.ReviewedClips
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToArray();
+        if (!expectedClips.SequenceEqual(
+                reviewedClips,
+                StringComparer.Ordinal))
+            throw new InvalidDataException(
+                "Animation review does not cover the exact current clip inventory.");
+        foreach (string clip in expectedClips)
+        {
+            if (!evidence.ClipCheckpoints.TryGetValue(
+                    clip,
+                    out List<string>? checkpoints) ||
+                checkpoints.Count < 2 ||
+                checkpoints.Any(x =>
+                    !x.StartsWith(
+                        asset.Manifest.Id + "__" + clip + "__",
+                        StringComparison.Ordinal)))
+                throw new InvalidDataException(
+                    $"Animation review checkpoints are incomplete for '{clip}'.");
+        }
+        if (!IsSha256(evidence.CaptureReportSha256) ||
+            evidence.CaptureImageSha256.Count == 0 ||
+            evidence.CaptureImageSha256.Values.Any(x => !IsSha256(x)))
+            throw new InvalidDataException(
+                "Animation review capture hashes are invalid.");
+
+        ProfileAnimationCoverage coverage =
+            ProfileAnimationCoverage.Evaluate(
+                animationProfiles,
+                asset.Manifest,
+                compiled.Compilation.Animations);
+        coverage.RequireComplete(asset.Manifest.Id);
+        ProfileAnimationQuality quality =
+            ProfileAnimationQuality.Evaluate(
+                animationProfiles,
+                asset.Manifest,
+                compiled.Compilation);
+        if (!quality.Complete)
+            throw new InvalidDataException(
+                "Animation review references choreography that no longer passes mechanical quality.");
+        return path;
+    }
+
+    private string ValidateProof(AssetRecord asset)
     {
         string standalone = Path.Combine(asset.ProofDirectory, "Standalone");
         string parts = Path.Combine(asset.ProofDirectory, "Parts", "parts", "manifest.json");
@@ -1176,23 +1547,105 @@ public sealed class StoreEngine
         return audit;
     }
 
-    private sealed record CompatibilitySample(string Motion, float Phase);
+    internal sealed record CompatibilitySample(
+        string Label,
+        string BodyClip,
+        float BodyPhase,
+        string EquipmentClip,
+        float EquipmentPhase);
     private sealed record SlotAddress(
         string Capability,
         string Side,
         int Instance,
         CompiledSocket Socket);
-    private static readonly CompatibilitySample[] CanonicalCompatibilitySamples =
+    internal static IReadOnlyList<CompatibilitySample> BuildCompatibilitySamples(
+        VoxelCompilation avatar,
+        VoxelCompilation equipment)
     {
-        new("Idle", 0f),
-        new("Idle", 0.5f),
-        new("WalkForward", 0.5f),
-        new("Attack", 0f),
-        new("Attack", 0.5f),
-        new("Attack", 1f),
-        new("Hit", 0.5f),
-        new("Death", 1f)
-    };
+        CompiledAnimationClip bodyIdle = RequireExactClip(avatar, "Idle");
+        CompiledAnimationClip equipmentIdle = RequireExactClip(equipment, "Idle");
+        var samples = new List<CompatibilitySample>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        void Add(
+            string label,
+            string bodyClip,
+            float bodyPhase,
+            string equipmentClip,
+            float equipmentPhase)
+        {
+            string key = string.Create(
+                CultureInfo.InvariantCulture,
+                $"{bodyClip}@{bodyPhase:0.####}|{equipmentClip}@{equipmentPhase:0.####}");
+            if (seen.Add(key))
+                samples.Add(new CompatibilitySample(
+                    label,
+                    bodyClip,
+                    bodyPhase,
+                    equipmentClip,
+                    equipmentPhase));
+        }
+
+        foreach (CompiledAnimationClip clip in avatar.Animations
+                     .OrderBy(x => x.Name, StringComparer.Ordinal))
+        {
+            foreach (float phase in CompatibilityPhases(clip))
+                Add("body:" + clip.Name, clip.Name, phase, equipmentIdle.Name, 0.5f);
+        }
+        foreach (CompiledAnimationClip clip in equipment.Animations
+                     .OrderBy(x => x.Name, StringComparer.Ordinal))
+        {
+            foreach (float phase in CompatibilityPhases(clip))
+                Add("equipment:" + clip.Name, bodyIdle.Name, 0.5f, clip.Name, phase);
+        }
+
+        string[] suffixes = { "", ".V1", ".V2", ".V3" };
+        foreach (string suffix in suffixes)
+        {
+            string death = "Death" + suffix;
+            string drop = "Drop" + suffix;
+            if (HasExactClip(avatar, death) && HasExactClip(equipment, drop))
+            {
+                Add("death-drop:" + (suffix.Length == 0 ? "base" : suffix[1..]),
+                    death, 0.75f, drop, 0.75f);
+                Add("death-drop-terminal:" + (suffix.Length == 0 ? "base" : suffix[1..]),
+                    death, 1f, drop, 1f);
+            }
+        }
+
+        string? locomotion = new[] { "WalkForward", "Glide", "Fly" }
+            .FirstOrDefault(name => HasExactClip(avatar, name));
+        if (locomotion != null)
+        {
+            foreach (CompiledAnimationClip attack in equipment.Animations
+                         .Where(x => x.Name == "Attack" ||
+                                     x.Name.StartsWith("Attack.V", StringComparison.Ordinal))
+                         .OrderBy(x => x.Name, StringComparer.Ordinal))
+            {
+                if (attack.ReferenceInfluence == null ||
+                    attack.ReferenceInfluence.Keys.All(x => x.Value >= 0.9999f))
+                    continue;
+                foreach (float phase in new[] { 0.25f, 0.5f, 0.75f })
+                    Add("moving-release:" + attack.Name, locomotion, phase, attack.Name, phase);
+            }
+        }
+        return samples;
+    }
+
+    private static float[] CompatibilityPhases(CompiledAnimationClip clip) =>
+        clip.Loop
+            ? new[] { 0f, 0.25f, 0.5f, 0.75f }
+            : new[] { 0f, 0.5f, 1f };
+
+    private static bool HasExactClip(VoxelCompilation compilation, string name) =>
+        compilation.Animations.Any(x => string.Equals(x.Name, name, StringComparison.Ordinal));
+
+    private static CompiledAnimationClip RequireExactClip(
+        VoxelCompilation compilation,
+        string name) =>
+        compilation.Animations.SingleOrDefault(
+            x => string.Equals(x.Name, name, StringComparison.Ordinal))
+        ?? throw new InvalidDataException(
+            $"Required exact animation clip '{name}' is unavailable.");
 
     private List<CompatibilityResult> EvaluateCompatibility(
         IReadOnlyList<AssetRecord> assets,
@@ -1200,6 +1653,7 @@ public sealed class StoreEngine
         bool write)
     {
         var result = new List<CompatibilityResult>();
+        AnimationProfilePolicy animationProfiles = AnimationProfilePolicy.Load(_root);
         HeroVoxelProvider.Resolution providerResolution =
             _provider.Resolve();
         AssetRecord[] equipmentAssets = assets
@@ -1213,6 +1667,7 @@ public sealed class StoreEngine
         {
             VoxelCompilation avatarCompilation = _provider.Compile(avatar, false).Compilation;
             ValidateRigidBodyAvatar(avatarCompilation);
+            animationProfiles.Resolve(avatar.Manifest);
 
             foreach (AssetRecord equipment in equipmentAssets)
             {
@@ -1223,6 +1678,11 @@ public sealed class StoreEngine
                 ValidateEquipmentCompositionFrame(
                     equipmentCompilation,
                     attachment);
+                animationProfiles.Resolve(equipment.Manifest);
+                IReadOnlyList<CompatibilitySample> compatibilitySamples =
+                    BuildCompatibilitySamples(
+                        avatarCompilation,
+                        equipmentCompilation);
                 string evidencePath = Path.Combine(
                     avatar.ProofDirectory,
                     "Compatibility",
@@ -1278,30 +1738,16 @@ public sealed class StoreEngine
                     }
 
                     foreach (SlotAddress slot in compatibleSlots)
-                    foreach (CompatibilitySample sample in CanonicalCompatibilitySamples)
+                    foreach (CompatibilitySample sample in compatibilitySamples)
                     {
-                        string bodyClipName =
-                            ResolveSemanticClipName(
-                                avatarCompilation,
-                                sample.Motion,
-                                slot.Side);
-                        string equipmentClipName =
-                            ResolveSemanticClipName(
-                                equipmentCompilation,
-                                sample.Motion,
-                                slot.Side);
                         CompiledAnimationClip bodyClip =
-                            avatarCompilation.Animations.Single(
-                                x => string.Equals(
-                                    x.Name,
-                                    bodyClipName,
-                                    StringComparison.Ordinal));
+                            RequireExactClip(
+                                avatarCompilation,
+                                sample.BodyClip);
                         CompiledAnimationClip equipmentClip =
-                            equipmentCompilation.Animations.Single(
-                                x => string.Equals(
-                                    x.Name,
-                                    equipmentClipName,
-                                    StringComparison.Ordinal));
+                            RequireExactClip(
+                                equipmentCompilation,
+                                sample.EquipmentClip);
 
                         int bodySocketIndex =
                             RequireSocketIndex(
@@ -1315,7 +1761,8 @@ public sealed class StoreEngine
                                 equipmentCompilation,
                                 equipmentClip,
                                 mountSocketIndex,
-                                sample.Phase,
+                                sample.BodyPhase,
+                                sample.EquipmentPhase,
                                 mountBind,
                                 inverseMountBind);
 
@@ -1325,8 +1772,8 @@ public sealed class StoreEngine
                             attachment.Capability,
                             slot.Socket.Name,
                             slot.Side,
-                            sample.Motion,
-                            sample.Phase,
+                            sample.Label,
+                            sample.EquipmentPhase,
                             pose.Passed,
                             pose.Detail,
                             evidenceRef));
@@ -1335,14 +1782,15 @@ public sealed class StoreEngine
                             capability = attachment.Capability,
                             socket = slot.Socket.Name,
                             side = slot.Side,
-                            motion = sample.Motion,
-                            phase = sample.Phase,
-                            bodyClip = bodyClipName,
-                            equipmentClip = equipmentClipName,
+                            caseName = sample.Label,
+                            bodyClip = sample.BodyClip,
+                            bodyPhase = sample.BodyPhase,
+                            equipmentClip = sample.EquipmentClip,
+                            equipmentPhase = sample.EquipmentPhase,
                             referenceInfluence =
                                 SampleReferenceInfluence(
                                     equipmentClip,
-                                    sample.Phase),
+                                    sample.EquipmentPhase),
                             bodySocketOrigin = Vector(MatrixOrigin(pose.BodySocket)),
                             attachmentReferenceOrigin =
                                 Vector(MatrixOrigin(pose.AttachmentReference)),
@@ -1379,7 +1827,24 @@ public sealed class StoreEngine
                                     equipment.SourceBase + ".voxel.yaml"),
                             equipmentPaletteSha256 =
                                 EvidenceHash.HashFile(
-                                    equipment.PalettePath)
+                                    equipment.PalettePath),
+                            avatarManifestSha256 =
+                                EvidenceHash.HashFile(
+                                    avatar.ManifestPath),
+                            equipmentManifestSha256 =
+                                EvidenceHash.HashFile(
+                                    equipment.ManifestPath),
+                            animationProfilesSha256 =
+                                EvidenceHash.HashFile(
+                                    Path.Combine(
+                                        _root,
+                                        "Store",
+                                        "animation-profiles.yaml"))
+                        },
+                        profiles = new
+                        {
+                            avatar = avatar.Manifest.AnimationProfile,
+                            equipment = equipment.Manifest.AnimationProfile
                         },
                         avatar = avatar.Manifest.Id,
                         equipment = equipment.Manifest.Id,
@@ -1424,7 +1889,7 @@ public sealed class StoreEngine
         return result;
     }
 
-    private static float SampleReferenceInfluence(
+    internal static float SampleReferenceInfluence(
         CompiledAnimationClip clip,
         float phase)
     {
@@ -1525,9 +1990,6 @@ public sealed class StoreEngine
                 "Rigid-body avatar must expose both Left and Right Hand slot instances.");
         }
 
-        ValidateSemanticAnimationSet(
-            compilation,
-            requireSideAttackVariants: true);
     }
 
 
@@ -1573,9 +2035,6 @@ public sealed class StoreEngine
                 "Current single-part equipment Mount position must coincide with the authored part pivot.");
         }
 
-        ValidateSemanticAnimationSet(
-            compilation,
-            requireSideAttackVariants: false);
     }
 
     internal static CompatibilityPoseEvaluation EvaluateCompatibilityPose(
@@ -1607,6 +2066,7 @@ public sealed class StoreEngine
             equipmentClip,
             mountSocketIndex,
             phase,
+            phase,
             mountBind,
             inverseMountBind);
     }
@@ -1618,7 +2078,8 @@ public sealed class StoreEngine
         VoxelCompilation equipmentCompilation,
         CompiledAnimationClip equipmentClip,
         int mountSocketIndex,
-        float phase,
+        float bodyPhase,
+        float equipmentPhase,
         Matrix4x4 mountBind,
         Matrix4x4 inverseMountBind)
     {
@@ -1626,7 +2087,7 @@ public sealed class StoreEngine
             VoxelCompiledPoseEvaluator.Evaluate(
                     avatarCompilation,
                     bodyClip,
-                    phase)
+                    bodyPhase)
                 .GetSocketModelMatrix(bodySocketIndex);
         Matrix4x4 attachmentReference =
             inverseMountBind * bodySocket;
@@ -1634,7 +2095,7 @@ public sealed class StoreEngine
             VoxelCompiledPoseEvaluator.Evaluate(
                     equipmentCompilation,
                     equipmentClip,
-                    phase)
+                    equipmentPhase)
                 .GetSocketModelMatrix(mountSocketIndex) *
             attachmentReference;
         Matrix4x4 resolvedBindMount =
@@ -1694,14 +2155,20 @@ public sealed class StoreEngine
 
     private static void PopulateAssetProjection(
         AssetHealth health,
-        VoxelCompilation compilation)
+        VoxelCompilation compilation,
+        AnimationProfilePolicy animationProfiles,
+        ProfileAnimationCoverage coverage,
+        ProfileAnimationQuality? quality)
     {
         health.SlotInstances.Clear();
         health.SlotCounts.Clear();
         health.SemanticMotions.Clear();
         health.SemanticMotionCoverage.Clear();
-        health.MissingRequiredV1.Clear();
-        health.AliasedRequiredV1.Clear();
+        health.RequiredAnimationClips.Clear();
+        health.MissingAnimationClips.Clear();
+        health.InvalidAnimationClips.Clear();
+        health.DuplicateAnimationTakes.Clear();
+        health.AnimationProfile = health.AnimationProfile?.Trim();
 
         string[] clipNames = compilation.Animations
             .Select(x => x.Name)
@@ -1711,21 +2178,23 @@ public sealed class StoreEngine
         // Preserve the legacy flat clip-name projection during migration.
         health.SemanticMotions.AddRange(clipNames);
 
-        IReadOnlyList<SemanticMotionCoverage> coverage =
-            SemanticAnimationClipName.BuildCoverage(clipNames);
-        health.SemanticMotionCoverage.AddRange(coverage);
-
-        health.MissingRequiredV1.AddRange(
-            GetMissingRequiredV1Clips(
-                compilation,
-                health.Kind));
-        health.AliasedRequiredV1.AddRange(
-            GetAliasedRequiredV1Clips(
-                compilation,
-                health.Kind));
-        health.RequiredV1Complete =
-            health.MissingRequiredV1.Count == 0 &&
-            health.AliasedRequiredV1.Count == 0;
+        IReadOnlyList<SemanticMotionCoverage> semanticCoverage =
+            SemanticAnimationClipName.BuildCoverage(
+                clipNames,
+                animationProfiles.Families.Keys);
+        health.SemanticMotionCoverage.AddRange(semanticCoverage);
+        health.RequiredAnimationClips.AddRange(
+            coverage.RequiredClips.Select(x => x.Name));
+        health.MissingAnimationClips.AddRange(coverage.MissingClips);
+        health.InvalidAnimationClips.AddRange(coverage.InvalidClips);
+        if (quality != null)
+        {
+            health.InvalidAnimationClips.AddRange(quality.InvalidTakes);
+            health.DuplicateAnimationTakes.AddRange(quality.DuplicateTakes);
+        }
+        health.AnimationCoverageComplete =
+            coverage.Complete &&
+            quality is { Complete: true };
 
         if (health.Kind != "avatar")
             return;
@@ -1829,203 +2298,6 @@ public sealed class StoreEngine
         _ => 3
     };
 
-    private static void ValidateSemanticAnimationSet(
-        VoxelCompilation compilation,
-        bool requireSideAttackVariants)
-    {
-        foreach (CompiledAnimationClip clip in compilation.Animations)
-        {
-            SemanticAnimationClipIdentity identity =
-                SemanticAnimationClipName.Parse(clip.Name);
-            bool shouldLoop =
-                SemanticAnimationClipName.ShouldLoop(identity.Motion);
-            if (clip.Loop != shouldLoop)
-            {
-                throw new InvalidDataException(
-                    $"Semantic animation clip '{clip.Name}' loop setting is invalid.");
-            }
-        }
-
-        foreach (string motion in RequiredSemanticMotions)
-        {
-            _ = compilation.Animations.SingleOrDefault(
-                    x => string.Equals(
-                        x.Name,
-                        motion,
-                        StringComparison.Ordinal))
-                ?? throw new InvalidDataException(
-                    $"Required semantic animation clip '{motion}' is missing.");
-        }
-
-        if (!requireSideAttackVariants)
-            return;
-
-        foreach (string side in new[] { "Left", "Right" })
-        {
-            string name = "Attack." + side;
-            _ = compilation.Animations.SingleOrDefault(
-                    x => string.Equals(
-                        x.Name,
-                        name,
-                        StringComparison.Ordinal))
-                ?? throw new InvalidDataException(
-                    $"Side-reactive avatar animation clip '{name}' is missing.");
-        }
-    }
-
-    internal static IReadOnlyList<string> RequiredV1Clips(
-        string kind) =>
-        kind switch
-        {
-            "avatar" => new[]
-            {
-                "Idle.V1",
-                "WalkForward.V1",
-                "Attack.Left.V1",
-                "Attack.Right.V1",
-                "Hit.V1",
-                "Death.V1"
-            },
-            "equipment" => new[]
-            {
-                "Idle.V1",
-                "WalkForward.V1",
-                "Attack.V1",
-                "Hit.V1",
-                "Death.V1"
-            },
-            _ => throw new InvalidDataException(
-                "Unsupported reusable model kind for required V1 coverage: " +
-                kind)
-        };
-
-    internal static IReadOnlyList<string> GetMissingRequiredV1Clips(
-        VoxelCompilation compilation,
-        string kind)
-    {
-        var names = compilation.Animations
-            .Select(x => x.Name)
-            .ToHashSet(StringComparer.Ordinal);
-        return RequiredV1Clips(kind)
-            .Where(x => !names.Contains(x))
-            .ToArray();
-    }
-
-    internal static IReadOnlyList<string> GetAliasedRequiredV1Clips(
-        VoxelCompilation compilation,
-        string kind)
-    {
-        var clips = compilation.Animations.ToDictionary(
-            x => x.Name,
-            StringComparer.Ordinal);
-        var aliased = new List<string>();
-        foreach (string variantName in RequiredV1Clips(kind))
-        {
-            if (!clips.TryGetValue(
-                    variantName,
-                    out CompiledAnimationClip? variant))
-            {
-                continue;
-            }
-
-            string fallbackName =
-                variantName[..^".V1".Length];
-            if (!clips.TryGetValue(
-                    fallbackName,
-                    out CompiledAnimationClip? fallback))
-            {
-                continue;
-            }
-
-            if (AnimationContentEquals(variant, fallback))
-                aliased.Add(variantName);
-        }
-
-        return aliased;
-    }
-
-    internal static void ValidateRequiredV1Coverage(
-        VoxelCompilation compilation,
-        string kind)
-    {
-        IReadOnlyList<string> missing =
-            GetMissingRequiredV1Clips(compilation, kind);
-        if (missing.Count > 0)
-        {
-            throw new InvalidDataException(
-                "Required V1 animation coverage is incomplete for " +
-                kind +
-                ": " +
-                string.Join(", ", missing));
-        }
-
-        IReadOnlyList<string> aliased =
-            GetAliasedRequiredV1Clips(compilation, kind);
-        if (aliased.Count > 0)
-        {
-            throw new InvalidDataException(
-                "Required V1 animation clips must contain authored motion " +
-                "different from their fallback clips: " +
-                string.Join(", ", aliased));
-        }
-    }
-
-    private static bool AnimationContentEquals(
-        CompiledAnimationClip left,
-        CompiledAnimationClip right)
-    {
-        if (left.Duration != right.Duration ||
-            left.Loop != right.Loop ||
-            left.Tracks.Count != right.Tracks.Count)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < left.Tracks.Count; i++)
-        {
-            CompiledAnimationTrack a = left.Tracks[i];
-            CompiledAnimationTrack b = right.Tracks[i];
-            if (!string.Equals(
-                    a.PartName,
-                    b.PartName,
-                    StringComparison.Ordinal) ||
-                !AnimationChannelEquals(a.Position, b.Position) ||
-                !AnimationChannelEquals(a.Rotation, b.Rotation) ||
-                !AnimationChannelEquals(a.Scale, b.Scale))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool AnimationChannelEquals(
-        CompiledAnimationVectorChannel? left,
-        CompiledAnimationVectorChannel? right)
-    {
-        if (left == null || right == null)
-            return left == right;
-        if (left.Interpolation != right.Interpolation ||
-            left.Keys.Count != right.Keys.Count)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < left.Keys.Count; i++)
-        {
-            CompiledAnimationVectorKey a = left.Keys[i];
-            CompiledAnimationVectorKey b = right.Keys[i];
-            if (a.Time != b.Time ||
-                a.Value != b.Value)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     internal static string ResolveSemanticClipName(
         VoxelCompilation compilation,
         string motion,
@@ -2097,7 +2369,7 @@ public sealed class StoreEngine
         float.IsFinite(matrix.M43) &&
         float.IsFinite(matrix.M44);
 
-    private static float MaxMatrixDelta(Matrix4x4 left, Matrix4x4 right) =>
+    internal static float MaxMatrixDelta(Matrix4x4 left, Matrix4x4 right) =>
         new[]
         {
             MathF.Abs(left.M11 - right.M11),
@@ -2209,9 +2481,12 @@ public sealed class StoreEngine
                 slotCounts = x.Kind == "avatar" ? x.SlotCounts : null,
                 semanticMotions = x.SemanticMotions,
                 semanticMotionCoverage = x.SemanticMotionCoverage,
-                requiredV1Complete = x.RequiredV1Complete,
-                missingRequiredV1 = x.MissingRequiredV1,
-                aliasedRequiredV1 = x.AliasedRequiredV1
+                animationProfile = x.AnimationProfile,
+                animationCoverageComplete = x.AnimationCoverageComplete,
+                requiredAnimationClips = x.RequiredAnimationClips,
+                missingAnimationClips = x.MissingAnimationClips,
+                invalidAnimationClips = x.InvalidAnimationClips,
+                duplicateAnimationTakes = x.DuplicateAnimationTakes
             }).OrderBy(x => x.Id).ToArray()
         }, JsonOptions));
         File.WriteAllText(
@@ -2299,15 +2574,25 @@ public sealed class StoreEngine
             JsonSerializer.Serialize(audit, JsonOptions));
     }
 
-    private static IEnumerable<string> EnumerateProofInputs(AssetRecord asset)
+    private IEnumerable<string> EnumerateProofInputs(AssetRecord asset)
     {
         yield return asset.ManifestPath;
         yield return asset.SourceBase + ".voxel.yaml";
         yield return asset.PalettePath;
+        yield return Path.Combine(
+            _root,
+            "Store",
+            "animation-profiles.yaml");
         yield return asset.SourceBase + ".generated.vox";
         string animation = asset.SourceBase + GeneratedAnimationManifestWriter.Suffix;
         if (File.Exists(animation))
             yield return animation;
+        string animationReview = Path.Combine(
+            asset.ProofDirectory,
+            "Animation",
+            "review.generated.json");
+        if (File.Exists(animationReview))
+            yield return animationReview;
         string standalone = Path.Combine(asset.ProofDirectory, "Standalone");
         if (Directory.Exists(standalone))
             foreach (string file in Directory.GetFiles(standalone, "*", SearchOption.TopDirectoryOnly)

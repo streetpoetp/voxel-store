@@ -3,10 +3,28 @@ assembly: Rifle02
 voxelsPerUnit: 8
 clips:
 - name: Idle
-  duration: 1.2
+  duration: 1.4
   loop: true
   tracks:
   - part: Rifle
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - 0
+        - 0
+        - 2.189
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
     rotation:
       interpolation: smoothstep
       keys:
@@ -18,6 +36,251 @@ clips:
       - time: 0.5
         value:
         - 0
+        - 0
+        - 2.5
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+- name: Idle.V1
+  duration: 1.7
+  loop: true
+  tracks:
+  - part: Rifle
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - 0.1791
+        - 0
+        - 1.194
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - 3
+        - 0
+        - -3
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+- name: Idle.V2
+  duration: 1.15
+  loop: true
+  tracks:
+  - part: Rifle
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - -0.1592
+        - 0
+        - 1.592
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - -3
+        - 0
+        - 4
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+- name: Idle.V3
+  duration: 1.5
+  loop: true
+  tracks:
+  - part: Rifle
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - 0
+        - 0.1194
+        - 0.796
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - 2
+        - 0
+        - -5
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+- name: Attack
+  duration: 0.5
+  loop: false
+  tracks:
+  - part: Rifle
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - 0
+        - 0.4975
+        - 0.199
+      - time: 0.55
+        value:
+        - 0
+        - 0.8955
+        - 0.1493
+      - time: 0.82
+        value:
+        - 0
+        - 0.3134
+        - 0.0448
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - 2
+        - 0
+        - 0
+      - time: 0.55
+        value:
+        - -10
+        - 0
+        - 0
+      - time: 0.82
+        value:
+        - -3
+        - 0
+        - 0
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+- name: Attack.V1
+  duration: 0.64
+  loop: false
+  tracks:
+  - part: Rifle
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - -0.0498
+        - 0.4975
+        - 0.199
+      - time: 0.55
+        value:
+        - 0.2488
+        - 1.194
+        - 0.2985
+      - time: 0.82
+        value:
+        - 0.0622
+        - 0.4179
+        - 0.0896
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - 2.8
+        - 0
+        - -1.25
+      - time: 0.55
+        value:
+        - -14
+        - 0
+        - 5
+      - time: 0.82
+        value:
+        - -4.2
         - 0
         - 1.5
       - time: 1
@@ -25,35 +288,12 @@ clips:
         - 0
         - 0
         - 0
-- name: WalkForward
-  duration: 0.6
-  loop: true
-  tracks:
-  - part: Rifle
-    rotation:
-      interpolation: smoothstep
-      keys:
-      - time: 0
-        value:
-        - 0
-        - 0
-        - 0
-      - time: 0.5
-        value:
-        - 0
-        - 0
-        - 5
-      - time: 1
-        value:
-        - 0
-        - 0
-        - 0
-- name: Attack
-  duration: 0.45
+- name: Attack.V2
+  duration: 0.56
   loop: false
   tracks:
   - part: Rifle
-    rotation:
+    position:
       interpolation: smoothstep
       keys:
       - time: 0
@@ -61,21 +301,26 @@ clips:
         - 0
         - 0
         - 0
+      - time: 0.18
+        value:
+        - 0.0498
+        - 0.4975
+        - 0.199
       - time: 0.55
         value:
-        - 14
-        - 0
-        - 0
+        - -0.2488
+        - 0.796
+        - 0.199
+      - time: 0.82
+        value:
+        - -0.0622
+        - 0.2786
+        - 0.0597
       - time: 1
         value:
-        - 2.52
         - 0
         - 0
-- name: Hit
-  duration: 0.35
-  loop: false
-  tracks:
-  - part: Rifle
+        - 0
     rotation:
       interpolation: smoothstep
       keys:
@@ -84,108 +329,59 @@ clips:
         - 0
         - 0
         - 0
-      - time: 0.45
+      - time: 0.18
         value:
+        - 1.4
         - 0
-        - 0
-        - 10
-      - time: 1
-        value:
-        - 0
-        - 0
-        - 0
-- name: Death
-  duration: 0.75
-  loop: false
-  tracks:
-  - part: Rifle
-    rotation:
-      interpolation: smoothstep
-      keys:
-      - time: 0
-        value:
-        - 0
-        - 0
-        - 0
-      - time: 1
-        value:
-        - 0
-        - 0
-        - 82
-- name: Idle.V1
-  duration: 1.104
-  loop: true
-  tracks:
-  - part: Rifle
-    rotation:
-      interpolation: smoothstep
-      keys:
-      - time: 0
-        value:
-        - 0
-        - 0
-        - 0
-      - time: 0.5
-        value:
-        - 0
-        - 0
-        - 7.5
-      - time: 1
-        value:
-        - 0
-        - 0
-        - 0
-- name: WalkForward.V1
-  duration: 0.588
-  loop: true
-  tracks:
-  - part: Rifle
-    rotation:
-      interpolation: smoothstep
-      keys:
-      - time: 0
-        value:
-        - 0
-        - 0
-        - 0
-      - time: 0.5
-        value:
-        - 0
-        - 0
-        - 2
-      - time: 1
-        value:
-        - 0
-        - 0
-        - 0
-- name: Attack.V1
-  duration: 0.4455
-  loop: false
-  tracks:
-  - part: Rifle
-    rotation:
-      interpolation: smoothstep
-      keys:
-      - time: 0
-        value:
-        - 0
-        - 0
-        - 0
+        - 1.5
       - time: 0.55
         value:
-        - 14
-        - 0
         - -7
+        - 0
+        - -6
+      - time: 0.82
+        value:
+        - -2.1
+        - 0
+        - -1.8
       - time: 1
         value:
-        - 2.52
         - 0
         - 0
-- name: Hit.V1
-  duration: 0.329
+        - 0
+- name: Attack.V3
+  duration: 0.72
   loop: false
   tracks:
   - part: Rifle
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - 0
+        - 0.4975
+        - 0.199
+      - time: 0.55
+        value:
+        - 0
+        - 1.4925
+        - 0.4478
+      - time: 0.82
+        value:
+        - 0
+        - 0.5224
+        - 0.1343
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
     rotation:
       interpolation: smoothstep
       keys:
@@ -194,21 +390,131 @@ clips:
         - 0
         - 0
         - 0
-      - time: 0.45
+      - time: 0.18
+        value:
+        - 3.6
+        - 0
+        - 0
+      - time: 0.55
+        value:
+        - -18
+        - 0
+        - 0
+      - time: 0.82
+        value:
+        - -5.4
+        - 0
+        - 0
+      - time: 1
         value:
         - 0
+        - 0
+        - 0
+- name: Drop
+  duration: 0.72
+  loop: false
+  referenceInfluence:
+    interpolation: smoothstep
+    keys:
+    - time: 0
+      value: 1
+    - time: 0.12
+      value: 1
+    - time: 0.28
+      value: 0.3
+    - time: 0.42
+      value: 0
+    - time: 1
+      value: 0
+  tracks:
+  - part: Rifle
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - 0
+        - 0.1493
+        - 0.2488
+      - time: 0.5
+        value:
+        - 0.1343
+        - 0.1343
+        - -1.5124
+      - time: 1
+        value:
+        - 0.2985
+        - 0.2985
+        - -3.781
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.22
+        value:
+        - 12.3
+        - 0
+        - 2.7
+      - time: 0.62
+        value:
+        - 53.3
+        - 0
+        - 11.7
+      - time: 1
+        value:
+        - 82
         - 0
         - 18
-      - time: 1
+- name: Drop.V1
+  duration: 0.86
+  loop: false
+  referenceInfluence:
+    interpolation: smoothstep
+    keys:
+    - time: 0
+      value: 1
+    - time: 0.12
+      value: 1
+    - time: 0.28
+      value: 0.3
+    - time: 0.42
+      value: 0
+    - time: 1
+      value: 0
+  tracks:
+  - part: Rifle
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
         value:
         - 0
         - 0
         - 0
-- name: Death.V1
-  duration: 0.7125
-  loop: false
-  tracks:
-  - part: Rifle
+      - time: 0.18
+        value:
+        - 0
+        - 0.1493
+        - 0.2488
+      - time: 0.5
+        value:
+        - -0.2687
+        - 0.0672
+        - -1.791
+      - time: 1
+        value:
+        - -0.597
+        - 0.1493
+        - -4.4775
     rotation:
       interpolation: smoothstep
       keys:
@@ -217,8 +523,146 @@ clips:
         - 0
         - 0
         - 0
+      - time: 0.22
+        value:
+        - 9.6
+        - 0
+        - -6.9
+      - time: 0.62
+        value:
+        - 41.6
+        - 0
+        - -29.9
       - time: 1
+        value:
+        - 64
+        - 0
+        - -46
+- name: Drop.V2
+  duration: 0.64
+  loop: false
+  referenceInfluence:
+    interpolation: smoothstep
+    keys:
+    - time: 0
+      value: 1
+    - time: 0.12
+      value: 1
+    - time: 0.28
+      value: 0.3
+    - time: 0.42
+      value: 0
+    - time: 1
+      value: 0
+  tracks:
+  - part: Rifle
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
         value:
         - 0
         - 0
-        - 85
+        - 0
+      - time: 0.18
+        value:
+        - 0
+        - 0.1493
+        - 0.2488
+      - time: 0.5
+        value:
+        - 0.3582
+        - -0.1343
+        - -1.3532
+      - time: 1
+        value:
+        - 0.796
+        - -0.2985
+        - -3.383
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.22
+        value:
+        - 15.75
+        - 0
+        - 8.7
+      - time: 0.62
+        value:
+        - 68.25
+        - 0
+        - 37.7
+      - time: 1
+        value:
+        - 105
+        - 0
+        - 58
+- name: Drop.V3
+  duration: 0.95
+  loop: false
+  referenceInfluence:
+    interpolation: smoothstep
+    keys:
+    - time: 0
+      value: 1
+    - time: 0.12
+      value: 1
+    - time: 0.28
+      value: 0.3
+    - time: 0.42
+      value: 0
+    - time: 1
+      value: 0
+  tracks:
+  - part: Rifle
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - 0
+        - 0.1493
+        - 0.2488
+      - time: 0.5
+        value:
+        - -0.0896
+        - 0.2015
+        - -1.99
+      - time: 1
+        value:
+        - -0.199
+        - 0.4478
+        - -4.975
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.22
+        value:
+        - 17.7
+        - 0
+        - -2.4
+      - time: 0.62
+        value:
+        - 76.7
+        - 0
+        - -10.4
+      - time: 1
+        value:
+        - 118
+        - 0
+        - -16

@@ -3,11 +3,11 @@ assembly: Kukri01
 voxelsPerUnit: 8
 clips:
 - name: Idle
-  duration: 1.2
+  duration: 1.4
   loop: true
   tracks:
   - part: Kukri
-    rotation:
+    position:
       interpolation: smoothstep
       keys:
       - time: 0
@@ -19,17 +19,12 @@ clips:
         value:
         - 0
         - 0
-        - 1.5
+        - 2.299
       - time: 1
         value:
         - 0
         - 0
         - 0
-- name: WalkForward
-  duration: 0.6
-  loop: true
-  tracks:
-  - part: Kukri
     rotation:
       interpolation: smoothstep
       keys:
@@ -42,18 +37,156 @@ clips:
         value:
         - 0
         - 0
-        - 5
+        - 2.5
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+- name: Idle.V1
+  duration: 1.7
+  loop: true
+  tracks:
+  - part: Kukri
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - 0.1881
+        - 0
+        - 1.254
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - 3
+        - 0
+        - -3
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+- name: Idle.V2
+  duration: 1.15
+  loop: true
+  tracks:
+  - part: Kukri
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - -0.1672
+        - 0
+        - 1.672
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - -3
+        - 0
+        - 4
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+- name: Idle.V3
+  duration: 1.5
+  loop: true
+  tracks:
+  - part: Kukri
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - 0
+        - 0.1254
+        - 0.836
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.5
+        value:
+        - 2
+        - 0
+        - -5
       - time: 1
         value:
         - 0
         - 0
         - 0
 - name: Attack
-  duration: 0.45
+  duration: 0.5
   loop: false
+  referenceInfluence:
+    interpolation: smoothstep
+    keys:
+    - time: 0
+      value: 1
+    - time: 0.18
+      value: 1
+    - time: 0.32
+      value: 0.25
+    - time: 0.66
+      value: 0.25
+    - time: 0.84
+      value: 0.65
+    - time: 1
+      value: 1
   tracks:
   - part: Kukri
-    rotation:
+    position:
       interpolation: smoothstep
       keys:
       - time: 0
@@ -61,21 +194,26 @@ clips:
         - 0
         - 0
         - 0
+      - time: 0.18
+        value:
+        - 0.1672
+        - 0.5225
+        - 0.209
       - time: 0.55
         value:
-        - 0
-        - 0
-        - -52
+        - -0.836
+        - -4.18
+        - 0.836
+      - time: 0.82
+        value:
+        - -0.209
+        - -1.463
+        - 0.2508
       - time: 1
         value:
         - 0
         - 0
-        - -9.36
-- name: Hit
-  duration: 0.35
-  loop: false
-  tracks:
-  - part: Kukri
+        - 0
     rotation:
       interpolation: smoothstep
       keys:
@@ -84,86 +222,47 @@ clips:
         - 0
         - 0
         - 0
-      - time: 0.45
+      - time: 0.18
         value:
+        - -2
         - 0
-        - 0
+        - 17.5
+      - time: 0.55
+        value:
         - 10
-      - time: 1
+        - 0
+        - -70
+      - time: 0.82
         value:
+        - 3
         - 0
-        - 0
-        - 0
-- name: Death
-  duration: 0.75
-  loop: false
-  tracks:
-  - part: Kukri
-    rotation:
-      interpolation: smoothstep
-      keys:
-      - time: 0
-        value:
-        - 0
-        - 0
-        - 0
-      - time: 1
-        value:
-        - 0
-        - 0
-        - 82
-- name: Idle.V1
-  duration: 1.152
-  loop: true
-  tracks:
-  - part: Kukri
-    rotation:
-      interpolation: smoothstep
-      keys:
-      - time: 0
-        value:
-        - 0
-        - 0
-        - 0
-      - time: 0.5
-        value:
-        - 0
-        - 0
-        - -5.5
-      - time: 1
-        value:
-        - 0
-        - 0
-        - 0
-- name: WalkForward.V1
-  duration: 0.6
-  loop: true
-  tracks:
-  - part: Kukri
-    rotation:
-      interpolation: smoothstep
-      keys:
-      - time: 0
-        value:
-        - 0
-        - 0
-        - 0
-      - time: 0.5
-        value:
-        - 0
-        - 0
-        - 13
+        - -21
       - time: 1
         value:
         - 0
         - 0
         - 0
 - name: Attack.V1
-  duration: 0.4365
+  duration: 0.64
   loop: false
+  referenceInfluence:
+    interpolation: smoothstep
+    keys:
+    - time: 0
+      value: 1
+    - time: 0.18
+      value: 1
+    - time: 0.32
+      value: 0.25
+    - time: 0.66
+      value: 0.25
+    - time: 0.84
+      value: 0.65
+    - time: 1
+      value: 1
   tracks:
   - part: Kukri
-    rotation:
+    position:
       interpolation: smoothstep
       keys:
       - time: 0
@@ -171,21 +270,26 @@ clips:
         - 0
         - 0
         - 0
+      - time: 0.18
+        value:
+        - 0
+        - 0.5225
+        - 0.209
       - time: 0.55
         value:
         - 0
+        - -5.434
+        - 0.3135
+      - time: 0.82
+        value:
         - 0
-        - -60
+        - -1.9019
+        - 0.094
       - time: 1
         value:
         - 0
         - 0
-        - -9.36
-- name: Hit.V1
-  duration: 0.3465
-  loop: false
-  tracks:
-  - part: Kukri
+        - 0
     rotation:
       interpolation: smoothstep
       keys:
@@ -194,21 +298,74 @@ clips:
         - 0
         - 0
         - 0
-      - time: 0.45
+      - time: 0.18
         value:
+        - 1.6
         - 0
+        - -3
+      - time: 0.55
+        value:
+        - -8
         - 0
-        - 3
+        - 12
+      - time: 0.82
+        value:
+        - -2.4
+        - 0
+        - 3.6
       - time: 1
         value:
         - 0
         - 0
         - 0
-- name: Death.V1
-  duration: 0.7275
+- name: Attack.V2
+  duration: 0.56
   loop: false
+  referenceInfluence:
+    interpolation: smoothstep
+    keys:
+    - time: 0
+      value: 1
+    - time: 0.18
+      value: 1
+    - time: 0.32
+      value: 0.25
+    - time: 0.66
+      value: 0.25
+    - time: 0.84
+      value: 0.65
+    - time: 1
+      value: 1
   tracks:
   - part: Kukri
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - -0.1672
+        - 0.5225
+        - 0.209
+      - time: 0.55
+        value:
+        - 0.836
+        - -4.7025
+        - 1.1495
+      - time: 0.82
+        value:
+        - 0.209
+        - -1.6459
+        - 0.3448
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
     rotation:
       interpolation: smoothstep
       keys:
@@ -217,8 +374,355 @@ clips:
         - 0
         - 0
         - 0
+      - time: 0.18
+        value:
+        - -2.4
+        - 0
+        - -19.5
+      - time: 0.55
+        value:
+        - 12
+        - 0
+        - 78
+      - time: 0.82
+        value:
+        - 3.6
+        - 0
+        - 23.4
       - time: 1
         value:
         - 0
         - 0
-        - 87
+        - 0
+- name: Attack.V3
+  duration: 0.72
+  loop: false
+  referenceInfluence:
+    interpolation: smoothstep
+    keys:
+    - time: 0
+      value: 1
+    - time: 0.18
+      value: 1
+    - time: 0.32
+      value: 0.25
+    - time: 0.66
+      value: 0.25
+    - time: 0.84
+      value: 0.65
+    - time: 1
+      value: 1
+  tracks:
+  - part: Kukri
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - 0.0731
+        - 0.5225
+        - 0.209
+      - time: 0.55
+        value:
+        - -0.3657
+        - -6.061
+        - 0.627
+      - time: 0.82
+        value:
+        - -0.0914
+        - -2.1213
+        - 0.1881
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - 3.2
+        - 0
+        - 7
+      - time: 0.55
+        value:
+        - -16
+        - 0
+        - -28
+      - time: 0.82
+        value:
+        - -4.8
+        - 0
+        - -8.4
+      - time: 1
+        value:
+        - 0
+        - 0
+        - 0
+- name: Drop
+  duration: 0.72
+  loop: false
+  referenceInfluence:
+    interpolation: smoothstep
+    keys:
+    - time: 0
+      value: 1
+    - time: 0.12
+      value: 1
+    - time: 0.28
+      value: 0.3
+    - time: 0.42
+      value: 0
+    - time: 1
+      value: 0
+  tracks:
+  - part: Kukri
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - 0
+        - 0.1567
+        - 0.2612
+      - time: 0.5
+        value:
+        - 0.1411
+        - 0.1411
+        - -1.5884
+      - time: 1
+        value:
+        - 0.3135
+        - 0.3135
+        - -3.971
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.22
+        value:
+        - 12.3
+        - 0
+        - 2.7
+      - time: 0.62
+        value:
+        - 53.3
+        - 0
+        - 11.7
+      - time: 1
+        value:
+        - 82
+        - 0
+        - 18
+- name: Drop.V1
+  duration: 0.86
+  loop: false
+  referenceInfluence:
+    interpolation: smoothstep
+    keys:
+    - time: 0
+      value: 1
+    - time: 0.12
+      value: 1
+    - time: 0.28
+      value: 0.3
+    - time: 0.42
+      value: 0
+    - time: 1
+      value: 0
+  tracks:
+  - part: Kukri
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - 0
+        - 0.1567
+        - 0.2612
+      - time: 0.5
+        value:
+        - -0.2822
+        - 0.0705
+        - -1.881
+      - time: 1
+        value:
+        - -0.627
+        - 0.1567
+        - -4.7025
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.22
+        value:
+        - 9.6
+        - 0
+        - -6.9
+      - time: 0.62
+        value:
+        - 41.6
+        - 0
+        - -29.9
+      - time: 1
+        value:
+        - 64
+        - 0
+        - -46
+- name: Drop.V2
+  duration: 0.64
+  loop: false
+  referenceInfluence:
+    interpolation: smoothstep
+    keys:
+    - time: 0
+      value: 1
+    - time: 0.12
+      value: 1
+    - time: 0.28
+      value: 0.3
+    - time: 0.42
+      value: 0
+    - time: 1
+      value: 0
+  tracks:
+  - part: Kukri
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - 0
+        - 0.1567
+        - 0.2612
+      - time: 0.5
+        value:
+        - 0.3762
+        - -0.1411
+        - -1.4212
+      - time: 1
+        value:
+        - 0.836
+        - -0.3135
+        - -3.553
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.22
+        value:
+        - 15.75
+        - 0
+        - 8.7
+      - time: 0.62
+        value:
+        - 68.25
+        - 0
+        - 37.7
+      - time: 1
+        value:
+        - 105
+        - 0
+        - 58
+- name: Drop.V3
+  duration: 0.95
+  loop: false
+  referenceInfluence:
+    interpolation: smoothstep
+    keys:
+    - time: 0
+      value: 1
+    - time: 0.12
+      value: 1
+    - time: 0.28
+      value: 0.3
+    - time: 0.42
+      value: 0
+    - time: 1
+      value: 0
+  tracks:
+  - part: Kukri
+    position:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.18
+        value:
+        - 0
+        - 0.1567
+        - 0.2612
+      - time: 0.5
+        value:
+        - -0.0941
+        - 0.2116
+        - -2.09
+      - time: 1
+        value:
+        - -0.209
+        - 0.4703
+        - -5.225
+    rotation:
+      interpolation: smoothstep
+      keys:
+      - time: 0
+        value:
+        - 0
+        - 0
+        - 0
+      - time: 0.22
+        value:
+        - 17.7
+        - 0
+        - -2.4
+      - time: 0.62
+        value:
+        - 76.7
+        - 0
+        - -10.4
+      - time: 1
+        value:
+        - 118
+        - 0
+        - -16

@@ -18,7 +18,9 @@ namespace VoxelStore.Preview.Editor.Tests
             "{\"Id\":\"a\",\"Kind\":\"avatar\",\"UnitRef\":\"u/a\"," +
             "\"SourceBase\":\"Assets/A/Source/A\",\"Palette\":\"Assets/A/Source/A.palette.yaml\"," +
             "\"GeneratedVox\":\"Assets/A/Source/A.generated.vox\"," +
-            "\"GeneratedAnimation\":\"Assets/A/Source/A.animation.generated.yaml\"}";
+            "\"GeneratedAnimation\":\"Assets/A/Source/A.animation.generated.yaml\"," +
+            "\"AnimationProfile\":\"avatar.grounded\",\"RequiredClips\":[" +
+            "{\"Name\":\"Idle\",\"Loop\":true},{\"Name\":\"Attack\",\"Loop\":false}]}";
 
         [Test]
         public void PreviewHasNoStoreRuntimeAssembly()
@@ -70,33 +72,45 @@ namespace VoxelStore.Preview.Editor.Tests
         }
 
         [Test]
-        public void BakedVariantCoverageIsKindSpecificAndExact()
+        public void BakedVariantCoverageUsesExactToolResolvedInventory()
         {
-            CollectionAssert.AreEqual(
-                new[] { "Attack.Right.V1" },
-                PreviewVariantCoverage.MissingClips(
-                    "Avatars",
+            PreviewUnitContract unit = PreviewPlanClient.Parse(
+                "{\"Units\":[" + ValidUnitJson + "]}").Units[0];
+            Assert.DoesNotThrow(
+                () => PreviewVariantCoverage.ValidateInventory(
+                    unit,
                     new[]
                     {
-                        "Idle.V1",
-                        "WalkForward.V1",
-                        "Attack.Left.V1",
-                        "Hit.V1",
-                        "Death.V1"
+                        ("Idle", true),
+                        ("Attack", false)
                     }));
-
-            Assert.AreEqual(
-                0,
-                PreviewVariantCoverage.MissingClips(
-                    "Equipment",
-                    new[]
-                    {
-                        "Idle.V1",
-                        "WalkForward.V1",
-                        "Attack.V1",
-                        "Hit.V1",
-                        "Death.V1"
-                    }).Length);
+            InvalidOperationException missing =
+                Assert.Throws<InvalidOperationException>(
+                    () => PreviewVariantCoverage.ValidateInventory(
+                        unit,
+                        new[] { ("Idle", true) }));
+            StringAssert.Contains("Attack", missing.Message);
+            InvalidOperationException wrongLoop =
+                Assert.Throws<InvalidOperationException>(
+                    () => PreviewVariantCoverage.ValidateInventory(
+                        unit,
+                        new[]
+                        {
+                            ("Idle", false),
+                            ("Attack", false)
+                        }));
+            StringAssert.Contains("wrongLoop=[Idle]", wrongLoop.Message);
+            InvalidOperationException unexpected =
+                Assert.Throws<InvalidOperationException>(
+                    () => PreviewVariantCoverage.ValidateInventory(
+                        unit,
+                        new[]
+                        {
+                            ("Idle", true),
+                            ("Attack", false),
+                            ("Death", false)
+                        }));
+            StringAssert.Contains("unexpected=[Death]", unexpected.Message);
         }
 
         [Test]
@@ -437,10 +451,14 @@ namespace VoxelStore.Preview.Editor.Tests
         [Test]
         public void CurrentBakedContentComposesDirectlyThroughProviderActor()
         {
-            VoxelStorePreviewCommand.BakeAllForBatch();
+            VoxelStorePreviewCommand.BakeCandidatesForBatch(
+                new[]
+                {
+                    "avatar.skeleton-grunt-01",
+                    "equipment.axe-03"
+                });
             PreviewCatalogModel[] models =
                 PreviewCatalogDiscovery.Discover();
-            PreviewVariantCoverage.ValidateAll(models);
 
             PreviewCatalogModel avatarModel = models.First(
                 x => PreviewCatalogDiscovery.IsCatalog(x, "Avatars"));
@@ -496,7 +514,11 @@ namespace VoxelStore.Preview.Editor.Tests
         [Test]
         public void HeroVoxelEditorBuildsCurrentBakedModelDebugHierarchy()
         {
-            VoxelStorePreviewCommand.BakeAllForBatch();
+            VoxelStorePreviewCommand.BakeCandidatesForBatch(
+                new[]
+                {
+                    "avatar.skeleton-grunt-01"
+                });
             PreviewCatalogModel model =
                 PreviewCatalogDiscovery.Discover().First();
             GameObject debug = VoxelSceneDebugBuilder.Create(

@@ -26,138 +26,394 @@ sockets:
       translate: [4, 10, 1]
 animations:
   - clip: Idle
-    duration: 1.2
+    duration: 1.4
     loop: true
     tracks:
       - part: Spear
-        rotation:
+        position:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
             - time: 0.5
-              value: [0, 0, 1.5]
+              value: [0, 0, 2.134]
             - time: 1
               value: [0, 0, 0]
-  - clip: WalkForward
-    duration: 0.6
-    loop: true
-    tracks:
-      - part: Spear
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
             - time: 0.5
-              value: [0, 0, 5]
+              value: [0, 0, 2.5]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V1
+    duration: 1.7
+    loop: true
+    tracks:
+      - part: Spear
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0.1746, 0, 1.164]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [3, 0, -3]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V2
+    duration: 1.15
+    loop: true
+    tracks:
+      - part: Spear
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [-0.1552, 0, 1.552]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [-3, 0, 4]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V3
+    duration: 1.5
+    loop: true
+    tracks:
+      - part: Spear
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0, 0.1164, 0.776]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [2, 0, -5]
             - time: 1
               value: [0, 0, 0]
   - clip: Attack
-    duration: 0.45
+    duration: 0.5
     loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.18, value: 1 }
+        - { time: 0.32, value: 0.25 }
+        - { time: 0.66, value: 0.25 }
+        - { time: 0.84, value: 0.65 }
+        - { time: 1, value: 1 }
     tracks:
       - part: Spear
-        rotation:
+        position:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.485, 0.194]
             - time: 0.55
-              value: [28, 0, 0]
+              value: [0, -6.79, 0.2425]
+            - time: 0.82
+              value: [0, -2.3765, 0.0728]
             - time: 1
-              value: [5.04, 0, 0]
-  - clip: Hit
-    duration: 0.35
-    loop: false
-    tracks:
-      - part: Spear
+              value: [0, 0, 0]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 0.45
-              value: [0, 0, 10]
-            - time: 1
-              value: [0, 0, 0]
-  - clip: Death
-    duration: 0.75
-    loop: false
-    tracks:
-      - part: Spear
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 1
-              value: [0, 0, 82]
-  - clip: Idle.V1
-    duration: 1.176
-    loop: true
-    tracks:
-      - part: Spear
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 0.5
-              value: [0, 0, 4.5]
-            - time: 1
-              value: [0, 0, 0]
-  - clip: WalkForward.V1
-    duration: 0.6
-    loop: true
-    tracks:
-      - part: Spear
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 0.5
-              value: [0, 0, 10]
+            - time: 0.18
+              value: [0.8, 0, -2]
+            - time: 0.55
+              value: [-4, 0, 8]
+            - time: 0.82
+              value: [-1.2, 0, 2.4]
             - time: 1
               value: [0, 0, 0]
   - clip: Attack.V1
-    duration: 0.4365
+    duration: 0.64
     loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.18, value: 1 }
+        - { time: 0.32, value: 0.25 }
+        - { time: 0.66, value: 0.25 }
+        - { time: 0.84, value: 0.65 }
+        - { time: 1, value: 1 }
     tracks:
       - part: Spear
-        rotation:
+        position:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
+            - time: 0.18
+              value: [-0.2328, 0.485, 0.194]
             - time: 0.55
-              value: [28, 0, -8]
+              value: [1.164, -5.335, 0.776]
+            - time: 0.82
+              value: [0.291, -1.8673, 0.2328]
             - time: 1
-              value: [5.04, 0, 0]
-  - clip: Hit.V1
-    duration: 0.3395
-    loop: false
-    tracks:
-      - part: Spear
+              value: [0, 0, 0]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 0.45
-              value: [0, 0, 18]
+            - time: 0.18
+              value: [-1.6, 0, -14.5]
+            - time: 0.55
+              value: [8, 0, 58]
+            - time: 0.82
+              value: [2.4, 0, 17.4]
             - time: 1
               value: [0, 0, 0]
-  - clip: Death.V1
-    duration: 0.7125
+  - clip: Attack.V2
+    duration: 0.56
     loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.18, value: 1 }
+        - { time: 0.32, value: 0.25 }
+        - { time: 0.66, value: 0.25 }
+        - { time: 0.84, value: 0.65 }
+        - { time: 1, value: 1 }
     tracks:
       - part: Spear
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0.2328, 0.485, 0.194]
+            - time: 0.55
+              value: [-1.164, -5.626, 0.873]
+            - time: 0.82
+              value: [-0.291, -1.9691, 0.2619]
+            - time: 1
+              value: [0, 0, 0]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
+            - time: 0.18
+              value: [-2, 0, 15.5]
+            - time: 0.55
+              value: [10, 0, -62]
+            - time: 0.82
+              value: [3, 0, -18.6]
             - time: 1
-              value: [0, 0, 88]
+              value: [0, 0, 0]
+  - clip: Attack.V3
+    duration: 0.72
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.18, value: 1 }
+        - { time: 0.32, value: 0.25 }
+        - { time: 0.66, value: 0.25 }
+        - { time: 0.84, value: 0.65 }
+        - { time: 1, value: 1 }
+    tracks:
+      - part: Spear
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [-0.0679, 0.485, 0.194]
+            - time: 0.55
+              value: [0.3395, -7.954, 0.388]
+            - time: 0.82
+              value: [0.0849, -2.7839, 0.1164]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [2.4, 0, -6]
+            - time: 0.55
+              value: [-12, 0, 24]
+            - time: 0.82
+              value: [-3.6, 0, 7.2]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Drop
+    duration: 0.72
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Spear
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.1455, 0.2425]
+            - time: 0.5
+              value: [0.131, 0.131, -1.4744]
+            - time: 1
+              value: [0.291, 0.291, -3.686]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [12.3, 0, 2.7]
+            - time: 0.62
+              value: [53.3, 0, 11.7]
+            - time: 1
+              value: [82, 0, 18]
+  - clip: Drop.V1
+    duration: 0.86
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Spear
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.1455, 0.2425]
+            - time: 0.5
+              value: [-0.2619, 0.0655, -1.746]
+            - time: 1
+              value: [-0.582, 0.1455, -4.365]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [9.6, 0, -6.9]
+            - time: 0.62
+              value: [41.6, 0, -29.9]
+            - time: 1
+              value: [64, 0, -46]
+  - clip: Drop.V2
+    duration: 0.64
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Spear
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.1455, 0.2425]
+            - time: 0.5
+              value: [0.3492, -0.131, -1.3192]
+            - time: 1
+              value: [0.776, -0.291, -3.298]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [15.75, 0, 8.7]
+            - time: 0.62
+              value: [68.25, 0, 37.7]
+            - time: 1
+              value: [105, 0, 58]
+  - clip: Drop.V3
+    duration: 0.95
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Spear
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.1455, 0.2425]
+            - time: 0.5
+              value: [-0.0873, 0.1964, -1.94]
+            - time: 1
+              value: [-0.194, 0.4365, -4.85]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [17.7, 0, -2.4]
+            - time: 0.62
+              value: [76.7, 0, -10.4]
+            - time: 1
+              value: [118, 0, -16]

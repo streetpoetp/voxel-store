@@ -79,45 +79,108 @@ sockets:
       translate: [2, 10, 6]
 animations:
   - clip: Idle
-    duration: 1.2
+    duration: 1.4
     loop: true
     tracks:
       - part: Axe
-        rotation:
+        position:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
             - time: 0.5
-              value: [0, 0, 1.5]
+              value: [0, 0, 2.024]
             - time: 1
               value: [0, 0, 0]
-  - clip: WalkForward
-    duration: 0.6
-    loop: true
-    tracks:
-      - part: Axe
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
             - time: 0.5
-              value: [0, 0, 5]
+              value: [0, 0, 2.5]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V1
+    duration: 1.7
+    loop: true
+    tracks:
+      - part: Axe
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0.1656, 0, 1.104]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [3, 0, -3]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V2
+    duration: 1.15
+    loop: true
+    tracks:
+      - part: Axe
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [-0.1472, 0, 1.472]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [-3, 0, 4]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Idle.V3
+    duration: 1.5
+    loop: true
+    tracks:
+      - part: Axe
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [0, 0.1104, 0.736]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.5
+              value: [2, 0, -5]
             - time: 1
               value: [0, 0, 0]
   - clip: Attack
-    duration: 0.45
+    duration: 0.5
     loop: false
     referenceInfluence:
       interpolation: smoothstep
       keys:
         - { time: 0, value: 1 }
         - { time: 0.18, value: 1 }
-        - { time: 0.28, value: 0 }
-        - { time: 0.62, value: 0 }
-        - { time: 0.78, value: 0.35 }
-        - { time: 0.9, value: 0.75 }
+        - { time: 0.32, value: 0.25 }
+        - { time: 0.66, value: 0.25 }
+        - { time: 0.84, value: 0.65 }
         - { time: 1, value: 1 }
     tracks:
       - part: Axe
@@ -127,11 +190,11 @@ animations:
             - time: 0
               value: [0, 0, 0]
             - time: 0.18
-              value: [0, 1.5, 0.5]
+              value: [0, 0.46, 0.184]
             - time: 0.55
-              value: [0, -8, 1.5]
+              value: [0, -5.06, 1.104]
             - time: 0.82
-              value: [0, -10, 0.5]
+              value: [0, -1.771, 0.3312]
             - time: 1
               value: [0, 0, 0]
         rotation:
@@ -140,80 +203,144 @@ animations:
             - time: 0
               value: [0, 0, 0]
             - time: 0.18
-              value: [0, 0, -18]
+              value: [-2.4, 0, -20.5]
             - time: 0.55
-              value: [0, 0, 72]
+              value: [12, 0, 82]
             - time: 0.82
-              value: [0, 0, 38]
-            - time: 1
-              value: [0, 0, 11.7]
-  - clip: Hit
-    duration: 0.35
-    loop: false
-    tracks:
-      - part: Axe
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 0.45
-              value: [0, 0, 10]
-            - time: 1
-              value: [0, 0, 0]
-  - clip: Death
-    duration: 0.75
-    loop: false
-    tracks:
-      - part: Axe
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 1
-              value: [0, 0, 82]
-  - clip: Idle.V1
-    duration: 1.164
-    loop: true
-    tracks:
-      - part: Axe
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 0.5
-              value: [0, 0, 6.5]
-            - time: 1
-              value: [0, 0, 0]
-  - clip: WalkForward.V1
-    duration: 0.558
-    loop: true
-    tracks:
-      - part: Axe
-        rotation:
-          interpolation: smoothstep
-          keys:
-            - time: 0
-              value: [0, 0, 0]
-            - time: 0.5
-              value: [0, 0, 12]
+              value: [3.6, 0, 24.6]
             - time: 1
               value: [0, 0, 0]
   - clip: Attack.V1
-    duration: 0.423
+    duration: 0.64
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.18, value: 1 }
+        - { time: 0.32, value: 0.25 }
+        - { time: 0.66, value: 0.25 }
+        - { time: 0.84, value: 0.65 }
+        - { time: 1, value: 1 }
+    tracks:
+      - part: Axe
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [-0.2576, 0.46, 0.184]
+            - time: 0.55
+              value: [1.288, -6.44, 0.828]
+            - time: 0.82
+              value: [0.322, -2.254, 0.2484]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [-3.6, 0, -29.5]
+            - time: 0.55
+              value: [18, 0, 118]
+            - time: 0.82
+              value: [5.4, 0, 35.4]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Attack.V2
+    duration: 0.56
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.18, value: 1 }
+        - { time: 0.32, value: 0.25 }
+        - { time: 0.66, value: 0.25 }
+        - { time: 0.84, value: 0.65 }
+        - { time: 1, value: 1 }
+    tracks:
+      - part: Axe
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0.2576, 0.46, 0.184]
+            - time: 0.55
+              value: [-1.288, -5.796, 1.288]
+            - time: 0.82
+              value: [-0.322, -2.0286, 0.3864]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [-1.6, 0, 24]
+            - time: 0.55
+              value: [8, 0, -96]
+            - time: 0.82
+              value: [2.4, 0, -28.8]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Attack.V3
+    duration: 0.72
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.18, value: 1 }
+        - { time: 0.32, value: 0.25 }
+        - { time: 0.66, value: 0.25 }
+        - { time: 0.84, value: 0.65 }
+        - { time: 1, value: 1 }
+    tracks:
+      - part: Axe
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [-0.1104, 0.46, 0.184]
+            - time: 0.55
+              value: [0.552, -7.36, 0.46]
+            - time: 0.82
+              value: [0.138, -2.576, 0.138]
+            - time: 1
+              value: [0, 0, 0]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [-4.8, 0, -38.75]
+            - time: 0.55
+              value: [24, 0, 155]
+            - time: 0.82
+              value: [7.2, 0, 46.5]
+            - time: 1
+              value: [0, 0, 0]
+  - clip: Drop
+    duration: 0.72
     loop: false
     referenceInfluence:
       interpolation: smoothstep
       keys:
         - { time: 0, value: 1 }
         - { time: 0.12, value: 1 }
-        - { time: 0.22, value: 0 }
-        - { time: 0.7, value: 0 }
-        - { time: 0.82, value: 0.3 }
-        - { time: 0.92, value: 0.72 }
-        - { time: 1, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
     tracks:
       - part: Axe
         position:
@@ -221,50 +348,125 @@ animations:
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 0.2
-              value: [3, -4, 1.5]
+            - time: 0.18
+              value: [0, 0.138, 0.23]
             - time: 0.5
-              value: [6, -18, 3]
-            - time: 0.75
-              value: [-3, -26, 2.5]
+              value: [0.1242, 0.1242, -1.3984]
             - time: 1
-              value: [0, 0, 0]
+              value: [0.276, 0.276, -3.496]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 0.2
-              value: [0, 0, -25]
-            - time: 0.5
-              value: [0, 0, 110]
-            - time: 0.75
-              value: [0, 0, 165]
+            - time: 0.22
+              value: [12.3, 0, 2.7]
+            - time: 0.62
+              value: [53.3, 0, 11.7]
             - time: 1
-              value: [0, 0, 11.7]
-  - clip: Hit.V1
-    duration: 0.3325
+              value: [82, 0, 18]
+  - clip: Drop.V1
+    duration: 0.86
     loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
     tracks:
       - part: Axe
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.138, 0.23]
+            - time: 0.5
+              value: [-0.2484, 0.0621, -1.656]
+            - time: 1
+              value: [-0.552, 0.138, -4.14]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
-            - time: 0.45
-              value: [0, 0, 16]
+            - time: 0.22
+              value: [9.6, 0, -6.9]
+            - time: 0.62
+              value: [41.6, 0, -29.9]
             - time: 1
-              value: [0, 0, 0]
-  - clip: Death.V1
-    duration: 0.7125
+              value: [64, 0, -46]
+  - clip: Drop.V2
+    duration: 0.64
     loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
     tracks:
       - part: Axe
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.138, 0.23]
+            - time: 0.5
+              value: [0.3312, -0.1242, -1.2512]
+            - time: 1
+              value: [0.736, -0.276, -3.128]
         rotation:
           interpolation: smoothstep
           keys:
             - time: 0
               value: [0, 0, 0]
+            - time: 0.22
+              value: [15.75, 0, 8.7]
+            - time: 0.62
+              value: [68.25, 0, 37.7]
             - time: 1
-              value: [0, 0, 85]
+              value: [105, 0, 58]
+  - clip: Drop.V3
+    duration: 0.95
+    loop: false
+    referenceInfluence:
+      interpolation: smoothstep
+      keys:
+        - { time: 0, value: 1 }
+        - { time: 0.12, value: 1 }
+        - { time: 0.28, value: 0.3 }
+        - { time: 0.42, value: 0 }
+        - { time: 1, value: 0 }
+    tracks:
+      - part: Axe
+        position:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.18
+              value: [0, 0.138, 0.23]
+            - time: 0.5
+              value: [-0.0828, 0.1863, -1.84]
+            - time: 1
+              value: [-0.184, 0.414, -4.6]
+        rotation:
+          interpolation: smoothstep
+          keys:
+            - time: 0
+              value: [0, 0, 0]
+            - time: 0.22
+              value: [17.7, 0, -2.4]
+            - time: 0.62
+              value: [76.7, 0, -10.4]
+            - time: 1
+              value: [118, 0, -16]

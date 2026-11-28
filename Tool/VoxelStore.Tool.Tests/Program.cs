@@ -28,6 +28,52 @@ static void ExpectFailure(Action action, string contains)
         $"Expected failure containing '{contains}', but action succeeded.");
 }
 
+static void RunAnimationProfilePolicyTests(string repositoryRoot)
+{
+    var policy = AnimationProfilePolicy.Load(repositoryRoot);
+    Require(policy.Profiles.Count == 11, "catalog has all eleven approved motion profiles");
+    foreach (var (id, profile) in policy.Profiles)
+    {
+        foreach (string? form in profile.Kind == "equipment" ? profile.Forms.Cast<string?>() : new string?[] { null })
+        {
+            var asset = new AssetManifest { Id = "fixture", Kind = profile.Kind, Form = form, AnimationProfile = id };
+            Require(ReferenceEquals(policy.Resolve(asset), profile), "explicit applicable profile resolves");
+            foreach (string family in profile.Required.Concat(profile.Optional))
+                _ = policy.LoopFor(family);
+            asset.AnimationProfile = null;
+            ExpectFailure(() => policy.Resolve(asset), "explicit animationProfile");
+            asset.AnimationProfile = "missing.profile";
+            ExpectFailure(() => policy.Resolve(asset), "Unknown animation profile");
+            asset.AnimationProfile = id;
+            asset.Kind = profile.Kind == "avatar" ? "equipment" : "avatar";
+            ExpectFailure(() => policy.Resolve(asset), "incompatible with kind/form");
+            asset.Kind = profile.Kind;
+            if (profile.Kind == "equipment")
+            {
+                asset.Form = "not-a-supported-form";
+                ExpectFailure(() => policy.Resolve(asset), "incompatible with kind/form");
+                Require(!profile.Allows("Hit") && !profile.Allows("Death") && !profile.Allows("WalkForward"),
+                    "equipment does not require or allow irrelevant avatar motion");
+            }
+        }
+    }
+    Require(policy.Profiles["avatar.floating"].Allows("Glide") &&
+        !policy.Profiles["avatar.floating"].Allows("WalkForward"), "floating profile uses Glide");
+    Require(policy.Profiles["avatar.winged"].Allows("Fly") &&
+        !policy.Profiles["avatar.winged"].Allows("WalkForward"), "winged profile uses Fly");
+    Require(policy.LoopFor("Glide") && policy.LoopFor("Fly") && !policy.LoopFor("Drop"), "profile loop rules");
+    Require(policy.Profiles["equipment.ranged"].Allows("Aim") &&
+        !policy.Profiles["equipment.blade"].Allows("Aim"), "optional families are profile-specific");
+
+    var parsed = ContractYaml.Parse<AssetManifest>("kind: equipment\nform: axe\nanimationProfile: equipment.heavy");
+    Require(ReferenceEquals(policy.Resolve(parsed), policy.Profiles["equipment.heavy"]), "manifest parses explicit profile");
+    policy.Families["Invalid"] = new AnimationFamilyPolicy();
+    ExpectFailure(policy.Validate, "explicit loop rule");
+    policy.Families.Remove("Invalid");
+    policy.Profiles["avatar.grounded"].Required.Add("Unknown");
+    ExpectFailure(policy.Validate, "Invalid animation profile families");
+}
+
 static string TempRoot()
 {
     string path = Path.Combine(
@@ -354,6 +400,86 @@ static void RunReferenceDensitySelectorTests()
 }
 
 
+
+static string EquipmentProfileVoxelSpec()
+{
+    var builder = new System.Text.StringBuilder();
+    builder.AppendLine("name: FixtureStaff");
+    builder.AppendLine("voxelsPerUnit: 64");
+    builder.AppendLine("assemblyOrigin:");
+    builder.AppendLine("  part: Staff");
+    builder.AppendLine("parts:");
+    builder.AppendLine("  - part: Staff");
+    builder.AppendLine("    pivot: [2, 2, 48]");
+    builder.AppendLine("    voxels:");
+    builder.AppendLine("      - box: { min: [0, 0, 0], size: [4, 4, 96], color: staff }");
+    builder.AppendLine("sockets:");
+    builder.AppendLine("  - socket: Mount");
+    builder.AppendLine("    parent: Staff");
+    builder.AppendLine("    transform:");
+    builder.AppendLine("      translate: [2, 2, 48]");
+    builder.AppendLine("animations:");
+    foreach (string family in new[] { "Idle", "Attack", "Drop" })
+    for (int variant = 0; variant < 4; variant++)
+    {
+        string name = variant == 0 ? family : family + ".V" + variant;
+        bool loop = family == "Idle";
+        float angle = 4f + variant * 7f + (family == "Attack" ? 18f : family == "Drop" ? 32f : 0f);
+        builder.AppendLine("  - clip: " + name);
+        builder.AppendLine("    duration: 1");
+        builder.AppendLine("    loop: " + loop.ToString().ToLowerInvariant());
+        if (family == "Drop")
+        {
+            builder.AppendLine("    referenceInfluence:");
+            builder.AppendLine("      interpolation: smoothstep");
+            builder.AppendLine("      keys:");
+            builder.AppendLine("        - { time: 0, value: 1 }");
+            builder.AppendLine("        - { time: 0.5, value: 0 }");
+            builder.AppendLine("        - { time: 1, value: 0 }");
+        }
+        builder.AppendLine("    tracks:");
+        builder.AppendLine("      - part: Staff");
+        builder.AppendLine("        rotation:");
+        builder.AppendLine("          interpolation: smoothstep");
+        builder.AppendLine("          keys:");
+        builder.AppendLine("            - time: 0");
+        builder.AppendLine("              value: [0, 0, 0]");
+        builder.AppendLine("            - time: 0.5");
+        builder.AppendLine("              value: [" + angle.ToString(System.Globalization.CultureInfo.InvariantCulture) + ", 0, " + (variant * 3).ToString(System.Globalization.CultureInfo.InvariantCulture) + "]");
+        builder.AppendLine("            - time: 1");
+        builder.AppendLine("              value: [" + (family == "Drop" ? angle * 1.25f : 0f).ToString(System.Globalization.CultureInfo.InvariantCulture) + ", 0, 0]");
+    }
+    return builder.ToString();
+}
+
+static void AcceptFixtureAnimationReview(
+    StoreEngine engine,
+    string root,
+    string assetId,
+    IEnumerable<string>? clipNames = null)
+{
+    string capture = Path.Combine(
+        root,
+        "Capture",
+        assetId.Replace('.', '_'));
+    Directory.CreateDirectory(capture);
+    string[] clips = (clipNames ??
+        new[] { "Idle", "Idle.V1", "Idle.V2", "Idle.V3", "Attack", "Attack.V1", "Attack.V2", "Attack.V3", "Drop", "Drop.V1", "Drop.V2", "Drop.V3" })
+        .OrderBy(x => x, StringComparer.Ordinal)
+        .ToArray();
+    var captures = new List<object>();
+    foreach (string clip in clips)
+    for (int i = 0; i < 2; i++)
+    {
+        string file = clip.Replace('.', '-') + "-" + i + ".png";
+        File.WriteAllBytes(Path.Combine(capture, file), new byte[] { 1, 2, 3, (byte)i });
+        captures.Add(new { checkpoint = assetId + "__" + clip + "__p" + i, file });
+    }
+    string report = Path.Combine(capture, "game-view-capture.json");
+    File.WriteAllText(report, System.Text.Json.JsonSerializer.Serialize(new { captures }));
+    engine.AcceptAnimationReview(assetId, report);
+}
+
 static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string repositoryRoot)
 {
     string root = TempRoot();
@@ -377,6 +503,7 @@ static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string rep
             version: 3
             id: equipment.fixture-staff
             kind: equipment
+            animationProfile: equipment.magical
             unitRef: voxel-store/equipment/fixture-staff
             form: staff
             attachment:
@@ -410,116 +537,11 @@ static (string Root, string AssetRoot) PrepareDensityEquipmentFixture(string rep
             """);
         File.WriteAllText(
             Path.Combine(assetRoot, "Source", "FixtureStaff.voxel.yaml"),
-            """
-            name: FixtureStaff
-            voxelsPerUnit: 64
-            assemblyOrigin:
-              part: Staff
-            parts:
-              - part: Staff
-                pivot: [2, 2, 48]
-                voxels:
-                  - box: { min: [0, 0, 0], size: [4, 4, 96], color: staff }
-            sockets:
-              - socket: Mount
-                parent: Staff
-                transform:
-                  translate: [2, 2, 48]
-            animations:
-              - clip: Idle
-                duration: 1
-                loop: true
-                tracks:
-                  - part: Staff
-                    rotation:
-                      keys:
-                        - time: 0
-                          value: [0, 0, 0]
-              - clip: WalkForward
-                duration: 1
-                loop: true
-                tracks:
-                  - part: Staff
-                    rotation:
-                      keys:
-                        - time: 0
-                          value: [0, 0, 0]
-              - clip: Attack
-                duration: 1
-                loop: false
-                tracks:
-                  - part: Staff
-                    rotation:
-                      keys:
-                        - time: 0
-                          value: [0, 0, 0]
-              - clip: Hit
-                duration: 1
-                loop: false
-                tracks:
-                  - part: Staff
-                    rotation:
-                      keys:
-                        - time: 0
-                          value: [0, 0, 0]
-              - clip: Death
-                duration: 1
-                loop: false
-                tracks:
-                  - part: Staff
-                    rotation:
-                      keys:
-                        - time: 0
-                          value: [0, 0, 0]
-              - clip: Idle.V1
-                duration: 0.9
-                loop: true
-                tracks:
-                  - part: Staff
-                    rotation:
-                      keys:
-                        - time: 0
-                          value: [0, 0, 2]
-              - clip: WalkForward.V1
-                duration: 0.9
-                loop: true
-                tracks:
-                  - part: Staff
-                    rotation:
-                      keys:
-                        - time: 0
-                          value: [0, 0, 3]
-              - clip: Attack.V1
-                duration: 0.9
-                loop: false
-                tracks:
-                  - part: Staff
-                    rotation:
-                      keys:
-                        - time: 0
-                          value: [0, 0, 8]
-              - clip: Hit.V1
-                duration: 0.9
-                loop: false
-                tracks:
-                  - part: Staff
-                    rotation:
-                      keys:
-                        - time: 0
-                          value: [0, 0, -4]
-              - clip: Death.V1
-                duration: 0.9
-                loop: false
-                tracks:
-                  - part: Staff
-                    rotation:
-                      keys:
-                        - time: 0
-                          value: [0, 0, 12]
-            """);
+            EquipmentProfileVoxelSpec());
 
         var engine = new StoreEngine(root, HeroStudioSubmodule(repositoryRoot));
         engine.Generate("equipment.fixture-staff");
+        AcceptFixtureAnimationReview(engine, root, "equipment.fixture-staff");
         engine.Seal("equipment.fixture-staff");
         return (root, assetRoot);
     }
@@ -3089,6 +3111,11 @@ static void RunPreviewPlanTests(string repositoryRoot)
     string syntheticRoot = TempRoot();
     try
     {
+        Directory.CreateDirectory(Path.Combine(syntheticRoot, "Store"));
+        File.Copy(
+            Path.Combine(repositoryRoot, "Store", "animation-profiles.yaml"),
+            Path.Combine(syntheticRoot, "Store", "animation-profiles.yaml"));
+
         AssetRecord Synthetic(string id, string kind, string unitRef) =>
             new(
                 new AssetManifest
@@ -3096,6 +3123,11 @@ static void RunPreviewPlanTests(string repositoryRoot)
                     Version = 2,
                     Id = id,
                     Kind = kind,
+                    Form = kind == "equipment" ? "sword" : null,
+                    AnimationProfile =
+                        kind == "avatar"
+                            ? "avatar.grounded"
+                            : "equipment.blade",
                     UnitRef = unitRef,
                     Source = new AssetSource
                     {
@@ -3118,9 +3150,33 @@ static void RunPreviewPlanTests(string repositoryRoot)
         {
             Assets = new List<AssetHealth>
             {
-                new() { Id = avatar.Manifest.Id, Kind = avatar.Manifest.Kind, UnitRef = avatar.Manifest.UnitRef, Published = true },
-                new() { Id = equipment.Manifest.Id, Kind = equipment.Manifest.Kind, UnitRef = equipment.Manifest.UnitRef, Published = true },
-                new() { Id = unpublished.Manifest.Id, Kind = unpublished.Manifest.Kind, UnitRef = unpublished.Manifest.UnitRef, Published = false }
+                new()
+                {
+                    Id = avatar.Manifest.Id,
+                    Kind = avatar.Manifest.Kind,
+                    UnitRef = avatar.Manifest.UnitRef,
+                    AnimationProfile = avatar.Manifest.AnimationProfile,
+                    Published = true,
+                    RequiredAnimationClips = { "Idle" }
+                },
+                new()
+                {
+                    Id = equipment.Manifest.Id,
+                    Kind = equipment.Manifest.Kind,
+                    UnitRef = equipment.Manifest.UnitRef,
+                    AnimationProfile = equipment.Manifest.AnimationProfile,
+                    Published = true,
+                    RequiredAnimationClips = { "Idle" }
+                },
+                new()
+                {
+                    Id = unpublished.Manifest.Id,
+                    Kind = unpublished.Manifest.Kind,
+                    UnitRef = unpublished.Manifest.UnitRef,
+                    AnimationProfile = unpublished.Manifest.AnimationProfile,
+                    Published = false,
+                    RequiredAnimationClips = { "Idle" }
+                }
             }
         };
         PreviewPlan synthetic = StoreEngine.CreatePreviewPlan(
@@ -3178,6 +3234,13 @@ static void RunPreviewPlanTests(string repositoryRoot)
         "preview plan must not mutate generated health");
 }
 string repositoryRoot = StoreEngine.FindRoot(AppContext.BaseDirectory);
+RunAnimationProfilePolicyTests(repositoryRoot);
+AnimationProfileTests.Run(repositoryRoot);
+if (args.Contains("--animation-profiles-only", StringComparer.Ordinal))
+{
+    Console.WriteLine("PASS: animation profile policy, coverage and sampled trajectory validation");
+    return;
+}
 if (args.Contains("--preview-plan-only", StringComparer.Ordinal))
 {
     RunPreviewPlanTests(repositoryRoot);
@@ -3264,6 +3327,12 @@ if (args.Contains("--reference-authority-only", StringComparer.Ordinal))
 
 var engine = new StoreEngine(repositoryRoot);
 
+if (args.Contains("--required-v1-only", StringComparer.Ordinal))
+{
+    Console.WriteLine("PASS: profile-driven default+V1/V2/V3 animation coverage and choreography tests");
+    return;
+}
+
 static IReadOnlyList<Hero.Voxel.Tool.CompiledAnimationClip> RequiredSemanticClips(
     string partName,
     bool includeSideAttack = false,
@@ -3306,123 +3375,6 @@ static IReadOnlyList<Hero.Voxel.Tool.CompiledAnimationClip> RequiredSemanticClip
     foreach ((string name, bool loop) in extraClips)
         clips.Add(Clip(name, loop));
     return clips;
-}
-
-static IReadOnlyList<Hero.Voxel.Tool.CompiledAnimationClip>
-    RequiredV1Fixture(
-        string partName,
-        string kind)
-{
-    var clips = RequiredSemanticClips(
-            partName,
-            includeSideAttack:
-                string.Equals(
-                    kind,
-                    "avatar",
-                    StringComparison.Ordinal))
-        .ToList();
-    foreach (string variantName in
-             StoreEngine.RequiredV1Clips(kind))
-    {
-        string fallbackName =
-            variantName[..^".V1".Length];
-        Hero.Voxel.Tool.CompiledAnimationClip fallback =
-            clips.Single(x =>
-                string.Equals(
-                    x.Name,
-                    fallbackName,
-                    StringComparison.Ordinal));
-        clips.Add(
-            fallback with
-            {
-                Name = variantName,
-                Duration = fallback.Duration + 0.1f
-            });
-    }
-
-    return clips;
-}
-
-var equipmentV1Compilation =
-    new Hero.Voxel.Tool.VoxelCompilation(
-        "EquipmentV1Fixture",
-        8,
-        Array.Empty<Hero.Voxel.Tool.PaletteEntry>(),
-        Array.Empty<Hero.Voxel.Tool.CompiledPart>(),
-        Array.Empty<Hero.Voxel.Tool.CompiledSocket>(),
-        RequiredV1Fixture("Staff", "equipment"));
-StoreEngine.ValidateRequiredV1Coverage(
-    equipmentV1Compilation,
-    "equipment");
-Require(
-    StoreEngine.GetMissingRequiredV1Clips(
-        equipmentV1Compilation,
-        "equipment").Count == 0,
-    "complete equipment V1 fixture must have no missing required clips");
-Require(
-    StoreEngine.GetAliasedRequiredV1Clips(
-        equipmentV1Compilation,
-        "equipment").Count == 0,
-    "distinct equipment V1 fixture must have no aliased required clips");
-
-ExpectFailure(
-    () => StoreEngine.ValidateRequiredV1Coverage(
-        equipmentV1Compilation with
-        {
-            Animations = equipmentV1Compilation.Animations
-                .Where(x => x.Name != "Death.V1")
-                .ToArray()
-        },
-        "equipment"),
-    "Death.V1");
-
-Hero.Voxel.Tool.CompiledAnimationClip deathBase =
-    equipmentV1Compilation.Animations.Single(
-        x => x.Name == "Death");
-Hero.Voxel.Tool.CompiledAnimationClip[] aliasedEquipment =
-    equipmentV1Compilation.Animations
-        .Where(x => x.Name != "Death.V1")
-        .Append(deathBase with { Name = "Death.V1" })
-        .ToArray();
-ExpectFailure(
-    () => StoreEngine.ValidateRequiredV1Coverage(
-        equipmentV1Compilation with
-        {
-            Animations = aliasedEquipment
-        },
-        "equipment"),
-    "different from their fallback");
-
-var avatarV1Compilation =
-    new Hero.Voxel.Tool.VoxelCompilation(
-        "AvatarV1Fixture",
-        8,
-        Array.Empty<Hero.Voxel.Tool.PaletteEntry>(),
-        Array.Empty<Hero.Voxel.Tool.CompiledPart>(),
-        Array.Empty<Hero.Voxel.Tool.CompiledSocket>(),
-        RequiredV1Fixture("Body", "avatar"));
-StoreEngine.ValidateRequiredV1Coverage(
-    avatarV1Compilation,
-    "avatar");
-Require(
-    StoreEngine.RequiredV1Clips("avatar")
-        .SequenceEqual(
-            new[]
-            {
-                "Idle.V1",
-                "WalkForward.V1",
-                "Attack.Left.V1",
-                "Attack.Right.V1",
-                "Hit.V1",
-                "Death.V1"
-            }),
-    "avatar publication floor must require both side-qualified Attack V1 takes");
-
-if (args.Contains("--required-v1-only", StringComparer.Ordinal))
-{
-    Console.WriteLine(
-        "PASS: required V1 publication coverage and alias rejection tests");
-    return;
 }
 
 SemanticAnimationClipIdentity parsedVariant =
@@ -3479,7 +3431,8 @@ IReadOnlyList<SemanticMotionCoverage> projectedCoverage =
             "Attack.Left",
             "Attack.V2",
             "Attack.Left.V2"
-        });
+        },
+        new[] { "Attack" });
 SemanticMotionCoverage projectedAttack = projectedCoverage.Single();
 Require(
     projectedAttack.Motion == "Attack" &&
@@ -3589,29 +3542,14 @@ ExpectFailure(
         EquipmentManifest().Attachment!),
     "must coincide");
 
-ExpectFailure(
-    () => StoreEngine.ValidateEquipmentCompositionFrame(
-        highDensityEquipment with
-        {
-            Animations = RequiredSemanticClips("Staff")
-                .Where(x => x.Name != "Death")
-                .ToArray()
-        },
-        EquipmentManifest().Attachment!),
-    "Death");
-
-ExpectFailure(
-    () => StoreEngine.ValidateEquipmentCompositionFrame(
-        highDensityEquipment with
-        {
-            Animations = RequiredSemanticClips("Staff")
-                .Select(x => x.Name == "Idle"
-                    ? x with { Loop = false }
-                    : x)
-                .ToArray()
-        },
-        EquipmentManifest().Attachment!),
-    "loop setting");
+StoreEngine.ValidateEquipmentCompositionFrame(
+    highDensityEquipment with
+    {
+        Animations = RequiredSemanticClips("Staff")
+            .Where(x => x.Name != "Death")
+            .ToArray()
+    },
+    EquipmentManifest().Attachment!);
 
 var variantEquipment = highDensityEquipment with
 {
@@ -3658,26 +3596,14 @@ Require(
         "Left",
         "V2") == "Attack",
     "missing requested variant and side clip must fall back to the required base clip");
-ExpectFailure(
-    () => StoreEngine.ValidateEquipmentCompositionFrame(
-        highDensityEquipment with
-        {
-            Animations = RequiredSemanticClips(
-                "Staff",
-                extraClips: new[] { ("Death.V2", true) })
-        },
-        EquipmentManifest().Attachment!),
-    "Death.V2");
-ExpectFailure(
-    () => StoreEngine.ValidateEquipmentCompositionFrame(
-        highDensityEquipment with
-        {
-            Animations = RequiredSemanticClips(
-                "Staff",
-                extraClips: new[] { ("Attack.Heavy", false) })
-        },
-        EquipmentManifest().Attachment!),
-    "variant must match");
+StoreEngine.ValidateEquipmentCompositionFrame(
+    highDensityEquipment with
+    {
+        Animations = RequiredSemanticClips(
+            "Staff",
+            extraClips: new[] { ("Death.V2", true) })
+    },
+    EquipmentManifest().Attachment!);
 
 var translatedEquipmentClips =
     RequiredSemanticClips("Staff").ToArray();
@@ -3840,31 +3766,15 @@ ExpectFailure(
         }),
     "both Left and Right");
 
-ExpectFailure(
-    () => StoreEngine.ValidateRigidBodyAvatar(
-        rigidBody with
-        {
-            Animations = RequiredSemanticClips(
-                    "Body",
-                    includeSideAttack: true)
-                .Where(x => x.Name != "Attack.Left")
-                .ToArray()
-        }),
-    "Attack.Left");
-
-ExpectFailure(
-    () => StoreEngine.ValidateRigidBodyAvatar(
-        rigidBody with
-        {
-            Animations = RequiredSemanticClips(
-                    "Body",
-                    includeSideAttack: true)
-                .Select(x => x.Name == "Idle"
-                    ? x with { Loop = false }
-                    : x)
-                .ToArray()
-        }),
-    "loop setting");
+StoreEngine.ValidateRigidBodyAvatar(
+    rigidBody with
+    {
+        Animations = RequiredSemanticClips(
+                "Body",
+                includeSideAttack: true)
+            .Where(x => x.Name != "Attack.Left")
+            .ToArray()
+    });
 
 var multiSlotBody = rigidBody with
 {
@@ -4392,6 +4302,12 @@ foreach (AssetRecord asset in assets)
     Require(
         compiled.Parts.Count > 0,
         $"provider compile produced no parts for {asset.Manifest.Id}");
+    AcceptFixtureAnimationReview(
+        coldStartEngine,
+        coldStartRoot,
+        asset.Manifest.Id,
+        compiled.Animations.Select(x => x.Name));
+    coldStartEngine.Seal(asset.Manifest.Id);
 }
 
 // Explicitly downgrade copied current proof to both retired repository conventions.
@@ -4411,13 +4327,13 @@ string copiedDaggerCompatibility = Path.Combine(
 File.WriteAllText(
     copiedSwordCompatibility,
     File.ReadAllText(copiedSwordCompatibility).Replace(
-        "model-socket-reference-influence-semantic-phase.v3",
+        "profile-independent-motion-pairs.v4",
         "model-socket-reference-semantic-phase.v2",
         StringComparison.Ordinal));
 File.WriteAllText(
     copiedDaggerCompatibility,
     File.ReadAllText(copiedDaggerCompatibility).Replace(
-        "model-socket-reference-influence-semantic-phase.v3",
+        "profile-independent-motion-pairs.v4",
         "model-socket-animated-mount.v1",
         StringComparison.Ordinal));
 
@@ -4457,22 +4373,50 @@ Require(
     first.Assets.Count == second.Assets.Count,
     "scan must be deterministic");
 Require(
-    first.Compatibility.Count == 32 &&
     first.Compatibility.All(x =>
         x.Passed &&
         x.Capability == "Hand" &&
         x.Socket is "Equip.Hand.Left.0" or "Equip.Hand.Right.0" &&
         x.Side is "Left" or "Right" &&
         x.Phase >= 0f && x.Phase <= 1f),
-    "Sword02 and Dagger02 must each pass both side-aware Hand slots across semantic samples");
+    "Sword02 and Dagger02 must pass every independently planned body/equipment sample on both Hand slots");
+AssetRecord coldAvatar =
+    assets.Single(x => x.Manifest.Kind == "avatar");
+Hero.Voxel.Tool.VoxelCompilation coldAvatarCompilation =
+    Hero.Voxel.Tool.VoxelSpecCompiler.Compile(
+        Hero.Voxel.Tool.VoxelSpecYaml.LoadSpec(coldAvatar.SourceBase + ".voxel.yaml"),
+        Hero.Voxel.Tool.VoxelSpecYaml.LoadPalette(coldAvatar.PalettePath));
+var expectedCompatibilityCounts =
+    assets.Where(x => x.Manifest.Kind == "equipment")
+        .ToDictionary(
+            x => x.Manifest.Id,
+            x =>
+            {
+                Hero.Voxel.Tool.VoxelCompilation equipmentCompilation =
+                    Hero.Voxel.Tool.VoxelSpecCompiler.Compile(
+                        Hero.Voxel.Tool.VoxelSpecYaml.LoadSpec(x.SourceBase + ".voxel.yaml"),
+                        Hero.Voxel.Tool.VoxelSpecYaml.LoadPalette(x.PalettePath));
+                return StoreEngine.BuildCompatibilitySamples(
+                    coldAvatarCompilation,
+                    equipmentCompilation).Count * 2;
+            },
+            StringComparer.Ordinal);
+Require(
+    first.Compatibility.Count == expectedCompatibilityCounts.Values.Sum() &&
+    first.Compatibility.All(x =>
+        x.Passed &&
+        x.Capability == "Hand" &&
+        x.Socket is "Equip.Hand.Left.0" or "Equip.Hand.Right.0" &&
+        x.Side is "Left" or "Right" &&
+        x.Phase >= 0f && x.Phase <= 1f),
+    "compatibility row count must match the independent exact-clip sample planner");
 Require(
     first.Compatibility
         .GroupBy(x => x.Equipment, StringComparer.Ordinal)
         .All(x =>
-            x.Count() == 16 &&
-            x.Select(row => row.Socket).Distinct(StringComparer.Ordinal).Count() == 2 &&
-            x.Select(row => row.Motion).Distinct(StringComparer.Ordinal).Count() == 5),
-    "each equipment asset must contribute two Hand slots across all required semantic motions");
+            x.Count() == expectedCompatibilityCounts[x.Key] &&
+            x.Select(row => row.Socket).Distinct(StringComparer.Ordinal).Count() == 2),
+    "each equipment asset must contribute both Hand slots across all independently planned exact clips");
 
 string formCoveragePath = Path.Combine(coldStartRoot, "Collections", "combat-foundation.v1.yaml");
 string formCoverageOriginal = File.ReadAllText(formCoveragePath);
@@ -4510,7 +4454,7 @@ using (JsonDocument evidence =
     JsonElement inputs = evidence.RootElement.GetProperty("inputs");
     Require(
         evidence.RootElement.GetProperty("convention").GetString() ==
-            "model-socket-reference-influence-semantic-phase.v3" &&
+            "profile-independent-motion-pairs.v4" &&
         provider.GetProperty("heroStudioRevision").GetString() ==
             resolution.Lock.HeroStudioRevision &&
         provider.GetProperty("workflowSha256").GetString() ==
@@ -4519,13 +4463,23 @@ using (JsonDocument evidence =
         inputs.GetProperty("avatarPaletteSha256").GetString()!.Length == 64 &&
         inputs.GetProperty("equipmentSourceSha256").GetString()!.Length == 64 &&
         inputs.GetProperty("equipmentPaletteSha256").GetString()!.Length == 64 &&
-        samples.GetArrayLength() == 16,
-        "compatibility evidence must use the reference-influence convention with current provider and input identity");
+        inputs.GetProperty("avatarManifestSha256").GetString()!.Length == 64 &&
+        inputs.GetProperty("equipmentManifestSha256").GetString()!.Length == 64 &&
+        inputs.GetProperty("animationProfilesSha256").GetString()!.Length == 64 &&
+        evidence.RootElement.GetProperty("profiles").GetProperty("avatar").GetString() == "avatar.grounded" &&
+        evidence.RootElement.GetProperty("profiles").GetProperty("equipment").GetString() == "equipment.blade" &&
+        samples.GetArrayLength() ==
+            expectedCompatibilityCounts["equipment.sword-02"],
+        "compatibility evidence must use independent-motion v4 with current profiles, provider and input identity");
     Require(
         samples.EnumerateArray().All(x =>
             x.GetProperty("capability").GetString() == "Hand" &&
             x.GetProperty("socket").GetString()!.StartsWith("Equip.Hand.", StringComparison.Ordinal) &&
-            x.GetProperty("phase").GetSingle() is >= 0f and <= 1f &&
+            !string.IsNullOrWhiteSpace(x.GetProperty("caseName").GetString()) &&
+            !string.IsNullOrWhiteSpace(x.GetProperty("bodyClip").GetString()) &&
+            !string.IsNullOrWhiteSpace(x.GetProperty("equipmentClip").GetString()) &&
+            x.GetProperty("bodyPhase").GetSingle() is >= 0f and <= 1f &&
+            x.GetProperty("equipmentPhase").GetSingle() is >= 0f and <= 1f &&
             x.GetProperty("referenceInfluence").GetSingle() is >= 0f and <= 1f &&
             x.GetProperty("bodySocketOrigin").GetArrayLength() == 3 &&
             x.GetProperty("attachmentReferenceOrigin").GetArrayLength() == 3 &&
@@ -4533,7 +4487,7 @@ using (JsonDocument evidence =
             x.GetProperty("referenceError").GetSingle() <= 0.0001f &&
             x.GetProperty("animatedMountDrift").GetSingle() >= 0f &&
             x.GetProperty("passed").GetBoolean()),
-        "compatibility evidence must persist slot, phase, sampled influence, bind reference, evaluated Mount drift, and pass result");
+        "compatibility evidence must persist exact clips, independent phases, sampled influence, bind reference, evaluated Mount drift, and pass result");
 }
 
 string canonicalCompatibilityEvidence =
@@ -4559,7 +4513,7 @@ Require(
 // Obsolete v2 naming with otherwise current bytes must still fail.
 string obsoleteV2Evidence =
     canonicalCompatibilityEvidence.Replace(
-        "model-socket-reference-influence-semantic-phase.v3",
+        "profile-independent-motion-pairs.v4",
         "model-socket-reference-semantic-phase.v2",
         StringComparison.Ordinal);
 File.WriteAllText(compatibilityEvidence, obsoleteV2Evidence);
@@ -4691,8 +4645,8 @@ void AssertProofAuditInvalidatesOnTextChange(string path, string label)
         AssetHealth health =
             staleProof.Assets.Single(x => x.Id == avatar.Manifest.Id);
         Require(
-            health.FailedGate == "proof",
-            $"{label} change must invalidate proof audit evidence");
+            health.FailedGate == "animation-proof",
+            $"{label} change must invalidate reviewed animation evidence before the generic proof audit");
     }
     finally
     {
@@ -4740,6 +4694,7 @@ try
     foreach (string relative in new[]
              {
                  "Store/policy.yaml",
+                 "Store/animation-profiles.yaml",
                  "Collections/combat-foundation.v1.yaml",
                  "toolchain/hero-voxel.lock.yaml",
                  "Assets/Avatars/FoundationGuard01/Source/FoundationGuard01.palette.yaml"
@@ -4770,8 +4725,24 @@ try
         "Avatars",
             "FoundationGuard01"));
 
+    var bootstrapEngine =
+        new StoreEngine(bootstrapRoot, resolution.Root);
+    AssetRecord bootstrapAvatar =
+        bootstrapEngine.DiscoverAssets().Single();
+    Hero.Voxel.Tool.VoxelCompilation bootstrapCompiled =
+        Hero.Voxel.Tool.VoxelSpecCompiler.Compile(
+            Hero.Voxel.Tool.VoxelSpecYaml.LoadSpec(
+                bootstrapAvatar.SourceBase + ".voxel.yaml"),
+            Hero.Voxel.Tool.VoxelSpecYaml.LoadPalette(
+                bootstrapAvatar.PalettePath));
+    AcceptFixtureAnimationReview(
+        bootstrapEngine,
+        bootstrapRoot,
+        bootstrapAvatar.Manifest.Id,
+        bootstrapCompiled.Animations.Select(x => x.Name));
+    bootstrapEngine.Seal(bootstrapAvatar.Manifest.Id);
     StoreSnapshot bootstrap =
-        new StoreEngine(bootstrapRoot, resolution.Root).Scan(false, false);
+        bootstrapEngine.Scan(false, false);
     Require(
         bootstrap.Assets.Count == 1 && bootstrap.Assets[0].Published,
         "bootstrap avatar must publish");
@@ -4866,20 +4837,72 @@ try
                 "form: sword",
                 $"form: {form}",
                 StringComparison.Ordinal);
+        string profile = form switch
+        {
+            "axe" or "hammer" or "mace" => "equipment.heavy",
+            "spear" => "equipment.polearm",
+            "staff" => "equipment.magical",
+            "bow" or "crossbow" or "rifle" => "equipment.ranged",
+            _ => throw new InvalidOperationException(
+                "No fixture animation profile for form " + form)
+        };
+        manifest = manifest.Replace(
+            "animationProfile: equipment.blade",
+            "animationProfile: " + profile,
+            StringComparison.Ordinal);
         File.WriteAllText(manifestPath, manifest);
-        fullEngine.Seal(fixtureId);
+    }
+
+    IReadOnlyList<AssetRecord> fullAssets =
+        fullEngine.DiscoverAssets();
+    foreach (AssetRecord asset in fullAssets)
+    {
+        Hero.Voxel.Tool.VoxelCompilation compiled =
+            Hero.Voxel.Tool.VoxelSpecCompiler.Compile(
+                Hero.Voxel.Tool.VoxelSpecYaml.LoadSpec(
+                    asset.SourceBase + ".voxel.yaml"),
+                Hero.Voxel.Tool.VoxelSpecYaml.LoadPalette(
+                    asset.PalettePath));
+        AcceptFixtureAnimationReview(
+            fullEngine,
+            fullCatalogRoot,
+            asset.Manifest.Id,
+            compiled.Animations.Select(x => x.Name));
+        fullEngine.Seal(asset.Manifest.Id);
     }
 
     StoreSnapshot fullCatalog =
-        new StoreEngine(fullCatalogRoot, resolution.Root).Scan(false, true);
+        fullEngine.Scan(false, true);
+    AssetRecord fullAvatar =
+        fullAssets.Single(x => x.Manifest.Kind == "avatar");
+    Hero.Voxel.Tool.VoxelCompilation fullAvatarCompilation =
+        Hero.Voxel.Tool.VoxelSpecCompiler.Compile(
+            Hero.Voxel.Tool.VoxelSpecYaml.LoadSpec(
+                fullAvatar.SourceBase + ".voxel.yaml"),
+            Hero.Voxel.Tool.VoxelSpecYaml.LoadPalette(
+                fullAvatar.PalettePath));
+    int expectedFullCompatibility =
+        fullAssets.Where(x => x.Manifest.Kind == "equipment")
+            .Sum(asset =>
+            {
+                Hero.Voxel.Tool.VoxelCompilation equipmentCompilation =
+                    Hero.Voxel.Tool.VoxelSpecCompiler.Compile(
+                        Hero.Voxel.Tool.VoxelSpecYaml.LoadSpec(
+                            asset.SourceBase + ".voxel.yaml"),
+                        Hero.Voxel.Tool.VoxelSpecYaml.LoadPalette(
+                            asset.PalettePath));
+                return StoreEngine.BuildCompatibilitySamples(
+                    fullAvatarCompilation,
+                    equipmentCompilation).Count * 2;
+            });
     Require(
         fullCatalog.Healthy &&
         fullCatalog.Assets.Count(x => x.Kind == "equipment") == 10 &&
         fullCatalog.CoverageGaps.Count == 0 &&
         fullCatalog.NextJob == null &&
-        fullCatalog.Compatibility.Count == 160 &&
+        fullCatalog.Compatibility.Count == expectedFullCompatibility &&
         fullCatalog.Compatibility.All(x => x.Passed),
-        "isolated ten-form catalog must converge to healthy/no-gap state with 160 passing side-aware semantic-phase compatibility rows");
+        "isolated ten-form catalog must converge to healthy/no-gap state with all independently planned exact-clip compatibility rows passing");
 }
 finally
 {

@@ -10,7 +10,7 @@ Use this skill only inside the `voxel-store` repository.
 1. Read `AGENTS.md` and `WORKFLOW.md`.
 2. Run deterministic scan/plan state. **Claim only the first asset-scoped job** and its earliest unresolved/current gate. If there is no job, report healthy/no-op and stop.
 3. Keep that asset as the only creative/repair owner for this invocation. Never skip its current gate or select a second asset.
-4. Delegate the same asset to `voxel-store-pipeline` at the canonical stage that owns the Tool-reported current gate:
+4. Delegate the same asset to `voxel-store-pipeline` at the canonical stage that owns the Tool-reported current gate, including profile/source, animation-proof, compatibility, and seal gates:
    - an uncovered new-production requirement enters at **Intent**;
    - an existing repair enters at the earliest matching pipeline stage without replaying already-current upstream authority.
 5. Let the pipeline dispatch the stage to its existing Tool/OpenSpec/Hero.Voxel/specialized-skill owner. Do not restate those detailed validity rules here.
